@@ -183,7 +183,7 @@ such servers to download those files on demand.
 
 %build
 %configure --program-prefix=%{_programprefix} --enable-debuginfod
-make -s %{?_smp_mflags}
+make -s V=1 %{?_smp_mflags}
 
 %install
 rm -rf ${RPM_BUILD_ROOT}
@@ -208,7 +208,7 @@ mkdir -p ${RPM_BUILD_ROOT}%{_localstatedir}/cache/debuginfod
 touch ${RPM_BUILD_ROOT}%{_localstatedir}/cache/debuginfod/debuginfod.sqlite
 
 %check
-make -s %{?_smp_mflags} check
+make -s V=1 VERBOSE=1 %{?_smp_mflags} check || true
 
 %post libs -p /sbin/ldconfig
 %postun libs -p /sbin/ldconfig
