@@ -22,7 +22,8 @@ BuildRequires: flex
 
 # Compression support
 BuildRequires: zlib-devel
-BuildRequires: bzip2-devel
+BuildRequires: /usr/include/bzlib.h
+# BuildRequires: bzip2-devel - not portable to opensuse
 BuildRequires: xz-devel
 
 # For debuginfod
