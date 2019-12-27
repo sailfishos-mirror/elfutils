@@ -87,7 +87,7 @@ wait_ready()
   fi
 }
 
-env LD_LIBRARY_PATH=$ldpath DEBUGINFOD_URLS= ${abs_builddir}/../debuginfod/debuginfod $VERBOSE -F -R -d $DB -p $PORT1 -t0 -g0 R F L &
+env LD_LIBRARY_PATH=$ldpath DEBUGINFOD_URLS= ${abs_builddir}/../debuginfod/debuginfod $VERBOSE -F -R -d $DB -p $PORT1 -t0 -g0 --fdcache-fds 1 --fdcache-mbs 2 R F L &
 PID1=$!
 # Server must become ready
 wait_ready $PORT1 'ready' 1
@@ -213,6 +213,12 @@ archive_test() {
              -a $filename | grep 'Build ID' | cut -d ' ' -f 7`
     test $__BUILDID = $buildid
 
+    # run again to assure that fdcache is being enjoyed
+    filename=`testrun ${abs_top_builddir}/debuginfod/debuginfod-find executable $__BUILDID`
+    buildid=`env LD_LIBRARY_PATH=$ldpath ${abs_builddir}/../src/readelf \
+             -a $filename | grep 'Build ID' | cut -d ' ' -f 7`
+    test $__BUILDID = $buildid
+
     filename=`testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $__BUILDID`
     buildid=`env LD_LIBRARY_PATH=$ldpath ${abs_builddir}/../src/readelf \
              -a $filename | grep 'Build ID' | cut -d ' ' -f 7`
@@ -323,6 +329,7 @@ if type curl 2>/dev/null; then
     curl http://127.0.0.1:$PORT1/metrics
     curl http://127.0.0.1:$PORT2/metrics
     curl http://127.0.0.1:$PORT1/metrics | grep -q 'http_responses_total.*result.*error'
+    curl http://127.0.0.1:$PORT1/metrics | grep -q 'http_responses_total.*result.*fdcache'
     curl http://127.0.0.1:$PORT2/metrics | grep -q 'http_responses_total.*result.*upstream'
 fi
 
