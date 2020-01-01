@@ -1,7 +1,7 @@
 # -*- rpm-spec-*-
 Name: elfutils
 Version: @PACKAGE_VERSION@
-Release: 1
+Release: 1.20200101
 URL: http://elfutils.org/
 License: GPLv3+ and (GPLv2+ or LGPLv3+) and GFDL
 Source: ftp://sourceware.org/pub/elfutils/%{version}/elfutils-%{version}.tar.bz2
