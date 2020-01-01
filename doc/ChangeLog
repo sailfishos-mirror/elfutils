@@ -1,3 +1,8 @@
+2019-12-31  Frank Ch. Eigler  <fche@redhat.com>
+
+	* debuginfod.8: Rework sections dealing with traversal/scanning,
+	explaining new threading model.
+
 2019-12-22  Frank Ch. Eigler  <fche@redhat.com
 
 	* debuginfod.8: Add -U (DEB) flag, generalize RPM to "archive".
