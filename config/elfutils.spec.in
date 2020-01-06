@@ -40,6 +40,7 @@ BuildRequires: iproute
 BuildRequires: dpkg
 %endif
 BuildRequires: curl
+BuildRequires: /usr/bin/lsb_release
 
 %define _gnu %{nil}
 %define _programprefix eu-
