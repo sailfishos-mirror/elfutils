@@ -40,6 +40,7 @@
 
 #include "config.h"
 #include "debuginfod.h"
+#include "debuginfod-client-useragent.h"
 #include "system.h"
 #include <assert.h>
 #include <dirent.h>
@@ -514,7 +515,7 @@ debuginfod_query_server (debuginfod_client *c,
       curl_easy_setopt(data[i].handle, CURLOPT_NOSIGNAL, (long) 1);
       curl_easy_setopt(data[i].handle, CURLOPT_AUTOREFERER, (long) 1);
       curl_easy_setopt(data[i].handle, CURLOPT_ACCEPT_ENCODING, "");
-      curl_easy_setopt(data[i].handle, CURLOPT_USERAGENT, (void*) PACKAGE_STRING);
+      curl_easy_setopt(data[i].handle, CURLOPT_USERAGENT, (void*) PACKAGE_NAME "/" PACKAGE_VERSION "," DEBUGINFOD_CLIENT_USERAGENT);
 
       curl_multi_add_handle(curlm, data[i].handle);
       server_url = strtok_r(NULL, url_delim, &strtok_saveptr);

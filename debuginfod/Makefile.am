@@ -67,6 +67,20 @@ debuginfod_find_LDADD = $(libeu) $(libdebuginfod)
 noinst_LIBRARIES = libdebuginfod.a
 noinst_LIBRARIES += libdebuginfod_pic.a
 
+debuginfod-client-useragent.h:
+	if type uname 2>/dev/null; then \
+		echo '#define DEBUGINFOD_CLIENT_USERAGENT_1 "'`uname -sm | sed -e 's, ,/,g'`'"' > $@; \
+	else \
+		echo '#define DEBUGINFOD_CLIENT_USERAGENT_1 ""' > $@; \
+	fi
+	if type lsb_release 2>/dev/null; then \
+		echo '#define DEBUGINFOD_CLIENT_USERAGENT_2 "'`lsb_release -sir | sed -e 's, ,/,g'`'"' >> $@; \
+	else \
+		echo '#define DEBUGINFOD_CLIENT_USERAGENT_2 ""' > $@; \
+	fi
+	echo '#define DEBUGINFOD_CLIENT_USERAGENT DEBUGINFOD_CLIENT_USERAGENT_1 "," DEBUGINFOD_CLIENT_USERAGENT_2' >> $@
+
+libdebuginfod: debuginfod-client-useragent.h
 libdebuginfod_a_SOURCES = debuginfod-client.c
 libdebuginfod_pic_a_SOURCES = debuginfod-client.c
 am_libdebuginfod_pic_a_OBJECTS = $(libdebuginfod_a_SOURCES:.c=.os)
@@ -98,7 +112,7 @@ uninstall: uninstall-am
 
 EXTRA_DIST = libdebuginfod.map
 MOSTLYCLEANFILES = $(am_libdebuginfod_pic_a_OBJECTS) libdebuginfod.so.$(VERSION)
-CLEANFILES += $(am_libdebuginfod_pic_a_OBJECTS) libdebuginfod.so
+CLEANFILES += $(am_libdebuginfod_pic_a_OBJECTS) libdebuginfod.so debuginfod-client-useragent.h
 
 # automake std-options override: arrange to pass LD_LIBRARY_PATH
 installcheck-binPROGRAMS: $(bin_PROGRAMS)

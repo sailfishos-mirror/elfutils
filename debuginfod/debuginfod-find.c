@@ -1,6 +1,6 @@
 /* Command-line frontend for retrieving ELF / DWARF / source files
    from the debuginfod.
-   Copyright (C) 2019 Red Hat, Inc.
+   Copyright (C) 2019-2020 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
