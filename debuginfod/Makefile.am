@@ -76,9 +76,10 @@ debuginfod-client-useragent.h:
 	if type lsb_release 2>/dev/null; then \
 		echo '#define DEBUGINFOD_CLIENT_USERAGENT_2 "'`lsb_release -sir | sed -e 's, ,/,g'`'"' >> $@; \
 	else \
-		echo '#define DEBUGINFOD_CLIENT_USERAGENT_2 ""' > $@; \
+		echo '#define DEBUGINFOD_CLIENT_USERAGENT_2 ""' >> $@; \
 	fi
 	echo '#define DEBUGINFOD_CLIENT_USERAGENT DEBUGINFOD_CLIENT_USERAGENT_1 "," DEBUGINFOD_CLIENT_USERAGENT_2' >> $@
+	cat $@
 
 debuginfod-client.o: debuginfod-client-useragent.h
 libdebuginfod_a_SOURCES = debuginfod-client.c
