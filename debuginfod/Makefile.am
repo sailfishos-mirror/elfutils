@@ -80,7 +80,7 @@ debuginfod-client-useragent.h:
 	fi
 	echo '#define DEBUGINFOD_CLIENT_USERAGENT DEBUGINFOD_CLIENT_USERAGENT_1 "," DEBUGINFOD_CLIENT_USERAGENT_2' >> $@
 
-libdebuginfod: debuginfod-client-useragent.h
+debuginfod-client.o: debuginfod-client-useragent.h
 libdebuginfod_a_SOURCES = debuginfod-client.c
 libdebuginfod_pic_a_SOURCES = debuginfod-client.c
 am_libdebuginfod_pic_a_OBJECTS = $(libdebuginfod_a_SOURCES:.c=.os)
