@@ -31,6 +31,8 @@
 # include <config.h>
 #endif
 
+#include <system.h>
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -74,13 +76,12 @@ ebl_object_note_type_name (Ebl *ebl, const char *name, uint32_t type,
 	    return goknowntypes[type];
 	  else
 	    {
-	      snprintf (buf, len, "%s: %" PRIu32, gettext ("<unknown>"), type);
+	      snprintf (buf, len, "%s: %" PRIu32, _("<unknown>"), type);
 	      return buf;
 	    }
 	}
 
-      if (strncmp (name, ELF_NOTE_GNU_BUILD_ATTRIBUTE_PREFIX,
-		   strlen (ELF_NOTE_GNU_BUILD_ATTRIBUTE_PREFIX)) == 0)
+      if (startswith (name, ELF_NOTE_GNU_BUILD_ATTRIBUTE_PREFIX))
 	{
 	  /* GNU Build Attribute notes (ab)use the owner name to store
 	     most of their data.  Don't decode everything here.  Just
@@ -106,7 +107,7 @@ ebl_object_note_type_name (Ebl *ebl, const char *name, uint32_t type,
 	  if (descsz == 0 && type == NT_VERSION)
 	    return "VERSION";
 
-	  snprintf (buf, len, "%s: %" PRIu32, gettext ("<unknown>"), type);
+	  snprintf (buf, len, "%s: %" PRIu32, _("<unknown>"), type);
 	  return buf;
 	}
 
@@ -127,7 +128,7 @@ ebl_object_note_type_name (Ebl *ebl, const char *name, uint32_t type,
 	res = knowntypes[type];
       else
 	{
-	  snprintf (buf, len, "%s: %" PRIu32, gettext ("<unknown>"), type);
+	  snprintf (buf, len, "%s: %" PRIu32, _("<unknown>"), type);
 
 	  res = buf;
 	}

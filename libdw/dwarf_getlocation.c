@@ -48,9 +48,25 @@ attr_ok (Dwarf_Attribute *attr)
   if (dwarf_whatform (attr) == DW_FORM_exprloc)
     return true;
 
+  if (attr->cu->version >= 4)
+    {
+      /* Must be an exprloc (or constant), just not any block form.  */
+      switch (dwarf_whatform (attr))
+	{
+	case DW_FORM_block:
+	case DW_FORM_block1:
+	case DW_FORM_block2:
+	case DW_FORM_block4:
+	  __libdw_seterrno (DWARF_E_NO_LOC_VALUE);
+	  return false;
+	default:
+	  break;
+	}
+    }
+
   /* Otherwise must be one of the attributes listed below.  Older
      DWARF versions might have encoded the exprloc as block, and we
-     cannot easily distinquish attributes in the loclist class because
+     cannot easily distinguish attributes in the loclist class because
      the same forms are used for different classes.  */
   switch (attr->code)
     {
@@ -186,6 +202,7 @@ is_constant_offset (Dwarf_Attribute *attr,
     case DW_FORM_data8:
     case DW_FORM_sdata:
     case DW_FORM_udata:
+    case DW_FORM_implicit_const:
       break;
     }
 
@@ -388,7 +405,7 @@ __libdw_intern_expression (Dwarf *dbg, bool other_byte_order,
 	    invalid:
 	      __libdw_seterrno (DWARF_E_INVALID_DWARF);
 	    returnmem:
-	      /* Free any dynamicly allocated loclists, if any.  */
+	      /* Free any dynamically allocated loclists, if any.  */
 	      while (n > MAX_STACK_LOCS)
 		{
 		  struct loclist *loc = loclist;

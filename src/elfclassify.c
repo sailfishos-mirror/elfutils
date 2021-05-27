@@ -16,6 +16,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <config.h>
+#include <system.h>
 
 #include <argp.h>
 #include <error.h>
@@ -51,7 +52,7 @@ static int file_fd = -1;
 /* Set by issue or elf_issue.  */
 static bool issue_found;
 
-/* Non-fatal issue occured while processing the current_path.  */
+/* Non-fatal issue occurred while processing the current_path.  */
 static void
 issue (int e, const char *msg)
 {
@@ -65,7 +66,7 @@ issue (int e, const char *msg)
   issue_found = true;
 }
 
-/* Non-fatal issue occured while processing the current ELF.  */
+/* Non-fatal issue occurred while processing the current ELF.  */
 static void
 elf_issue (const char *msg)
 {
@@ -335,11 +336,8 @@ run_classify (void)
 		     stderr);
 	    has_bits_alloc = true;
 	  }
-        const char *debug_prefix = ".debug_";
-        const char *zdebug_prefix = ".zdebug_";
-        if (strncmp (section_name, debug_prefix, strlen (debug_prefix)) == 0
-	    || strncmp (section_name, zdebug_prefix,
-			strlen (zdebug_prefix)) == 0)
+        if (startswith (section_name, ".debug_")
+	    || startswith (section_name, ".zdebug_"))
           {
             if (verbose > 1 && !has_debug_sections)
               fputs ("debug: .debug_* section found\n", stderr);
@@ -464,7 +462,7 @@ is_loadable (void)
 }
 
 /* Return true if the file is an ELF file which has a symbol table or
-   .debug_* sections (and thus can be stripped futher).  */
+   .debug_* sections (and thus can be stripped further).  */
 static bool
 is_unstripped (void)
 {

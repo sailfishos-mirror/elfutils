@@ -52,10 +52,6 @@
 #include "libeu.h"
 #include "printversion.h"
 
-#ifndef _
-# define _(str) gettext (str)
-#endif
-
 /* Name and version of program.  */
 ARGP_PROGRAM_VERSION_HOOK_DEF = print_version;
 
@@ -315,7 +311,7 @@ make_directories (const char *path)
   if (dir == NULL)
     error(EXIT_FAILURE, errno, _("memory exhausted"));
 
-  while (mkdir (dir, 0777) < 0 && errno != EEXIST)
+  while (mkdir (dir, ACCESSPERMS) < 0 && errno != EEXIST)
     {
       if (errno == ENOENT)
         make_directories (dir);
@@ -436,23 +432,25 @@ update_sh_size (Elf_Scn *outscn, const Elf_Data *data)
   update_shdr (outscn, newshdr);
 }
 
+static inline void
+adjust_reloc (GElf_Xword *info,
+	      size_t map[], size_t map_size)
+{
+  size_t ndx = GELF_R_SYM (*info);
+  if (ndx != STN_UNDEF)
+    {
+      if (ndx > map_size)
+	error (EXIT_FAILURE, 0, "bad symbol ndx section");
+      *info = GELF_R_INFO (map[ndx - 1], GELF_R_TYPE (*info));
+    }
+}
+
 /* Update relocation sections using the symbol table.  */
 static void
 adjust_relocs (Elf_Scn *outscn, Elf_Scn *inscn, const GElf_Shdr *shdr,
 	       size_t map[], size_t map_size, const GElf_Shdr *symshdr)
 {
   Elf_Data *data = elf_getdata (outscn, NULL);
-
-  inline void adjust_reloc (GElf_Xword *info)
-    {
-      size_t ndx = GELF_R_SYM (*info);
-      if (ndx != STN_UNDEF)
-	{
-	  if (ndx > map_size)
-	    error (EXIT_FAILURE, 0, "bad symbol ndx section");
-	  *info = GELF_R_INFO (map[ndx - 1], GELF_R_TYPE (*info));
-	}
-    }
 
   switch (shdr->sh_type)
     {
@@ -464,7 +462,7 @@ adjust_relocs (Elf_Scn *outscn, Elf_Scn *inscn, const GElf_Shdr *shdr,
 	{
 	  GElf_Rel rel_mem;
 	  GElf_Rel *rel = gelf_getrel (data, i, &rel_mem);
-	  adjust_reloc (&rel->r_info);
+	  adjust_reloc (&rel->r_info, map, map_size);
 	  ELF_CHECK (gelf_update_rel (data, i, rel),
 		     _("cannot update relocation: %s"));
 	}
@@ -478,7 +476,7 @@ adjust_relocs (Elf_Scn *outscn, Elf_Scn *inscn, const GElf_Shdr *shdr,
 	{
 	  GElf_Rela rela_mem;
 	  GElf_Rela *rela = gelf_getrela (data, i, &rela_mem);
-	  adjust_reloc (&rela->r_info);
+	  adjust_reloc (&rela->r_info, map, map_size);
 	  ELF_CHECK (gelf_update_rela (data, i, rela),
 		     _("cannot update relocation: %s"));
 	}
@@ -1067,6 +1065,20 @@ get_group_sig (Elf *elf, GElf_Shdr *shdr)
   return sig;
 }
 
+static inline bool
+check_match (bool match, Elf_Scn *scn, const char *name)
+{
+  if (!match)
+    {
+      error (0, 0, _("cannot find matching section for [%zu] '%s'"),
+	     elf_ndxscn (scn), name);
+      return true;
+    }
+
+  return false;
+}
+
+
 /* Fix things up when prelink has moved some allocated sections around
    and the debuginfo file's section headers no longer match up.
    This fills in SECTIONS[0..NALLOC-1].outscn or exits.
@@ -1202,16 +1214,6 @@ find_alloc_sections_prelink (Elf *debug, Elf_Data *debug_shstrtab,
     }
 
   bool fail = false;
-  inline void check_match (bool match, Elf_Scn *scn, const char *name)
-    {
-      if (!match)
-	{
-	  fail = true;
-	  error (0, 0, _("cannot find matching section for [%zu] '%s'"),
-		 elf_ndxscn (scn), name);
-	}
-    }
-
   Elf_Scn *scn = NULL;
   while ((scn = elf_nextscn (debug, scn)) != NULL)
     {
@@ -1242,7 +1244,7 @@ find_alloc_sections_prelink (Elf *debug, Elf_Data *debug_shstrtab,
       for (size_t i = 0; shdr != NULL && i < nalloc; ++i)
 	if (sections[i].outscn == scn)
 	  shdr = NULL;
-      check_match (shdr == NULL, scn, name);
+      fail |= check_match (shdr == NULL, scn, name);
     }
 
   if (fail)
@@ -1298,7 +1300,7 @@ find_alloc_sections_prelink (Elf *debug, Elf_Data *debug_shstrtab,
 	    }
 	}
 
-      check_match (undo_sec == NULL, scn, name);
+      fail |= check_match (undo_sec == NULL, scn, name);
     }
 
   free (undo_sections);
@@ -1450,29 +1452,6 @@ more sections in stripped file than debug file -- arguments reversed?"));
 	stripped_symtab = &sections[nalloc];
     }
 
-  /* Locate a matching unallocated section in SECTIONS.  */
-  inline struct section *find_unalloc_section (const GElf_Shdr *shdr,
-					       const char *name,
-					       const char *sig)
-    {
-      size_t l = nalloc, u = stripped_shnum - 1;
-      while (l < u)
-	{
-	  size_t i = (l + u) / 2;
-	  struct section *sec = &sections[i];
-	  int cmp = compare_unalloc_sections (shdr, &sec->shdr,
-					      name, sec->name,
-					      sig, sec->sig);
-	  if (cmp < 0)
-	    u = i;
-	  else if (cmp > 0)
-	    l = i + 1;
-	  else
-	    return sec;
-	}
-      return NULL;
-    }
-
   Elf_Data *shstrtab = elf_getdata (elf_getscn (unstripped,
 						unstripped_shstrndx), NULL);
   ELF_CHECK (shstrtab != NULL,
@@ -1534,9 +1513,27 @@ more sections in stripped file than debug file -- arguments reversed?"));
 	}
       else
 	{
-	  /* Look for the section that matches.  */
-	  sec = find_unalloc_section (shdr, name,
-				      get_group_sig (unstripped, shdr));
+	  /* Locate a matching unallocated section in SECTIONS.  */
+	  const char *sig = get_group_sig (unstripped, shdr);
+	  size_t l = nalloc, u = stripped_shnum - 1;
+	  while (l < u)
+	    {
+	      size_t i = (l + u) / 2;
+	      struct section *section = &sections[i];
+	      int cmp = compare_unalloc_sections (shdr, &section->shdr,
+						  name, section->name,
+						  sig, section->sig);
+	      if (cmp < 0)
+		u = i;
+	      else if (cmp > 0)
+		l = i + 1;
+	      else
+		{
+		  sec = section;
+		  break;
+		}
+	    }
+
 	  if (sec == NULL)
 	    {
 	      /* An additional unallocated section is fine if not SHT_NOBITS.
@@ -2192,7 +2189,8 @@ DWARF data in '%s' not adjusted for prelinking bias; consider prelink -u"),
 
       /* Copy the unstripped file and then modify it.  */
       int outfd = open (output_file, O_RDWR | O_CREAT,
-			  stripped_ehdr->e_type == ET_REL ? 0666 : 0777);
+			(stripped_ehdr->e_type == ET_REL
+			 ? DEFFILEMODE : ACCESSPERMS));
       if (outfd < 0)
 	error (EXIT_FAILURE, errno, _("cannot open '%s'"), output_file);
       Elf *outelf = elf_begin (outfd, ELF_C_WRITE, NULL);
@@ -2227,22 +2225,23 @@ open_file (const char *file, bool writable)
   return fd;
 }
 
+/* Warn, and exit if not forced to continue, if some ELF header
+   sanity check for the stripped and unstripped files failed.  */
+static void
+warn (const char *msg, bool force,
+      const char *stripped_file, const char *unstripped_file)
+{
+  error (force ? 0 : EXIT_FAILURE, 0, "%s'%s' and '%s' %s%s.",
+	 force ? _("WARNING: ") : "",
+	 stripped_file, unstripped_file, msg,
+	 force ? "" : _(", use --force"));
+}
+
 /* Handle a pair of files we need to open by name.  */
 static void
 handle_explicit_files (const char *output_file, bool create_dirs, bool force,
 		       const char *stripped_file, const char *unstripped_file)
 {
-
-  /* Warn, and exit if not forced to continue, if some ELF header
-     sanity check for the stripped and unstripped files failed.  */
-  void warn (const char *msg)
-  {
-    error (force ? 0 : EXIT_FAILURE, 0, "%s'%s' and '%s' %s%s.",
-	   force ? _("WARNING: ") : "",
-	   stripped_file, unstripped_file, msg,
-	   force ? "" : _(", use --force"));
-  }
-
   int stripped_fd = open_file (stripped_file, false);
   Elf *stripped = elf_begin (stripped_fd, ELF_C_READ, NULL);
   GElf_Ehdr stripped_ehdr;
@@ -2263,16 +2262,20 @@ handle_explicit_files (const char *output_file, bool create_dirs, bool force,
 
       if (memcmp (stripped_ehdr.e_ident,
 		  unstripped_ehdr.e_ident, EI_NIDENT) != 0)
-	warn (_("ELF header identification (e_ident) different"));
+	warn (_("ELF header identification (e_ident) different"), force,
+	      stripped_file, unstripped_file);
 
       if (stripped_ehdr.e_type != unstripped_ehdr.e_type)
-	warn (_("ELF header type (e_type) different"));
+	warn (_("ELF header type (e_type) different"), force,
+	      stripped_file, unstripped_file);
 
       if (stripped_ehdr.e_machine != unstripped_ehdr.e_machine)
-	warn (_("ELF header machine type (e_machine) different"));
+	warn (_("ELF header machine type (e_machine) different"), force,
+	      stripped_file, unstripped_file);
 
       if (stripped_ehdr.e_phnum < unstripped_ehdr.e_phnum)
-	warn (_("stripped program header (e_phnum) smaller than unstripped"));
+	warn (_("stripped program header (e_phnum) smaller than unstripped"),
+	      force, stripped_file, unstripped_file);
     }
 
   handle_file (output_file, create_dirs, stripped, &stripped_ehdr, unstripped);
@@ -2401,6 +2404,8 @@ handle_output_dir_module (const char *output_dir, Dwfl_Module *mod, bool force,
     error (EXIT_FAILURE, 0, _("memory exhausted"));
 
   handle_dwfl_module (output_file, true, force, mod, all, ignore, relocate);
+
+  free (output_file);
 }
 
 
@@ -2495,21 +2500,18 @@ static void
 handle_implicit_modules (const struct arg_info *info)
 {
   struct match_module_info mmi = { info->args, NULL, info->match_files };
-  inline ptrdiff_t next (ptrdiff_t offset)
-    {
-      return dwfl_getmodules (info->dwfl, &match_module, &mmi, offset);
-    }
-  ptrdiff_t offset = next (0);
+  ptrdiff_t offset = dwfl_getmodules (info->dwfl, &match_module, &mmi, 0);
   if (offset == 0)
     error (EXIT_FAILURE, 0, _("no matching modules found"));
 
   if (info->list)
     do
       list_module (mmi.found);
-    while ((offset = next (offset)) > 0);
+    while ((offset = dwfl_getmodules (info->dwfl, &match_module, &mmi,
+				      offset)) > 0);
   else if (info->output_dir == NULL)
     {
-      if (next (offset) != 0)
+      if (dwfl_getmodules (info->dwfl, &match_module, &mmi, offset) != 0)
 	error (EXIT_FAILURE, 0, _("matched more than one module"));
       handle_dwfl_module (info->output_file, false, info->force, mmi.found,
 			  info->all, info->ignore, info->relocate);
@@ -2519,7 +2521,8 @@ handle_implicit_modules (const struct arg_info *info)
       handle_output_dir_module (info->output_dir, mmi.found, info->force,
 				info->all, info->ignore,
 				info->modnames, info->relocate);
-    while ((offset = next (offset)) > 0);
+    while ((offset = dwfl_getmodules (info->dwfl, &match_module, &mmi,
+				      offset)) > 0);
 }
 
 int

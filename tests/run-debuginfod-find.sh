@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2019-2020 Red Hat, Inc.
+# Copyright (C) 2019-2021 Red Hat, Inc.
 # This file is part of elfutils.
 #
 # This file is free software; you can redistribute it and/or modify
@@ -20,13 +20,14 @@
 
 type curl 2>/dev/null || (echo "need curl"; exit 77)
 type rpm2cpio 2>/dev/null || (echo "need rpm2cpio"; exit 77)
+type cpio 2>/dev/null || (echo "need cpio"; exit 77)
 type bzcat 2>/dev/null || (echo "need bzcat"; exit 77)
 bsdtar --version | grep -q zstd && zstd=true || zstd=false
 echo "zstd=$zstd bsdtar=`bsdtar --version`"
 
 # for test case debugging, uncomment:
 #set -x
-#VERBOSE=-vvvv
+VERBOSE=-vvv
 
 DB=${PWD}/.debuginfod_tmp.sqlite
 tempfiles $DB
@@ -48,6 +49,29 @@ cleanup()
 
 # clean up trash if we were aborted early
 trap cleanup 0 1 2 3 5 9 15
+
+errfiles_list=
+err() {
+    for ports in $PORT1 $PORT2
+    do
+        echo $port metrics
+        curl -s http://127.0.0.1:$port/metrics
+        echo
+    done
+    for x in $errfiles_list
+    do
+        echo "$x"
+        cat $x
+        echo
+    done
+}
+trap err ERR
+
+errfiles() {
+    errfiles_list="$errfiles_list $*"
+}
+
+
 
 # find an unused port number
 while true; do
@@ -89,25 +113,31 @@ wait_ready()
   done;
 
   if [ $timeout -eq 0 ]; then
-      echo "metric $what never changed to $value on port $port"
-      curl -s http://127.0.0.1:$port/metrics
+    echo "metric $what never changed to $value on port $port"
     exit 1;
   fi
 }
 
-# create a 000 empty .rpm file to evoke a metric-visible error
-touch R/nothing.rpm
-chmod 000 R/nothing.rpm
+# create a bogus .rpm file to evoke a metric-visible error
+# Use a cyclic symlink instead of chmod 000 to make sure even root
+# would see an error (running the testsuite under root is NOT encouraged).
+ln -s R/nothing.rpm R/nothing.rpm
 
-env LD_LIBRARY_PATH=$ldpath DEBUGINFOD_URLS= ${abs_builddir}/../debuginfod/debuginfod $VERBOSE -F -R -d $DB -p $PORT1 -t0 -g0 --fdcache-fds 1 --fdcache-mbs 2 -Z .tar.xz -Z .tar.bz2=bzcat -v R F Z L > vlog4 2>&1 &
+env LD_LIBRARY_PATH=$ldpath DEBUGINFOD_URLS= ${abs_builddir}/../debuginfod/debuginfod $VERBOSE -F -R -d $DB -p $PORT1 -t0 -g0 --fdcache-fds 1 --fdcache-mbs 2 --fdcache-mintmp 0 -Z .tar.xz -Z .tar.bz2=bzcat -v R F Z L > vlog$PORT1 2>&1 &
 PID1=$!
-tempfiles vlog4
+tempfiles vlog$PORT1
+errfiles vlog$PORT1
 # Server must become ready
 wait_ready $PORT1 'ready' 1
 export DEBUGINFOD_URLS=http://127.0.0.1:$PORT1/   # or without trailing /
 
 # Be patient when run on a busy machine things might take a bit.
 export DEBUGINFOD_TIMEOUT=10
+
+# Check thread comm names
+ps -q $PID1 -e -L -o '%p %c %a' | grep groom
+ps -q $PID1 -e -L -o '%p %c %a' | grep scan
+ps -q $PID1 -e -L -o '%p %c %a' | grep traverse
 
 # We use -t0 and -g0 here to turn off time-based scanning & grooming.
 # For testing purposes, we just sic SIGUSR1 / SIGUSR2 at the process.
@@ -143,10 +173,49 @@ testrun ${abs_builddir}/debuginfod_build_id_find -e F/prog 1
 
 ########################################################################
 
+# PR25628
+rm -rf $DEBUGINFOD_CACHE_PATH # clean it from previous tests
+
+# The query is designed to fail, while the 000-permission file should be created.
+testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo 01234567 || true
+if [ ! -f $DEBUGINFOD_CACHE_PATH/01234567/debuginfo ]; then
+  echo "could not find cache in $DEBUGINFOD_CACHE_PATH"
+  exit 1
+fi
+
+if [ -r $DEBUGINFOD_CACHE_PATH/01234567/debuginfo ]; then
+  echo "The cache $DEBUGINFOD_CACHE_PATH/01234567/debuginfo is readable"
+  exit 1
+fi
+
+bytecount_before=`curl -s http://127.0.0.1:$PORT1/metrics | grep 'http_responses_transfer_bytes_count{code="404"}'`
+testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo 01234567 || true
+bytecount_after=`curl -s http://127.0.0.1:$PORT1/metrics | grep 'http_responses_transfer_bytes_count{code="404"}'`
+if [ "$bytecount_before" != "$bytecount_after" ]; then
+  echo "http_responses_transfer_bytes_count{code="404"} has changed."
+  exit 1
+fi
+
+# set cache_miss_s to 0 and sleep 1 to make the mtime expire.
+echo 0 > $DEBUGINFOD_CACHE_PATH/cache_miss_s
+sleep 1
+bytecount_before=`curl -s http://127.0.0.1:$PORT1/metrics | grep 'http_responses_transfer_bytes_count{code="404"}'`
+testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo 01234567 || true
+bytecount_after=`curl -s http://127.0.0.1:$PORT1/metrics | grep 'http_responses_transfer_bytes_count{code="404"}'`
+if [ "$bytecount_before" == "$bytecount_after" ]; then
+  echo "http_responses_transfer_bytes_count{code="404"} should be incremented."
+  exit 1
+fi
+########################################################################
+
 # Test whether debuginfod-find is able to fetch those files.
 rm -rf $DEBUGINFOD_CACHE_PATH # clean it from previous tests
 filename=`testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $BUILDID`
 cmp $filename F/prog.debug
+if [ -w $filename ]; then
+    echo "cache file writable, boo"
+    exit 1
+fi
 
 filename=`testrun ${abs_top_builddir}/debuginfod/debuginfod-find executable F/prog`
 cmp $filename F/prog
@@ -344,15 +413,16 @@ RPM_BUILDID=d44d42cbd7d915bc938c81333a21e355a6022fb7 # in rhel6/ subdir, for a l
 
 rm -r R/debuginfod-rpms/rhel6/*
 kill -USR2 $PID1  # groom cycle
-# Expect 3 rpms to be deleted by the groom
 # 1 groom cycle already took place at/soon-after startup, so -USR2 makes 2
 wait_ready $PORT1 'thread_work_total{role="groom"}' 2
-wait_ready $PORT1 'groom{statistic="file d/e"}' 3
+# Expect 4 rpms containing 2 buildids to be deleted by the groom
+wait_ready $PORT1 'groomed_total{decision="stale"}' 4
 
 rm -rf $DEBUGINFOD_CACHE_PATH # clean it from previous tests
 
+# this is one of the buildids from the groom-deleted rpms
 testrun ${abs_top_builddir}/debuginfod/debuginfod-find executable $RPM_BUILDID && false || true
-
+# but this one was not deleted so should be still around
 testrun ${abs_top_builddir}/debuginfod/debuginfod-find executable $BUILDID2
 
 ########################################################################
@@ -385,7 +455,7 @@ wait_ready $PORT1 'thread_busy{role="scan"}' 0
 archive_test bc1febfd03ca05e030f0d205f7659db29f8a4b30 /usr/src/debug/hello-1.0/hello.c $SHA
 archive_test f0aa15b8aba4f3c28cac3c2a73801fefa644a9f2 /usr/src/debug/hello-1.0/hello.c $SHA
 
-egrep '(libc.error.*rhel7)|(bc1febfd03ca)|(f0aa15b8aba)' vlog4
+egrep '(libc.error.*rhel7)|(bc1febfd03ca)|(f0aa15b8aba)' vlog$PORT1
 
 ########################################################################
 
@@ -401,14 +471,18 @@ export DEBUGINFOD_CACHE_PATH=${PWD}/.client_cache2
 mkdir -p $DEBUGINFOD_CACHE_PATH
 # NB: inherits the DEBUGINFOD_URLS to the first server
 # NB: run in -L symlink-following mode for the L subdir
-env LD_LIBRARY_PATH=$ldpath ${abs_builddir}/../debuginfod/debuginfod $VERBOSE -F -U -d ${DB}_2 -p $PORT2 -L L D > vlog3 2>&1 &
+env LD_LIBRARY_PATH=$ldpath ${abs_builddir}/../debuginfod/debuginfod $VERBOSE -F -U -d ${DB}_2 -p $PORT2 -L L D > vlog$PORT2 2>&1 &
 PID2=$!
-tempfiles vlog3
+tempfiles vlog$PORT2
+errfiles vlog$PORT2
 tempfiles ${DB}_2
 wait_ready $PORT2 'ready' 1
 wait_ready $PORT2 'thread_work_total{role="traverse"}' 1
 wait_ready $PORT2 'thread_work_pending{role="scan"}' 0
 wait_ready $PORT2 'thread_busy{role="scan"}' 0
+
+wait_ready $PORT2 'thread_busy{role="http-buildid"}' 0
+wait_ready $PORT2 'thread_busy{role="http-metrics"}' 1
 
 # have clients contact the new server
 export DEBUGINFOD_URLS=http://127.0.0.1:$PORT2
@@ -431,11 +505,11 @@ rm -rf $DEBUGINFOD_CACHE_PATH
 testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $BUILDID
 
 # send a request to stress XFF and User-Agent federation relay;
-# we'll grep for the two patterns in vlog4
+# we'll grep for the two patterns in vlog$PORT1
 curl -s -H 'User-Agent: TESTCURL' -H 'X-Forwarded-For: TESTXFF' $DEBUGINFOD_URLS/buildid/deaddeadbeef00000000/debuginfo -o /dev/null || true
 
-grep UA:TESTCURL vlog4
-grep XFF:TESTXFF vlog4
+grep UA:TESTCURL vlog$PORT1
+grep XFF:TESTXFF vlog$PORT1
 
 
 # confirm that first server can't resolve symlinked info in L/ but second can
@@ -446,6 +520,7 @@ file -L L/foo
 export DEBUGINFOD_URLS=http://127.0.0.1:$PORT1
 rm -rf $DEBUGINFOD_CACHE_PATH
 testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $BUILDID && false || true
+rm -f $DEBUGINFOD_CACHE_PATH/$BUILDID/debuginfo # drop 000-perm negative-hit file
 export DEBUGINFOD_URLS=http://127.0.0.1:$PORT2
 testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $BUILDID
 
@@ -453,6 +528,7 @@ testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $BUILDID
 export DEBUGINFOD_URLS=127.0.0.1:$PORT1
 rm -rf $DEBUGINFOD_CACHE_PATH
 testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $BUILDID && false || true
+rm -f $DEBUGINFOD_CACHE_PATH/$BUILDID/debuginfo # drop 000-perm negative-hit file
 export DEBUGINFOD_URLS=127.0.0.1:$PORT2
 testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $BUILDID
 
@@ -483,8 +559,42 @@ curl -s http://127.0.0.1:$PORT1/metrics | grep 'scanned_bytes_total'
 
 # And generate a few errors into the second debuginfod's logs, for analysis just below
 curl -s http://127.0.0.1:$PORT2/badapi > /dev/null || true
-curl -s http://127.0.0.1:$PORT2/buildid/deadbeef/debuginfo > /dev/null || true
+curl -s http://127.0.0.1:$PORT2/buildid/deadbeef/debuginfo > /dev/null || true  
+# NB: this error is used to seed the 404 failure for the survive-404 tests
 
+# Confirm bad artifact types are rejected without leaving trace
+curl -s http://127.0.0.1:$PORT2/buildid/deadbeef/badtype > /dev/null || true
+(curl -s http://127.0.0.1:$PORT2/metrics | grep 'badtype') && false
+
+# Confirm that reused curl connections survive 404 errors.
+# The rm's force an uncached fetch
+rm -f $DEBUGINFOD_CACHE_PATH/$BUILDID/debuginfo .client_cache*/$BUILDID/debuginfo
+testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $BUILDID
+rm -f $DEBUGINFOD_CACHE_PATH/$BUILDID/debuginfo .client_cache*/$BUILDID/debuginfo
+testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $BUILDID
+testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $BUILDID
+testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $BUILDID
+rm -f $DEBUGINFOD_CACHE_PATH/$BUILDID/debuginfo .client_cache*/$BUILDID/debuginfo
+testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $BUILDID
+
+# Confirm that some debuginfod client pools are being used
+curl -s http://127.0.0.1:$PORT2/metrics | grep 'dc_pool_op.*reuse'
+
+########################################################################
+# Corrupt the sqlite database and get debuginfod to trip across its errors
+curl -s http://127.0.0.1:$PORT1/metrics | grep 'sqlite3.*reset'
+ls -al $DB
+dd if=/dev/zero of=$DB bs=1 count=1
+ls -al $DB
+# trigger some random activity that's Sure to get sqlite3 upset
+kill -USR1 $PID1
+wait_ready $PORT1 'thread_work_total{role="traverse"}' 9
+wait_ready $PORT1 'thread_work_pending{role="scan"}' 0
+wait_ready $PORT1 'thread_busy{role="scan"}' 0
+kill -USR2 $PID1
+wait_ready $PORT1 'thread_work_total{role="groom"}' 4
+curl -s http://127.0.0.1:$PORT1/buildid/beefbeefbeefd00dd00d/debuginfo > /dev/null || true
+curl -s http://127.0.0.1:$PORT1/metrics | grep 'error_count.*sqlite'
 
 ########################################################################
 
@@ -500,11 +610,11 @@ tempfiles .debuginfod_*
 testrun ${abs_builddir}/debuginfod_build_id_find -e F/prog2 1
 
 # check out the debuginfod logs for the new style status lines
-# cat vlog3
-grep -q 'UA:.*XFF:.*GET /buildid/.* 200 ' vlog3
-grep -q 'UA:.*XFF:.*GET /metrics 200 ' vlog3
-grep -q 'UA:.*XFF:.*GET /badapi 503 ' vlog3
-grep -q 'UA:.*XFF:.*GET /buildid/deadbeef.* 404 ' vlog3
+# cat vlog$PORT2
+grep -q 'UA:.*XFF:.*GET /buildid/.* 200 ' vlog$PORT2
+grep -q 'UA:.*XFF:.*GET /metrics 200 ' vlog$PORT2
+grep -q 'UA:.*XFF:.*GET /badapi 503 ' vlog$PORT2
+grep -q 'UA:.*XFF:.*GET /buildid/deadbeef.* 404 ' vlog$PORT2
 
 ########################################################################
 
@@ -513,6 +623,10 @@ grep -q 'UA:.*XFF:.*GET /buildid/deadbeef.* 404 ' vlog3
 mkdir $DEBUGINFOD_CACHE_PATH/malformed
 touch $DEBUGINFOD_CACHE_PATH/malformed0
 touch $DEBUGINFOD_CACHE_PATH/malformed/malformed1
+
+# A valid format for an empty buildid subdirectory
+mkdir $DEBUGINFOD_CACHE_PATH/00000000
+touch -d '1970-01-01' $DEBUGINFOD_CACHE_PATH/00000000 # old enough to guarantee nukage
 
 # Trigger a cache clean and run the tests again. The clients should be unable to
 # find the target.
@@ -527,6 +641,11 @@ if [ ! -f $DEBUGINFOD_CACHE_PATH/malformed0 ] \
     || [ ! -f $DEBUGINFOD_CACHE_PATH/malformed/malformed1 ]; then
   echo "unrelated files did not survive cache cleaning"
   exit 1
+fi
+
+if [ -d $DEBUGINFOD_CACHE_PATH/00000000 ]; then
+    echo "failed to rmdir old cache dir"
+    exit 1
 fi
 
 # Test debuginfod without a path list; reuse $PORT1
