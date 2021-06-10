@@ -1,3 +1,10 @@
+2021-06-28  Noah Sanci <nsanci@redhat.com>
+
+	PR25978
+	* run-debuginfod-find.sh: Test to ensure options
+	fdcache-prefetch-fds/mbs are set. Check that inc_metric works for lru
+	and prefetch cache metrics.
+
 2021-06-16  Frank Ch. Eigler <fche@redhat.com>
 
 	* run-debuginfod-find.sh: Fix intermittent groom/stale failure,
