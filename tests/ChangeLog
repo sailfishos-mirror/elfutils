@@ -1,3 +1,8 @@
+2021-07-01  Noah Sanci <nsanci@redhat.com>
+	PR2711
+	* run-debuginfod-find.sh: Added test case for grooming the database
+	using regexes. 
+
 2021-06-16  Frank Ch. Eigler <fche@redhat.com>
 
 	* run-debuginfod-find.sh: Fix intermittent groom/stale failure,
