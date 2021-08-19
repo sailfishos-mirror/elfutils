@@ -63,6 +63,9 @@ AC_CONFIG_FILES([elfutils.spec:config/elfutils.spec.in])
 dnl debuginfo-server client & server parts.
 AC_CONFIG_FILES([debuginfod/Makefile debuginfod/debuginfod.h])
 
+dnl debuginfod-urls
+AC_CONFIG_FILES([config/debuginfod.url])
+
 AC_CANONICAL_HOST
 
 AC_ARG_ENABLE(deterministic-archives,
