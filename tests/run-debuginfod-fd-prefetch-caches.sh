@@ -37,18 +37,19 @@ export DEBUGINFOD_CACHE_PATH=${PWD}/.client_cache
 
 echo $PORT1
 env LD_LIBRARY_PATH=$ldpath DEBUGINFOD_URLS= ${abs_builddir}/../debuginfod/debuginfod $VERBOSE -p $PORT1 -d $DB \
-    --fdcache-mbs=$FDCACHE_MDS --fdcache-fds=$FDCACHE_FDS --fdcache-prefetch-mbs=$PREFETCH_MBS \
-    --fdcache-prefetch-fds=$PREFETCH_FDS --fdcache-mintmp 0 -v -F F > vlog$PORT1 2>&1 &
+    --fdcache-mbs=$FDCACHE_MBS --fdcache-fds=$FDCACHE_FDS --fdcache-prefetch-mbs=$PREFETCH_MBS \
+    --fdcache-prefetch-fds=$PREFETCH_FDS --fdcache-mintmp 0 > vlog$PORT1 2>&1 &
 PID1=$!
 tempfiles vlog$PORT1
 errfiles vlog$PORT1
 # Server must become ready
 wait_ready $PORT1 'ready' 1
 
-grep 'fdcache fds ' vlog$PORT1 #$FDCACHE_FDS
-grep 'fdcache mbs ' vlog$PORT1 #$FDCACHE_MBS
-grep 'prefetch fds ' vlog$PORT1 #$PREFETCH_FDS
-grep 'prefetch mbs ' vlog$PORT1 #$PREFETCH_MBS
+grep 'fdcache fds '$FDCACHE_FDS vlog$PORT1
+grep 'fdcache mbs '$FDCACHE_MBS vlog$PORT1
+grep 'prefetch fds '$PREFETCH_FDS vlog$PORT1
+grep 'prefetch mbs '$PREFETCH_MBS vlog$PORT1
+
 # search the vlog to find what metric counts should be and check the correct metrics
 # were incrimented
 enqueue_nr=$(grep -c 'interned.*front=1' vlog$PORT1 || true)

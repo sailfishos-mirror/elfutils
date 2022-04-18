@@ -70,12 +70,6 @@ wait_ready $PORT1 'thread_work_total{role="traverse"}' 2
 wait_ready $PORT1 'thread_work_pending{role="scan"}' 0
 wait_ready $PORT1 'thread_busy{role="scan"}' 0
 
-cp -rvp ${abs_srcdir}/debuginfod-rpms R
-if [ "$zstd" = "false" ]; then  # nuke the zstd fedora 31 ones
-    rm -vrf R/debuginfod-rpms/fedora31
-fi
-
-tempfiles vlog3
 cp -rvp ${abs_srcdir}/debuginfod-tars Z
 kill -USR1 $PID1
 # Wait till both files are in the index and scan/index fully finished
@@ -86,7 +80,7 @@ wait_ready $PORT1 'thread_busy{role="scan"}' 0
 # All rpms need to be in the index, except the dummy permission-000 one
 rpms=$(find R -name \*rpm | grep -v nothing | wc -l)
 wait_ready $PORT1 'scanned_files_total{source=".rpm archive"}' $rpms
-txz=$(find Z -name \*tar.xz | wc -l)
+RPM_BUILDID=d44d42cbd7d915bc938c81333a21e355a6022fb7 # in rhel6/ subdir, for a later test
 
 kill -USR1 $PID1  # two hits of SIGUSR1 may be needed to resolve .debug->dwz->srefs
 # Wait till both files are in the index and scan/index fully finished
@@ -94,51 +88,9 @@ wait_ready $PORT1 'thread_work_total{role="traverse"}' 4
 wait_ready $PORT1 'thread_work_pending{role="scan"}' 0
 wait_ready $PORT1 'thread_busy{role="scan"}' 0
 
-# Expect all source files found in the rpms (they are all called hello.c :)
-# We will need to extract all rpms (in their own directory) and could all
-# sources referenced in the .debug files.
-mkdir extracted
-cd extracted
-subdir=0;
-newrpms=$(find ../R -name \*\.rpm | grep -v nothing)
-for i in $newrpms; do
-    subdir=$[$subdir+1];
-    mkdir $subdir;
-    cd $subdir;
-    ls -lah ../$i
-    rpm2cpio ../$i | cpio -ivd;
-    cd ..;
-done
-sourcefiles=$(find -name \*\\.debug \
-              | env LD_LIBRARY_PATH=$ldpath xargs \
-                ${abs_top_builddir}/src/readelf --debug-dump=decodedline \
-              | grep mtime: | wc --lines)
-cd ..
-rm -rf extracted
-
-wait_ready $PORT1 'found_sourcerefs_total{source=".rpm archive"}' $sourcefiles
-
 export DEBUGINFOD_URLS=http://127.0.0.1:$PORT1
-
-# common source file sha1
-SHA=f4a1a8062be998ae93b8f1cd744a398c6de6dbb1
-# fedora31
-if [ $zstd = true ]; then
-    # fedora31 uses zstd compression on rpms, older rpm2cpio/libarchive can't handle it
-    # and we're not using the fancy -Z '.rpm=(rpm2cpio|zstdcat)<' workaround in this testsuite
-    archive_test 420e9e3308971f4b817cc5bf83928b41a6909d88 /usr/src/debug/hello3-1.0-2.x86_64/foobar////./../hello.c $SHA
-    archive_test 87c08d12c78174f1082b7c888b3238219b0eb265 /usr/src/debug/hello3-1.0-2.x86_64///foobar/./..//hello.c $SHA
-fi
-# fedora30
-archive_test c36708a78618d597dee15d0dc989f093ca5f9120 /usr/src/debug/hello2-1.0-2.x86_64/hello.c $SHA
-archive_test 41a236eb667c362a1c4196018cc4581e09722b1b /usr/src/debug/hello2-1.0-2.x86_64/hello.c $SHA
-# rhel7
-archive_test bc1febfd03ca05e030f0d205f7659db29f8a4b30 /usr/src/debug/hello-1.0/hello.c $SHA
-archive_test f0aa15b8aba4f3c28cac3c2a73801fefa644a9f2 /usr/src/debug/hello-1.0/hello.c $SHA
-# rhel6
-archive_test bbbf92ebee5228310e398609c23c2d7d53f6e2f9 /usr/src/debug/hello-1.0/hello.c $SHA
-archive_test d44d42cbd7d915bc938c81333a21e355a6022fb7 /usr/src/debug/hello-1.0/hello.c $SHA
-RPM_BUILDID=d44d42cbd7d915bc938c81333a21e355a6022fb7 # in rhel6/ subdir
+# Check to see if the buildid is accounted for
+testrun ${abs_top_builddir}/debuginfod/debuginfod-find executable $RPM_BUILDID
 
 # Drop some of the artifacts, run a groom cycle; confirm that
 # debuginfod has forgotten them, but remembers others
@@ -158,7 +110,7 @@ rm -rf $DEBUGINFOD_CACHE_PATH # clean it from previous tests
 testrun ${abs_top_builddir}/debuginfod/debuginfod-find executable $RPM_BUILDID && false || true
 
 # but this one was not deleted so should be still around
-testrun ${abs_top_builddir}/debuginfod/debuginfod-find executable $BUILDID || true
+testrun ${abs_top_builddir}/debuginfod/debuginfod-find executable $BUILDID
 
 kill $PID1
 wait $PID1

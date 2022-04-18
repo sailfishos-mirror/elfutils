@@ -73,7 +73,7 @@ PID1=0
 # Test to ensure that the --include="^$" --exclude=".*" options remove all files from a database backup
 #
 env LD_LIBRARY_PATH=$ldpath ${abs_builddir}/../debuginfod/debuginfod \
-    $VERBOSE -p $PORT2 -t0 -g0 --regex-groom --include="^$" --exclude=".*" -d ${DB}.backup > vlog$PORT2 2>&1 &
+    $VERBOSE -p $PORT2 -t0 -g0 --regex-groom --include="^$" --exclude=".*" -d ${DB} > vlog$PORT2 2>&1 &
 
 #reuse PID1
 PID1=$!
@@ -98,4 +98,3 @@ wait $PID1
 PID1=0
 
 exit 0;
-

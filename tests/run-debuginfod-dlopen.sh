@@ -32,7 +32,7 @@ DB=${PWD}/.debuginfod_tmp.sqlite
 tempfiles $DB
 export DEBUGINFOD_CACHE_PATH=${PWD}/.client_cache
 
-env LD_LIBRARY_PATH=$ldpath DEBUGINFOD_URLS= ${abs_builddir}/../debuginfod/debuginfod -F -R $VERBOSE -p $PORT1 -d $DB \
+env LD_LIBRARY_PATH=$ldpath DEBUGINFOD_URLS= ${abs_builddir}/../debuginfod/debuginfod -F $VERBOSE -p $PORT1 -d $DB \
     -t0 -g0 -v F > vlog$PORT1 2>&1 &
 PID1=$!
 tempfiles vlog$PORT1
@@ -51,9 +51,6 @@ ps -q $PID1 -e -L -o '%p %c %a' | grep traverse
 # Make sure the initial scan has finished.
 # Before moving files under the scan dirs.
 wait_ready $PORT1 'thread_work_total{role="traverse"}' 1
-
-# We use -t0 and -g0 here to turn off time-based scanning & grooming.
-# For testing purposes, we just sic SIGUSR1 / SIGUSR2 at the process.
 
 ########################################################################
 
@@ -87,5 +84,4 @@ testrun ${abs_builddir}/debuginfod_build_id_find -e F/p+r%o\$g 1
 kill $PID1
 wait $PID1
 PID1=0
-
 exit 0

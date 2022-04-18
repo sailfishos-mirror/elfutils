@@ -35,8 +35,9 @@ ln -s ${abs_builddir}/dwfllines L/foo   # any program not used elsewhere in this
 # set base to a unique multiple of 100 not used in any other 'run-debuginfod-*' test
 base=8900
 get_ports
+
 # Launch server which will be unable to follow symlinks
-env LD_LIBRARY_PATH=$ldpath ${abs_builddir}/../debuginfod/debuginfod $VERBOSE -d ${DB} -F -U -t0 -g0 -p $PORT1 L D F > vlog$PORT1 2>&1 &
+env LD_LIBRARY_PATH=$ldpath ${abs_builddir}/../debuginfod/debuginfod $VERBOSE -d ${DB} -F -U -t0 -g0 -p $PORT1 L F D > vlog$PORT1 2>&1 &
 PID1=$!
 tempfiles vlog$PORT1
 errfiles vlog$PORT1
@@ -59,7 +60,6 @@ gcc -Wl,--build-id -g -o prog ${PWD}/foobar///./../prog.c
 testrun ${abs_top_builddir}/src/strip -g -f prog.debug ${PWD}/prog
 BUILDID=`env LD_LIBRARY_PATH=$ldpath ${abs_builddir}/../src/readelf \
           -a prog | grep 'Build ID' | cut -d ' ' -f 7`
-
 mv prog F
 mv prog.debug F
 
@@ -69,14 +69,11 @@ wait_ready $PORT1 'thread_work_total{role="traverse"}' 2
 wait_ready $PORT1 'thread_work_pending{role="scan"}' 0
 wait_ready $PORT1 'thread_busy{role="scan"}' 0
 
-wait_ready $PORT1 'thread_busy{role="http-buildid"}' 0
-wait_ready $PORT1 'thread_busy{role="http-metrics"}' 1
-
 export DEBUGINFOD_CACHE_PATH=${PWD}/.client_cache2
 mkdir -p $DEBUGINFOD_CACHE_PATH
 
 # NB: run in -L symlink-following mode for the L subdir
-env LD_LIBRARY_PATH=$ldpath DEBUGINFOD_URLS=http://127.0.0.1:$PORT1 ${abs_builddir}/../debuginfod/debuginfod $VERBOSE -d ${DB}_2 -F -U -p $PORT2 -L L D > vlog$PORT2 2>&1 &
+env LD_LIBRARY_PATH=$ldpath DEBUGINFOD_URLS=http://127.0.0.1:$PORT1 ${abs_builddir}/../debuginfod/debuginfod $VERBOSE -d ${DB}_2 -F -U -p $PORT2 -L L D F > vlog$PORT2 2>&1 &
 PID2=$!
 tempfiles vlog$PORT2
 errfiles vlog$PORT2
@@ -91,9 +88,6 @@ kill -USR1 $PID2
 wait_ready $PORT2 'thread_work_total{role="traverse"}' 2
 wait_ready $PORT2 'thread_work_pending{role="scan"}' 0
 wait_ready $PORT2 'thread_busy{role="scan"}' 0
-
-wait_ready $PORT2 'thread_busy{role="http-buildid"}' 0
-wait_ready $PORT2 'thread_busy{role="http-metrics"}' 1
 
 # have clients contact the new server
 export DEBUGINFOD_URLS=http://127.0.0.1:$PORT2
@@ -121,13 +115,6 @@ fi
 
 testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $BUILDID
 
-# send a request to stress XFF and User-Agent federation relay;
-# we'll grep for the two patterns in vlog$PORT1
-curl -s -H 'User-Agent: TESTCURL' -H 'X-Forwarded-For: TESTXFF' $DEBUGINFOD_URLS/buildid/deaddeadbeef00000000/debuginfo -o /dev/null || true
-
-grep UA:TESTCURL vlog$PORT1
-grep XFF:TESTXFF vlog$PORT1
-
 # confirm that first server can't resolve symlinked info in L/ but second can
 BUILDID=`env LD_LIBRARY_PATH=$ldpath ${abs_builddir}/../src/readelf \
          -a L/foo | grep 'Build ID' | cut -d ' ' -f 7`
@@ -151,7 +138,6 @@ testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $BUILDID
 # test parallel queries in client
 rm -rf $DEBUGINFOD_CACHE_PATH
 export DEBUGINFOD_URLS="BAD http://127.0.0.1:$PORT1 127.0.0.1:$PORT1 http://127.0.0.1:$PORT2 DNE"
-
 testrun ${abs_builddir}/debuginfod_build_id_find -e F/prog 1
 
 kill $PID1
@@ -160,5 +146,4 @@ wait $PID1
 wait $PID2
 PID1=0
 PID2=0
-
 exit 0

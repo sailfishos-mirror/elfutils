@@ -54,11 +54,8 @@ env LD_LIBRARY_PATH=$ldpath DEBUGINFOD_RETRY_LIMIT=1 DEBUGINFOD_URLS="http://127
     ${abs_top_builddir}/debuginfod/debuginfod-find -v executable ${PWD}/prog 2> find-vlog$PORT1 || true
 tempfiles find-vlog$PORT1
 errfiles  find-vlog$PORT1
-echo "Checking maxsize"
 grep "using max size 1B" find-vlog$PORT1
-echo "Checking maxsize"
 grep 'serving file '$(realpath ${PWD})'/prog' vlog$PORT1
-echo "Checking maxsize"
 grep 'File too large' vlog$PORT1
 if [ -f ${DEBUGINFOD_CACHE_PATH}/${BUILDID} ]; then
   echo "File cached after maxsize check"
@@ -74,7 +71,6 @@ if [ -f ${DEBUGINFOD_CACHE_PATH}/${BUILDID} ]; then
   echo "File cached after maxtime check"
   err
 fi
-
 kill $PID1
 wait $PID1
 PID1=0

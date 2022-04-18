@@ -29,7 +29,7 @@ retry_attempts=`(testrun env DEBUGINFOD_URLS=http://255.255.255.255/JUNKJUNK DEB
         | grep -c 'Retry failed query'`
 if [ $retry_attempts -ne 10 ]; then
     echo "retry mechanism failed."
-    exit 1;
+    err
 fi
 
 exit 0;

@@ -48,11 +48,11 @@ wait_ready $PORT1 'thread_work_total{role="traverse"}' 1
 wait_ready $PORT1 'thread_work_pending{role="scan"}' 0
 wait_ready $PORT1 'thread_busy{role="scan"}' 0
 rm -rf $DEBUGINFOD_CACHE_PATH # clean it from previous tests
-ls F
+
+
 env DEBUGINFOD_CACHE_PATH=${PWD}/.client_cache DEBUGINFOD_URLS="http://127.0.0.1:$PORT1" \
-    LD_LIBRARY_PATH=$ldpath ${abs_top_builddir}/debuginfod/debuginfod-find -vvv source F/p++r\$\#o^^g ${abs_builddir}/F/p++r\$\#o^^g.c > vlog1 2>&1 || true
-tempfiles vlog1
-grep 'F/p%2B%2Br%24%23o%5E%5Eg.c' vlog1
+    LD_LIBRARY_PATH=$ldpath ${abs_top_builddir}/debuginfod/debuginfod-find -vvv source F/p++r\$\#o^^g ${abs_builddir}/F/p++r\$\#o^^g.c > vlog$PORT1 2>&1 || true
+grep 'F/p%2B%2Br%24%23o%5E%5Eg.c' vlog$PORT1
 
 kill $PID1
 wait $PID1

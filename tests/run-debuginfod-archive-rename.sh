@@ -61,9 +61,6 @@ wait_ready $PORT1 'thread_work_total{role="traverse"}' 2
 wait_ready $PORT1 'thread_work_pending{role="scan"}' 0
 wait_ready $PORT1 'thread_busy{role="scan"}' 0
 
-# common source file sha1
-SHA=f4a1a8062be998ae93b8f1cd744a398c6de6dbb1
-
 ########################################################################
 ## PR26810: Now rename some files in the R directory, then rescan, so
 # there are two copies of the same buildid in the index, one for the
@@ -88,14 +85,6 @@ kill -USR1 $PID1  # scan cycle
 wait_ready $PORT1 'thread_work_total{role="traverse"}' 5
 wait_ready $PORT1 'thread_work_pending{role="scan"}' 0
 wait_ready $PORT1 'thread_busy{role="scan"}' 0
-
-export DEBUGINFOD_URLS=http://127.0.0.1:$PORT1
-
-# retest rhel7
-archive_test bc1febfd03ca05e030f0d205f7659db29f8a4b30 /usr/src/debug/hello-1.0/hello.c $SHA
-archive_test f0aa15b8aba4f3c28cac3c2a73801fefa644a9f2 /usr/src/debug/hello-1.0/hello.c $SHA
-
-egrep '(libc.error.*rhel7)|(bc1febfd03ca)|(f0aa15b8aba)' vlog$PORT1
 
 kill $PID1
 wait $PID1

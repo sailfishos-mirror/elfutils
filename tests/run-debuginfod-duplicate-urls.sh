@@ -31,7 +31,7 @@ tempfiles $DB
 export DEBUGINFOD_CACHE_PATH=${PWD}/.client_cache
 
 env LD_LIBRARY_PATH=$ldpath ${abs_builddir}/../debuginfod/debuginfod \
-    $VERBOSE -F -p $PORT1 -t0 -g0 -d ${DB} F > vlog$PORT1 2>&1 &
+    $VERBOSE -p $PORT1 -t0 -g0 -d ${DB} > vlog$PORT1 2>&1 &
 PID1=$!
 tempfiles vlog$PORT1
 errfiles vlog$PORT1
@@ -44,7 +44,6 @@ rm -rf $DEBUGINFOD_CACHE_PATH # clean it from previous tests
 env DEBUGINFOD_URLS="http://127.0.0.1:$PORT1 http://127.0.0.1:$PORT1 http://127.0.0.1:$PORT1 http://127.0.0.1:7999" \
  LD_LIBRARY_PATH=$ldpath ${abs_top_builddir}/debuginfod/debuginfod-find -vvv executable 0 > vlog1 2>&1 || true
 tempfiles vlog1
-cat vlog1
 if [ $( grep -c 'duplicate url: http://127.0.0.1:'$PORT1'.*' vlog1 ) -ne 2 ]; then
   echo "Duplicate servers remain";
   err

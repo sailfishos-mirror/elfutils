@@ -50,10 +50,8 @@ errfiles vlog$PORT2
 
 wait_ready $PORT2 'ready' 1
 
-# Wait for first server to finish indexing
+# Wait for first server to finish traversing (no signal to groom/scan yet
 wait_ready $PORT1 'thread_work_total{role="traverse"}' 1
-wait_ready $PORT1 'thread_work_pending{role="scan"}' 0
-wait_ready $PORT1 'thread_busy{role="scan"}' 0
 
 # No similar metrics for the passive server
 ! (curl http://localhost:$PORT2/metrics | egrep 'role="scan"|role="groom"|role="traverse"')
@@ -61,17 +59,17 @@ wait_ready $PORT1 'thread_busy{role="scan"}' 0
 # Confirm no active threads
 ! (ps -q $PID2 -e -L -o '%p %c %a' | egrep 'scan|groom|traverse')
 
-# Do a random lookup via passive server
+# Do a random lookup via active and passiver server, ensure active succeeds and passive fails
+env LD_LIBRARY_PATH=$ldpath DEBUGINFOD_URLS=http://localhost:$PORT1 ${abs_builddir}/../debuginfod/debuginfod-find debuginfo cee13b2ea505a7f37bd20d271c6bc7e5f8d2dfcb
+grep "GET /buildid/cee13b2ea505a7f37bd20d271c6bc7e5f8d2dfcb/debuginfo 200" vlog$PORT1
 env LD_LIBRARY_PATH=$ldpath DEBUGINFOD_URLS=http://localhost:$PORT2 ${abs_builddir}/../debuginfod/debuginfod-find debuginfo cee13b2ea505a7f37bd20d271c6bc7e5f8d2dfcb
-
-tempfiles $DB*
+! (grep "GET /buildid/cee13b2ea505a7f37bd20d271c6bc7e5f8d2dfcb/debuginfo 200" vlog$PORT2)
 
 kill $PID1
-wait $PID1
-PID1=0
-
 kill $PID2
+wait $PID1
 wait $PID2
+PID1=0
 PID2=0
 
 exit 0
