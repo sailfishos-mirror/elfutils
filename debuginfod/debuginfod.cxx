@@ -3826,6 +3826,15 @@ main (int argc, char *argv[])
       error (EXIT_FAILURE, 0,
              "unexpected argument: %s", argv[remaining]);
 
+  // Make the prefetch cache spaces smaller than the normal
+  // fd cache if rpm scanning is on. This is to not waste memory
+  // since the prefetch cache isn't used when -R isn't specified
+  // Set to 1/2 arbitrarily
+  if ( fdcache_prefetch_fds == 0 )
+    fdcache_prefetch_fds = fdcache_fds * .5;
+  if ( fdcache_prefetch_mbs == 0 )
+    fdcache_prefetch_mbs = fdcache_mbs * .5;
+
   if (scan_archives.size()==0 && !scan_files && source_paths.size()>0)
     obatched(clog) << "warning: without -F -R -U -Z, ignoring PATHs" << endl;
 
