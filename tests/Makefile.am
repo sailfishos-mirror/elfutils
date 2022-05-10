@@ -61,6 +61,7 @@ check_PROGRAMS = arextract arsymtest newfile saridx scnnames sectiondump \
 		  dwelf_elf_e_machine_string \
 		  getphdrnum leb128 read_unaligned \
 		  msg_tst system-elf-libelf-test \
+		  nvidia_extended_linemap_libdw \
 		  $(asm_TESTS)
 
 asm_TESTS = asm-tst1 asm-tst2 asm-tst3 asm-tst4 asm-tst5 \
@@ -86,7 +87,13 @@ endif
 
 # test_nlist checks its own symbol table, and expects various symbols
 # to be in the order as specified in the source file. Explicitly set
-# minimal CFLAGS
+# minimal CFLAGS. But add address sanitizer if in use.
+if USE_ADDRESS_SANITIZER
+EXTRA_NLIST_CFLAGS=-fsanitize=address
+else
+EXTRA_NLIST_CFLAGS=
+endif
+
 test-nlist$(EXEEXT): test-nlist.c
 	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	  $(AM_CPPFLAGS) $(CPPFLAGS) \
@@ -138,11 +145,11 @@ TESTS = run-arextract.sh run-arsymtest.sh run-ar.sh newfile test-nlist \
 	run-low_high_pc.sh run-macro-test.sh run-elf_cntl_gelf_getshdr.sh \
 	run-test-archive64.sh run-readelf-vmcoreinfo.sh \
 	run-readelf-mixed-corenote.sh run-dwfllines.sh \
-	run-readelf-variant.sh \
+	run-readelf-variant.sh run-readelf-fat-lto.sh \
 	run-dwfl-report-elf-align.sh run-addr2line-test.sh \
 	run-addr2line-i-test.sh run-addr2line-i-lex-test.sh \
 	run-addr2line-i-demangle-test.sh run-addr2line-alt-debugpath.sh \
-	run-varlocs.sh run-exprlocs.sh run-funcretval.sh \
+	run-varlocs.sh run-exprlocs.sh run-varlocs-vars.sh run-funcretval.sh \
 	run-backtrace-native.sh run-backtrace-data.sh run-backtrace-dwarf.sh \
 	run-backtrace-native-biarch.sh run-backtrace-native-core.sh \
 	run-backtrace-native-core-biarch.sh run-backtrace-core-x86_64.sh \
@@ -157,6 +164,7 @@ TESTS = run-arextract.sh run-arsymtest.sh run-ar.sh newfile test-nlist \
 	run-backtrace-demangle.sh run-stack-d-test.sh run-stack-i-test.sh \
 	run-stack-demangled-test.sh run-readelf-zx.sh run-readelf-zp.sh \
 	run-readelf-addr.sh run-readelf-str.sh \
+	run-readelf-multi-noline.sh \
 	run-readelf-types.sh \
 	run-readelf-dwz-multi.sh run-allfcts-multi.sh run-deleted.sh \
 	run-linkmap-cut.sh run-aggregate-size.sh run-peel-type.sh \
@@ -186,7 +194,8 @@ TESTS = run-arextract.sh run-arsymtest.sh run-ar.sh newfile test-nlist \
 	leb128 read_unaligned \
 	msg_tst system-elf-libelf-test \
 	$(asm_TESTS) run-disasm-bpf.sh run-low_high_pc-dw-form-indirect.sh \
-	run-readelf-dw-form-indirect.sh
+	run-nvidia-extended-linemap-libdw.sh run-nvidia-extended-linemap-readelf.sh \
+	run-readelf-dw-form-indirect.sh run-strip-largealign.sh
 
 if !BIARCH
 export ELFUTILS_DISABLE_BIARCH = 1
@@ -208,7 +217,31 @@ if DEBUGINFOD
 check_PROGRAMS += debuginfod_build_id_find
 # With the dummy delegation doesn't work
 if !DUMMY_LIBDEBUGINFOD
-TESTS += run-debuginfod-find.sh
+TESTS += run-debuginfod-dlopen.sh \
+	 run-debuginfod-artifact-running.sh \
+	 run-debuginfod-fd-prefetch-caches.sh \
+	 run-debuginfod-regex.sh \
+	 run-debuginfod-duplicate-urls.sh \
+	 run-debuginfod-file.sh \
+	 run-debuginfod-sizetime.sh \
+	 run-debuginfod-malformed.sh \
+	 run-debuginfod-negative-cache.sh \
+	 run-debuginfod-tmp-home.sh \
+	 run-debuginfod-writable.sh \
+	 run-debuginfod-no-urls.sh \
+	 run-debuginfod-query-retry.sh \
+	 run-debuginfod-extraction.sh \
+	 run-debuginfod-archive-groom.sh \
+	 run-debuginfod-archive-rename.sh \
+	 run-debuginfod-archive-test.sh \
+	 run-debuginfod-federation-sqlite.sh \
+	 run-debuginfod-federation-link.sh \
+	 run-debuginfod-federation-metrics.sh \
+         run-debuginfod-percent-escape.sh \
+         run-debuginfod-x-forwarded-for.sh \
+         run-debuginfod-response-headers.sh \
+         run-debuginfod-extraction-passive.sh \
+	 run-debuginfod-webapi-concurrency.sh
 endif
 endif
 
@@ -277,7 +310,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     testfile21.bz2 testfile21.index.bz2 \
 	     testfile22.bz2 testfile23.bz2 testfile24.bz2 testfile25.bz2 \
 	     testfile26.bz2 testfile27.bz2 \
-	     coverage.sh test-subr.sh test-wrapper.sh \
+	     coverage.sh test-subr.sh test-wrapper.sh debuginfod-subr.sh \
 	     run-readelf-test1.sh run-readelf-test2.sh run-readelf-test3.sh \
 	     run-readelf-test4.sh run-readelf-twofiles.sh \
 	     run-bug1-test.sh testfile28.bz2 testfile28.rdwr.bz2 \
@@ -309,6 +342,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     testfile_multi.dwz.bz2 testfile_multi_main.bz2 \
 	     testfile-dwzstr.bz2 testfile-dwzstr.multi.bz2 \
 	     run-readelf-addr.sh run-readelf-str.sh \
+	     run-readelf-multi-noline.sh testfile_multi_noline.bz2 \
 	     run-readelf-types.sh \
 	     run-readelf-frames.sh \
 	     run-readelf-n.sh \
@@ -353,6 +387,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     testfilebazminppc64.bz2 testfilebazminppc64_pl.bz2 \
 	     testfilebazminppc64_plr.bz2 testfilebaztabppc64.bz2 \
 	     run-readelf-variant.sh testfile-ada-variant.bz2 \
+	     run-readelf-fat-lto.sh testfile-dwarf5-fat-lto.o.bz2 \
 	     run-dwflsyms.sh \
 	     run-unstrip-n.sh testcore-rtlib.bz2 testcore-rtlib-ppc.bz2 \
 	     run-low_high_pc.sh testfile_low_high_pc.bz2 \
@@ -375,7 +410,16 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     testfileppc32.bz2 testfileppc64.bz2 \
 	     testfiles390.bz2 testfiles390x.bz2 \
 	     testfilearm.bz2 testfileaarch64.bz2 \
-	     run-varlocs.sh run-exprlocs.sh testfile-stridex.bz2 \
+	     run-varlocs.sh run-exprlocs.sh run-varlocs-vars.sh \
+	     testfile-vars-clang-dwarf4-32.o.bz2 \
+	     testfile-vars-clang-dwarf4-64.o.bz2 \
+	     testfile-vars-clang-dwarf5-32.o.bz2 \
+	     testfile-vars-clang-dwarf5-64.o.bz2 \
+	     testfile-vars-gcc-dwarf4-32.o.bz2 \
+	     testfile-vars-gcc-dwarf4-64.o.bz2 \
+	     testfile-vars-gcc-dwarf5-32.o.bz2 \
+	     testfile-vars-gcc-dwarf5-64.o.bz2 \
+	     testfile-stridex.bz2 \
 	     testfile_const_type.c testfile_const_type.bz2 \
 	     testfile_implicit_pointer.c testfile_implicit_pointer.bz2 \
 	     testfile_parameter_ref.c testfile_parameter_ref.bz2 \
@@ -470,7 +514,31 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     run-elfclassify.sh run-elfclassify-self.sh \
 	     run-disasm-riscv64.sh \
 	     testfile-riscv64-dis1.o.bz2 testfile-riscv64-dis1.expect.bz2 \
-             run-debuginfod-find.sh \
+             run-debuginfod-extraction.sh \
+             run-debuginfod-federation-link.sh \
+             run-debuginfod-federation-metrics.sh \
+             run-debuginfod-artifact-running.sh \
+             run-debuginfod-federation-sqlite.sh \
+             run-debuginfod-x-forwarded-for.sh \
+	     run-debuginfod-fd-prefetch-caches.sh \
+	     run-debuginfod-regex.sh \
+	     run-debuginfod-duplicate-urls.sh \
+	     run-debuginfod-file.sh \
+	     run-debuginfod-sizetime.sh \
+	     run-debuginfod-dlopen.sh \
+	     run-debuginfod-malformed.sh \
+	     run-debuginfod-negative-cache.sh \
+	     run-debuginfod-tmp-home.sh \
+	     run-debuginfod-writable.sh \
+	     run-debuginfod-no-urls.sh \
+	     run-debuginfod-query-retry.sh \
+	     run-debuginfod-archive-groom.sh \
+	     run-debuginfod-archive-rename.sh \
+             run-debuginfod-archive-test.sh \
+             run-debuginfod-percent-escape.sh \
+	     run-debuginfod-response-headers.sh \
+             run-debuginfod-extraction-passive.sh \
+             run-debuginfod-webapi-concurrency.sh \
 	     debuginfod-rpms/fedora30/hello2-1.0-2.src.rpm \
 	     debuginfod-rpms/fedora30/hello2-1.0-2.x86_64.rpm \
 	     debuginfod-rpms/fedora30/hello2-debuginfo-1.0-2.x86_64.rpm \
@@ -507,7 +575,10 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     testfile_pt_gnu_prop.bz2 testfile_pt_gnu_prop32.bz2 \
 	     run-getphdrnum.sh testfile-phdrs.elf.bz2 \
 	     run-test-includes.sh run-low_high_pc-dw-form-indirect.sh \
-	     run-readelf-dw-form-indirect.sh testfile-dw-form-indirect.bz2
+	     run-readelf-dw-form-indirect.sh testfile-dw-form-indirect.bz2 \
+	     run-nvidia-extended-linemap-libdw.sh run-nvidia-extended-linemap-readelf.sh \
+	     testfile_nvidia_linemap.bz2 \
+	     testfile-largealign.o.bz2 run-strip-largealign.sh
 
 
 if USE_VALGRIND
@@ -570,7 +641,7 @@ scnnames_LDADD = $(libelf)
 sectiondump_LDADD = $(libelf)
 showptable_LDADD = $(libelf)
 hash_LDADD = $(libelf)
-test_nlist_CFLAGS =-g -O0
+test_nlist_CFLAGS =-g -O0 $(EXTRA_NLIST_CFLAGS)
 test_nlist_LDADD = $(libelf)
 msg_tst_LDADD = $(libelf)
 newscn_LDADD = $(libelf)
@@ -653,7 +724,7 @@ strptr_LDADD = $(libelf)
 newdata_LDADD = $(libelf)
 elfstrtab_LDADD = $(libelf)
 dwfl_proc_attach_LDADD = $(libdw)
-dwfl_proc_attach_LDFLAGS = -pthread $(AM_LDFLAGS)
+dwfl_proc_attach_LDFLAGS = -pthread -rdynamic $(AM_LDFLAGS)
 elfshphehdr_LDADD =$(libelf)
 elfstrmerge_LDADD = $(libdw) $(libelf)
 dwelfgnucompressed_LDADD = $(libelf) $(libdw)
@@ -681,6 +752,7 @@ dwelf_elf_e_machine_string_LDADD = $(libelf) $(libdw)
 getphdrnum_LDADD = $(libelf) $(libdw)
 leb128_LDADD = $(libelf) $(libdw)
 read_unaligned_LDADD = $(libelf) $(libdw)
+nvidia_extended_linemap_libdw_LDADD = $(libelf) $(libdw)
 
 # We want to test the libelf header against the system elf.h header.
 # Don't include any -I CPPFLAGS. Except when we install our own elf.h.

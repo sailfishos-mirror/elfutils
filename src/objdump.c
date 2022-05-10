@@ -100,8 +100,8 @@ static int handle_elf (Elf *elf, const char *prefix, const char *fname,
 
 
 #define INTERNAL_ERROR(fname) \
-  error (EXIT_FAILURE, 0, _("%s: INTERNAL ERROR %d (%s): %s"),      \
-	 fname, __LINE__, PACKAGE_VERSION, elf_errmsg (-1))
+  error_exit (0, _("%s: INTERNAL ERROR %d (%s): %s"),      \
+	      fname, __LINE__, PACKAGE_VERSION, elf_errmsg (-1))
 
 
 /* List of sections which should be used.  */
@@ -255,7 +255,7 @@ process_file (const char *fname, bool more_than_one)
 	    INTERNAL_ERROR (fname);
 
 	  if (close (fd) != 0)
-	    error (EXIT_FAILURE, errno, _("while close `%s'"), fname);
+	    error_exit (errno, _("while close `%s'"), fname);
 
 	  return result;
 	}
@@ -267,7 +267,7 @@ process_file (const char *fname, bool more_than_one)
 	    INTERNAL_ERROR (fname);
 
 	  if (close (fd) != 0)
-	    error (EXIT_FAILURE, errno, _("while close `%s'"), fname);
+	    error_exit (errno, _("while close `%s'"), fname);
 
 	  return result;
 	}
@@ -684,7 +684,7 @@ show_disasm (Ebl *ebl, const char *fname, uint32_t shstrndx)
 {
   DisasmCtx_t *ctx = disasm_begin (ebl, ebl->elf, NULL /* XXX TODO */);
   if (ctx == NULL)
-    error (EXIT_FAILURE, 0, _("cannot disassemble"));
+    error_exit (0, _("cannot disassemble"));
 
   Elf_Scn *scn = NULL;
   while ((scn = elf_nextscn (ebl->elf, scn)) != NULL)
@@ -717,15 +717,14 @@ show_disasm (Ebl *ebl, const char *fname, uint32_t shstrndx)
 	      info.address_color = color_address;
 	      info.bytes_color = color_bytes;
 
-	      if (asprintf (&fmt, "%s%%7m %s%%.1o,%s%%.2o,%s%%.3o,,%s%%.4o%s%%.5o%%34a %s%%l",
-			    color_mnemonic ?: "",
-			    color_operand1 ?: "",
-			    color_operand2 ?: "",
-			    color_operand3 ?: "",
-                            color_operand4 ?: "",
-                            color_operand5 ?: "",
-			    color_label ?: "") < 0)
-		error (EXIT_FAILURE, errno, _("cannot allocate memory"));
+	      fmt = xasprintf ("%s%%7m %s%%.1o,%s%%.2o,%s%%.3o,,%s%%.4o%s%%.5o%%34a %s%%l",
+			       color_mnemonic ?: "",
+			       color_operand1 ?: "",
+			       color_operand2 ?: "",
+			       color_operand3 ?: "",
+			       color_operand4 ?: "",
+			       color_operand5 ?: "",
+			       color_label ?: "");
 	    }
 	  else
 	    {
@@ -756,8 +755,7 @@ handle_elf (Elf *elf, const char *prefix, const char *fname,
   /* Get the backend for this object file type.  */
   Ebl *ebl = ebl_openbackend (elf);
   if (ebl == NULL)
-    error (EXIT_FAILURE, 0,
-	   _("cannot create backend for elf file"));
+    error_exit (0, _("cannot create backend for elf file"));
 
   printf ("%s: elf%d-%s\n\n",
 	  fname, gelf_getclass (elf) == ELFCLASS32 ? 32 : 64,
@@ -778,8 +776,7 @@ handle_elf (Elf *elf, const char *prefix, const char *fname,
   /* Get the section header string table index.  */
   size_t shstrndx;
   if (elf_getshdrstrndx (ebl->elf, &shstrndx) < 0)
-    error (EXIT_FAILURE, 0,
-	   _("cannot get section header string table index"));
+    error_exit (0, _("cannot get section header string table index"));
 
   int result = 0;
   if (print_disasm)

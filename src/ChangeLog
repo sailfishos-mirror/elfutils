@@ -1,3 +1,114 @@
+2022-04-24  Mark Wielaard  <mark@klomp.org>
+
+	* elfclassify.c (main): Use classify_flag_no_stdin for no-std in options.
+
+2022-04-19  Mark Wielaard  <mark@klomp.org>
+
+	* readelf.c (get_dyn_ents): Define dyn_mem outside the while loop.
+
+2022-03-01  Di Chen  <dichen@redhat.com>
+
+	* readelf.c (get_dyn_ents): New function.
+	(handle_dynamic): Use get_dyn_ents to get the actual number of
+	Dynamic entries in the section.
+
+2022-03-27  Mark Wielaard  <mark@klomp.org>
+
+	* addr2line.c: Replace error (EXIT_FAILURE, ...) with error_exit(...).
+	* ar.c: Likewise.
+	* arlib.c: Likewise.
+	* elfcompress.c: Likewise.
+	* nm.c: Likewise.
+	* objdump.c: Likewise.
+	* readelf.c: Likewise.
+	* size.c: Likewise.
+	* strings.c: Likewise.
+	* strip.c: Likewise.
+	* unstrip.c: Likewise.
+
+2022-03-24  Mark Wielaard  <mark@klomp.org>
+
+	* elflint.c (check_note_data): Recognize NT_FDO_PACKAGING_METADATA.
+
+2022-03-11  Mark Wielaard  <mark@klomp.org>
+
+	* addr2line.c (OPT_RELATIVE): New constant.
+	(options): Add --relative.
+	(use_comp_dir): Initialize to true.
+	(parse_opt): Handle OPT_RELATIVE.
+
+2021-12-04  Mark Wielaard  <mark@klomp.org>
+
+	* readelf.c (print_ehdr): Pass sizeof (buf) - 1 to strncpy.
+
+2021-10-20  John M Mellor-Crummey  <johnmc@rice.edu>
+
+	* readelf.c (print_debug_line_section): Try to read
+	debug_str_offset if available.  Handle DW_LNE_NVIDIA_inlined_call
+	and DW_LNE_NVIDIA_set_function_name.
+
+2021-10-06  Mark Wielaard  <mark@klomp.org>
+
+	* elflint.c (check_sections): Don't dereference databits if bad.
+
+2021-09-09  Dmitry V. Levin  <ldv@altlinux.org>
+
+	* findtextrel.c: Include "libeu.h".
+	(open_rootdir_file): New function.
+	(process_file): Use it to open file inside rootdir.
+	* Makefile.am (findtextrel_no_Wstack_usage): Remove.
+
+2021-09-06  Dmitry V. Levin  <ldv@altlinux.org>
+
+	* objdump.c (show_disasm): Replace asprintf followed by
+	error(EXIT_FAILURE) with xasprintf.
+	* readelf.c (handle_gnu_hash): Likewise.
+	* unstrip.c (handle_output_dir_module, main): Likewise.
+
+	* elflint.c (check_sections): Remove cast of xcalloc return value.
+	* findtextrel.c (process_file): Remove casts of malloc and realloc
+	return values.
+	* nm.c (get_local_names, show_symbols_sysv, show_symbols): Remove
+	casts of xmalloc return values.
+	* readelf.c (print_hash_info, handle_sysv_hash, handle_sysv_hash64,
+	handle_gnu_hash): Remove cast of xcalloc return value.
+	(print_debug_units): Remove casts of xmalloc return values.
+	* strip.c (handle_elf): Remove casts of xcalloc and xmalloc return
+	values.
+
+2021-09-05  Dmitry V. Levin  <ldv@altlinux.org>
+
+	* Makefile.am (AM_LDFLAGS): Add $(STACK_USAGE_NO_ERROR).
+
+2021-08-20  Saleem Abdulrasool  <abdulras@google.com>
+
+	* elfclassify.c: Remove error.h include.
+
+2021-03-18  Timm Bäder  <tbaeder@redhat.com>
+
+	* readelf.c (run_advance_pc): New static inline function
+	lifted from...
+	(print_debug_line_section): ... here. Define advance_pc
+	using run_advance_pc.
+
+2021-07-03  Mark Wielaard  <mark@klomp.org>
+
+	* readelf.c (compare_listptr): Fix dwarf_attr_name argument.
+
+2021-06-18  Mark Wielaard  <mark@klomp.org>
+
+	* unstrip.c (adjust_relocs): Check gelf_getrel and geld_getrela.
+
+2021-06-18  Mark Wielaard  <mark@klomp.org>
+
+	* strip.c (remove_debug_relocations): Check gelf_update results.
+	(update_section_size): Likewise.
+
+2021-06-06  Sergei Trofimovich  <slyfox@gentoo.org>
+
+	* elflint.c (buffer_left): Mark as 'static' to avoid external linkage
+	failure.
+
 2021-05-12  Dmitry V. Levin  <ldv@altlinux.org>
 
 	* elfcompress.c (process_file): Return 1 instead of -1 in case of an

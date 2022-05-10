@@ -1,5 +1,6 @@
 /* Declarations for common convenience functions.
    Copyright (C) 2006-2011 Red Hat, Inc.
+   Copyright (C) 2022 Mark J. Wielaard <mark@klomp.org>
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -29,8 +30,9 @@
 #ifndef LIB_SYSTEM_H
 #define LIB_SYSTEM_H	1
 
+#include <config.h>
+
 #include <errno.h>
-#include <error.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/param.h>
@@ -38,6 +40,26 @@
 #include <byteswap.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdarg.h>
+#include <stdlib.h>
+
+#if defined(HAVE_ERROR_H)
+#include <error.h>
+#elif defined(HAVE_ERR_H)
+extern int error_message_count;
+void error(int status, int errnum, const char *format, ...);
+#else
+#error "err.h or error.h must be available"
+#endif
+
+/* error (EXIT_FAILURE, ...) should be noreturn but on some systems it
+   isn't.  This may cause warnings about code that should not be reachable.
+   So have an explicit error_exit wrapper that is noreturn (because it
+   calls exit explicitly).  */
+#define error_exit(errnum,...) do { \
+    error (EXIT_FAILURE,errnum,__VA_ARGS__); \
+    exit (EXIT_FAILURE); \
+  } while (0)
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 # define LE32(n)	(n)
@@ -68,6 +90,19 @@
 #if !HAVE_DECL_MEMPCPY
 #define mempcpy(dest, src, n) \
     ((void *) ((char *) memcpy (dest, src, n) + (size_t) n))
+#endif
+
+#if !HAVE_DECL_REALLOCARRAY
+static inline void *
+reallocarray (void *ptr, size_t nmemb, size_t size)
+{
+  if (size > 0 && nmemb > SIZE_MAX / size)
+    {
+      errno = ENOMEM;
+      return NULL;
+    }
+  return realloc (ptr, nmemb * size);
+}
 #endif
 
 /* Return TRUE if the start of STR matches PREFIX, FALSE otherwise.  */

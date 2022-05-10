@@ -844,6 +844,10 @@ enum
     DW_LNE_set_discriminator = 4,
 
     DW_LNE_lo_user = 128,
+
+    DW_LNE_NVIDIA_inlined_call = 144,
+    DW_LNE_NVIDIA_set_function_name = 145,
+
     DW_LNE_hi_user = 255
   };
 
@@ -928,6 +932,19 @@ enum
     DW_LLE_GNU_base_address_selection_entry = 0x1,
     DW_LLE_GNU_start_end_entry = 0x2,
     DW_LLE_GNU_start_length_entry = 0x3
+  };
+
+/* DWARF5 package file section identifiers.  */
+enum
+  {
+    DW_SECT_INFO = 1,
+    /* Reserved = 2, */
+    DW_SECT_ABBREV = 3,
+    DW_SECT_LINE = 4,
+    DW_SECT_LOCLISTS = 5,
+    DW_SECT_STR_OFFSETS = 6,
+    DW_SECT_MACRO = 7,
+    DW_SECT_RNGLISTS = 8,
   };
 
 

@@ -35,7 +35,6 @@
 
 #include <libdw.h>
 #include <dwarf.h>
-#include "atomics.h"
 
 
 /* Known location expressions already decoded.  */
@@ -145,6 +144,16 @@ enum
 
 #include "dwarf_sig8_hash.h"
 
+/* The type of Dwarf object, sorted by preference
+   (if there is a higher order type, we pick that one over the others).  */
+enum dwarf_type
+  {
+    TYPE_UNKNOWN = 0,
+    TYPE_GNU_LTO = 16,
+    TYPE_DWO = 32,
+    TYPE_PLAIN = 64,
+  };
+
 /* This is the structure representing the debugging state.  */
 struct Dwarf
 {
@@ -215,6 +224,8 @@ struct Dwarf
 
   /* Similar for addrx/constx, which will come from .debug_addr section.  */
   struct Dwarf_CU *fake_addr_cu;
+
+  enum dwarf_type type;
 
   /* Supporting lock for internal memory handling.  Ensures threads that have
      an entry in the mem_tails array are not disturbed by new threads doing
@@ -291,6 +302,9 @@ struct Dwarf_Line_s
   unsigned int op_index:8;
   unsigned int isa:8;
   unsigned int discriminator:24;
+  /* These are currently only used for the NVIDIA extensions.  */
+  unsigned int context;
+  unsigned int function_name;
 };
 
 struct Dwarf_Lines_s

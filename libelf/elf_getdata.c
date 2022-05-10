@@ -1,5 +1,6 @@
 /* Return the next data element from the section after possibly converting it.
    Copyright (C) 1998-2005, 2006, 2007, 2015, 2016 Red Hat, Inc.
+   Copyright (C) 2022 Mark J. Wielaard <mark@klomp.org>
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 1998.
 
@@ -77,7 +78,6 @@ static const Elf_Type shtype_map[TYPEIDX (SHT_HISUNW) + 1] =
 const uint_fast8_t __libelf_type_aligns[ELFCLASSNUM - 1][ELF_T_NUM] =
   {
 # define TYPE_ALIGNS(Bits)						      \
-    {									      \
       [ELF_T_ADDR] = __alignof__ (ElfW2(Bits,Addr)),			      \
       [ELF_T_EHDR] = __alignof__ (ElfW2(Bits,Ehdr)),			      \
       [ELF_T_HALF] = __alignof__ (ElfW2(Bits,Half)),			      \
@@ -100,13 +100,17 @@ const uint_fast8_t __libelf_type_aligns[ELFCLASSNUM - 1][ELF_T_NUM] =
       [ELF_T_MOVE] = __alignof__ (ElfW2(Bits,Move)),			      \
       [ELF_T_LIB] = __alignof__ (ElfW2(Bits,Lib)),			      \
       [ELF_T_NHDR] = __alignof__ (ElfW2(Bits,Nhdr)),			      \
-      [ELF_T_GNUHASH] = __alignof__ (Elf32_Word),			      \
       [ELF_T_AUXV] = __alignof__ (ElfW2(Bits,auxv_t)),			      \
       [ELF_T_CHDR] = __alignof__ (ElfW2(Bits,Chdr)),			      \
-      [ELF_T_NHDR8] = 8 /* Special case for GNU Property note.  */	      \
-    }
-      [ELFCLASS32 - 1] = TYPE_ALIGNS (32),
-      [ELFCLASS64 - 1] = TYPE_ALIGNS (64),
+      [ELF_T_NHDR8] = 8 /* Special case for GNU Property note.  */
+    [ELFCLASS32 - 1] =  {
+	TYPE_ALIGNS (32),
+	[ELF_T_GNUHASH] = __alignof__ (Elf32_Word),
+    },
+    [ELFCLASS64 - 1] = {
+	TYPE_ALIGNS (64),
+	[ELF_T_GNUHASH] = __alignof__ (Elf64_Xword),
+    },
 # undef TYPE_ALIGNS
   };
 
@@ -146,7 +150,7 @@ convert_data (Elf_Scn *scn, int eclass,
 	scn->data_base = scn->rawdata_base;
       else
 	{
-	  scn->data_base = (char *) malloc (size);
+	  scn->data_base = malloc (size);
 	  if (scn->data_base == NULL)
 	    {
 	      __libelf_seterrno (ELF_E_NOMEM);
@@ -161,7 +165,7 @@ convert_data (Elf_Scn *scn, int eclass,
     {
       xfct_t fp;
 
-      scn->data_base = (char *) malloc (size);
+      scn->data_base = malloc (size);
       if (scn->data_base == NULL)
 	{
 	  __libelf_seterrno (ELF_E_NOMEM);
@@ -175,7 +179,7 @@ convert_data (Elf_Scn *scn, int eclass,
 	rawdata_source = scn->rawdata_base;
       else
 	{
-	  rawdata_source = (char *) malloc (size);
+	  rawdata_source = malloc (size);
 	  if (rawdata_source == NULL)
 	    {
 	      __libelf_seterrno (ELF_E_NOMEM);
@@ -328,8 +332,7 @@ __libelf_set_rawdata_wrlock (Elf_Scn *scn)
 
 	  /* We have to read the data from the file.  Allocate the needed
 	     memory.  */
-	  scn->rawdata_base = scn->rawdata.d.d_buf
-	    = (char *) malloc (size);
+	  scn->rawdata_base = scn->rawdata.d.d_buf = malloc (size);
 	  if (scn->rawdata.d.d_buf == NULL)
 	    {
 	      __libelf_seterrno (ELF_E_NOMEM);
@@ -384,7 +387,18 @@ __libelf_set_rawdata_wrlock (Elf_Scn *scn)
      which should be uncommon.  */
   align = align ?: 1;
   if (type != SHT_NOBITS && align > offset)
-    align = offset;
+    {
+      /* Align the offset to the next power of two. Uses algorithm from
+         https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2 */
+      align = offset - 1;
+      align |= align >> 1;
+      align |= align >> 2;
+      align |= align >> 4;
+      align |= align >> 8;
+      align |= align >> 16;
+      align |= align >> 32;
+      align++;
+    }
   scn->rawdata.d.d_align = align;
   if (elf->class == ELFCLASS32
       || (offsetof (struct Elf, state.elf32.ehdr)

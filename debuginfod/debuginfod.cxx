@@ -1,5 +1,6 @@
 /* Debuginfo-over-http server.
    Copyright (C) 2019-2021 Red Hat, Inc.
+   Copyright (C) 2021 Mark J. Wielaard <mark@klomp.org>
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -33,11 +34,11 @@
 
 extern "C" {
 #include "printversion.h"
+#include "system.h"
 }
 
 #include "debuginfod.h"
 #include <dwarf.h>
-#include <system.h>
 
 #include <argp.h>
 #ifdef __GNUC__
@@ -46,7 +47,6 @@ extern "C" {
 
 #include <unistd.h>
 #include <stdlib.h>
-#include <error.h>
 #include <libintl.h>
 #include <locale.h>
 #include <pthread.h>
@@ -353,13 +353,16 @@ static const struct argp_option options[] =
    { "rescan-time", 't', "SECONDS", 0, "Number of seconds to wait between rescans, 0=disable.", 0 },
    { "groom-time", 'g', "SECONDS", 0, "Number of seconds to wait between database grooming, 0=disable.", 0 },
    { "maxigroom", 'G', NULL, 0, "Run a complete database groom/shrink pass at startup.", 0 },
-   { "concurrency", 'c', "NUM", 0, "Limit scanning thread concurrency to NUM.", 0 },
+   { "concurrency", 'c', "NUM", 0, "Limit scanning thread concurrency to NUM, default=#CPUs.", 0 },
+   { "connection-pool", 'C', "NUM", OPTION_ARG_OPTIONAL,
+     "Use webapi connection pool with NUM threads, default=unlim.", 0 },
    { "include", 'I', "REGEX", 0, "Include files matching REGEX, default=all.", 0 },
    { "exclude", 'X', "REGEX", 0, "Exclude files matching REGEX, default=none.", 0 },
    { "port", 'p', "NUM", 0, "HTTP port to listen on, default 8002.", 0 },
    { "database", 'd', "FILE", 0, "Path to sqlite database.", 0 },
    { "ddl", 'D', "SQL", 0, "Apply extra sqlite ddl/pragma to connection.", 0 },
    { "verbose", 'v', NULL, 0, "Increase verbosity.", 0 },
+   { "regex-groom", 'r', NULL, 0,"Uses regexes from -I and -X arguments to groom the database.",0},
 #define ARGP_KEY_FDCACHE_FDS 0x1001
    { "fdcache-fds", ARGP_KEY_FDCACHE_FDS, "NUM", 0, "Maximum number of archive files to keep in fdcache.", 0 },
 #define ARGP_KEY_FDCACHE_MBS 0x1002
@@ -368,7 +371,17 @@ static const struct argp_option options[] =
    { "fdcache-prefetch", ARGP_KEY_FDCACHE_PREFETCH, "NUM", 0, "Number of archive files to prefetch into fdcache.", 0 },
 #define ARGP_KEY_FDCACHE_MINTMP 0x1004
    { "fdcache-mintmp", ARGP_KEY_FDCACHE_MINTMP, "NUM", 0, "Minimum free space% on tmpdir.", 0 },
-   { NULL, 0, NULL, 0, NULL, 0 }
+#define ARGP_KEY_FDCACHE_PREFETCH_MBS 0x1005
+   { "fdcache-prefetch-mbs", ARGP_KEY_FDCACHE_PREFETCH_MBS, "MB", 0,"Megabytes allocated to the \
+      prefetch cache.", 0},
+#define ARGP_KEY_FDCACHE_PREFETCH_FDS 0x1006
+   { "fdcache-prefetch-fds", ARGP_KEY_FDCACHE_PREFETCH_FDS, "NUM", 0,"Number of files allocated to the \
+      prefetch cache.", 0},
+#define ARGP_KEY_FORWARDED_TTL_LIMIT 0x1007
+   {"forwarded-ttl-limit", ARGP_KEY_FORWARDED_TTL_LIMIT, "NUM", 0, "Limit of X-Forwarded-For hops, default 8.", 0},
+#define ARGP_KEY_PASSIVE 0x1008
+   { "passive", ARGP_KEY_PASSIVE, NULL, 0, "Do not scan or groom, read-only database.", 0 },
+   { NULL, 0, NULL, 0, NULL, 0 },
   };
 
 /* Short description of program.  */
@@ -401,18 +414,24 @@ static unsigned rescan_s = 300;
 static unsigned groom_s = 86400;
 static bool maxigroom = false;
 static unsigned concurrency = std::thread::hardware_concurrency() ?: 1;
+static int connection_pool = 0;
 static set<string> source_paths;
 static bool scan_files = false;
 static map<string,string> scan_archives;
 static vector<string> extra_ddl;
 static regex_t file_include_regex;
 static regex_t file_exclude_regex;
+static bool regex_groom = false;
 static bool traverse_logical;
 static long fdcache_fds;
 static long fdcache_mbs;
 static long fdcache_prefetch;
 static long fdcache_mintmp;
+static long fdcache_prefetch_mbs;
+static long fdcache_prefetch_fds;
+static unsigned forwarded_ttl_limit = 8;
 static string tmpdir;
+static bool passive_p = false;
 
 static void set_metric(const string& key, double value);
 // static void inc_metric(const string& key);
@@ -424,7 +443,14 @@ static void inc_metric(const string& metric,
 static void add_metric(const string& metric,
                        const string& lname, const string& lvalue,
                        double value);
-// static void add_metric(const string& metric, double value);
+static void inc_metric(const string& metric,
+                       const string& lname, const string& lvalue,
+                       const string& rname, const string& rvalue);
+static void add_metric(const string& metric,
+                       const string& lname, const string& lvalue,
+                       const string& rname, const string& rvalue,                       
+                       double value);
+
 
 class tmp_inc_metric { // a RAII style wrapper for exception-safe scoped increment & decrement
   string m, n, v;
@@ -471,7 +497,14 @@ parse_opt (int key, char *arg,
   switch (key)
     {
     case 'v': verbose ++; break;
-    case 'd': db_path = string(arg); break;
+    case 'd':
+      /* When using the in-memory database make sure it is shareable,
+	 so we can open it twice as read/write and read-only.  */
+      if (strcmp (arg, ":memory:") == 0)
+	db_path = "file::memory:?cache=shared";
+      else
+	db_path = string(arg);
+      break;
     case 'p': http_port = (unsigned) atoi(arg);
       if (http_port == 0 || http_port > 65535)
         argp_failure(state, 1, EINVAL, "port number");
@@ -498,34 +531,67 @@ parse_opt (int key, char *arg,
       }
       break;
     case 'L':
+      if (passive_p)
+        argp_failure(state, 1, EINVAL, "-L option inconsistent with passive mode");
       traverse_logical = true;
       break;
-    case 'D': extra_ddl.push_back(string(arg)); break;
+    case 'D':
+      if (passive_p)
+        argp_failure(state, 1, EINVAL, "-D option inconsistent with passive mode");
+      extra_ddl.push_back(string(arg));
+      break;
     case 't':
+      if (passive_p)
+        argp_failure(state, 1, EINVAL, "-t option inconsistent with passive mode");
       rescan_s = (unsigned) atoi(arg);
       break;
     case 'g':
+      if (passive_p)
+        argp_failure(state, 1, EINVAL, "-g option inconsistent with passive mode");
       groom_s = (unsigned) atoi(arg);
       break;
     case 'G':
+      if (passive_p)
+        argp_failure(state, 1, EINVAL, "-G option inconsistent with passive mode");
       maxigroom = true;
       break;
     case 'c':
+      if (passive_p)
+        argp_failure(state, 1, EINVAL, "-c option inconsistent with passive mode");
       concurrency = (unsigned) atoi(arg);
       if (concurrency < 1) concurrency = 1;
       break;
+    case 'C':
+      if (arg)
+        {
+          connection_pool = atoi(arg);
+          if (connection_pool < 2)
+            argp_failure(state, 1, EINVAL, "-C NUM minimum 2");
+        }
+      else // arg not given
+        connection_pool = std::thread::hardware_concurrency() * 2 ?: 2;
+      break;
     case 'I':
       // NB: no problem with unconditional free here - an earlier failed regcomp would exit program
+      if (passive_p)
+        argp_failure(state, 1, EINVAL, "-I option inconsistent with passive mode");
       regfree (&file_include_regex);
       rc = regcomp (&file_include_regex, arg, REG_EXTENDED|REG_NOSUB);
       if (rc != 0)
         argp_failure(state, 1, EINVAL, "regular expression");
       break;
     case 'X':
+      if (passive_p)
+        argp_failure(state, 1, EINVAL, "-X option inconsistent with passive mode");
       regfree (&file_exclude_regex);
       rc = regcomp (&file_exclude_regex, arg, REG_EXTENDED|REG_NOSUB);
       if (rc != 0)
         argp_failure(state, 1, EINVAL, "regular expression");
+      break;
+    case 'r':
+      if (passive_p)
+        argp_failure(state, 1, EINVAL, "-r option inconsistent with passive mode");
+      regex_groom = true;
       break;
     case ARGP_KEY_FDCACHE_FDS:
       fdcache_fds = atol (arg);
@@ -538,9 +604,33 @@ parse_opt (int key, char *arg,
       break;
     case ARGP_KEY_FDCACHE_MINTMP:
       fdcache_mintmp = atol (arg);
+      if( fdcache_mintmp > 100 || fdcache_mintmp < 0 )
+        argp_failure(state, 1, EINVAL, "fdcache mintmp percent");
+      break;
+    case ARGP_KEY_FORWARDED_TTL_LIMIT:
+      forwarded_ttl_limit = (unsigned) atoi(arg);
       break;
     case ARGP_KEY_ARG:
       source_paths.insert(string(arg));
+      break;
+    case ARGP_KEY_FDCACHE_PREFETCH_FDS:
+      fdcache_prefetch_fds = atol(arg);
+      if ( fdcache_prefetch_fds < 0)
+        argp_failure(state, 1, EINVAL, "fdcache prefetch fds");
+      break;
+    case ARGP_KEY_FDCACHE_PREFETCH_MBS:
+      fdcache_prefetch_mbs = atol(arg);
+      if ( fdcache_prefetch_mbs < 0)
+        argp_failure(state, 1, EINVAL, "fdcache prefetch mbs");
+      break;
+    case ARGP_KEY_PASSIVE:
+      passive_p = true;
+      if (source_paths.size() > 0
+          || maxigroom
+          || extra_ddl.size() > 0
+          || traverse_logical)
+        // other conflicting options tricky to check
+        argp_failure(state, 1, EINVAL, "inconsistent options with passive mode");
       break;
       // case 'h': argp_state_help (state, stderr, ARGP_HELP_LONG|ARGP_HELP_EXIT_OK);
     default: return ARGP_ERR_UNKNOWN;
@@ -552,6 +642,9 @@ parse_opt (int key, char *arg,
 
 ////////////////////////////////////////////////////////////////////////
 
+
+static void add_mhd_response_header (struct MHD_Response *r,
+				     const char *h, const char *v);
 
 // represent errors that may get reported to an ostream and/or a libmicrohttpd connection
 
@@ -570,7 +663,7 @@ struct reportable_exception
     MHD_Response* r = MHD_create_response_from_buffer (message.size(),
                                                        (void*) message.c_str(),
                                                        MHD_RESPMEM_MUST_COPY);
-    MHD_add_response_header (r, "Content-Type", "text/plain");
+    add_mhd_response_header (r, "Content-Type", "text/plain");
     MHD_RESULT rc = MHD_queue_response (c, code, r);
     MHD_destroy_response (r);
     return rc;
@@ -626,10 +719,11 @@ class workq
   mutex mtx;
   condition_variable cv;
   bool dead;
-  unsigned idlers;
+  unsigned idlers;   // number of threads busy with wait_idle / done_idle
+  unsigned fronters; // number of threads busy with wait_front / done_front
 
 public:
-  workq() { dead = false; idlers = 0; }
+  workq() { dead = false; idlers = 0; fronters = 0; }
   ~workq() {}
 
   void push_back(const Payload& p)
@@ -653,10 +747,11 @@ public:
     unique_lock<mutex> lock(mtx);
     q.clear();
     set_metric("thread_work_pending","role","scan", q.size());
+    // NB: there may still be some live fronters
     cv.notify_all(); // maybe wake up waiting idlers
   }
 
-  // block this scanner thread until there is work to do and no active
+  // block this scanner thread until there is work to do and no active idler
   bool wait_front (Payload& p)
   {
     unique_lock<mutex> lock(mtx);
@@ -668,19 +763,29 @@ public:
       {
         p = * q.begin();
         q.erase (q.begin());
+        fronters ++; // prevent idlers from starting awhile, even if empty q
         set_metric("thread_work_pending","role","scan", q.size());
-        if (q.size() == 0)
-          cv.notify_all(); // maybe wake up waiting idlers
+        // NB: don't wake up idlers yet!  The consumer is busy
+        // processing this element until it calls done_front().
         return true;
       }
   }
 
+  // notify waitq that scanner thread is done with that last item
+  void done_front ()
+  {
+    unique_lock<mutex> lock(mtx);
+    fronters --;
+    if (q.size() == 0 && fronters == 0)
+      cv.notify_all(); // maybe wake up waiting idlers
+  }
+  
   // block this idler thread until there is no work to do
   void wait_idle ()
   {
     unique_lock<mutex> lock(mtx);
     cv.notify_all(); // maybe wake up waiting scanners
-    while (!dead && (q.size() != 0))
+    while (!dead && ((q.size() != 0) || fronters > 0))
       cv.wait(lock);
     idlers ++;
   }
@@ -705,6 +810,54 @@ static workq<scan_payload> scanq; // just a single one
 // idler: thread_main_groom()
 
 
+////////////////////////////////////////////////////////////////////////
+
+// Unique set is a thread-safe structure that lends 'ownership' of a value
+// to a thread.  Other threads requesting the same thing are made to wait.
+// It's like a semaphore-on-demand.
+template <typename T>
+class unique_set
+{
+private:
+  set<T> values;
+  mutex mtx;
+  condition_variable cv;
+public:
+  unique_set() {}
+  ~unique_set() {}
+
+  void acquire(const T& value)
+  {
+    unique_lock<mutex> lock(mtx);
+    while (values.find(value) != values.end())
+      cv.wait(lock);
+    values.insert(value);
+  }
+
+  void release(const T& value)
+  {
+    unique_lock<mutex> lock(mtx);
+    // assert (values.find(value) != values.end());
+    values.erase(value);
+    cv.notify_all();
+  }
+};
+
+
+// This is the object that's instantiate to uniquely hold a value in a
+// RAII-pattern way.
+template <typename T>
+class unique_set_reserver
+{
+private:
+  unique_set<T>& please_hold;
+  T mine;
+public:
+  unique_set_reserver(unique_set<T>& t, const T& value):
+    please_hold(t), mine(value)  { please_hold.acquire(mine); }
+  ~unique_set_reserver() { please_hold.release(mine); }
+};
+
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -716,10 +869,11 @@ timestamp (ostream &o)
   char datebuf[80];
   char *now2 = NULL;
   time_t now_t = time(NULL);
-  struct tm *now = gmtime (&now_t);
-  if (now)
+  struct tm now;
+  struct tm *nowp = gmtime_r (&now_t, &now);
+  if (nowp)
     {
-      (void) strftime (datebuf, sizeof (datebuf), "%c", now);
+      (void) strftime (datebuf, sizeof (datebuf), "%c", nowp);
       now2 = datebuf;
     }
 
@@ -909,9 +1063,22 @@ conninfo (struct MHD_Connection * conn)
     sts = getnameinfo (so, sizeof (struct sockaddr_in), hostname, sizeof (hostname), servname,
                        sizeof (servname), NI_NUMERICHOST | NI_NUMERICSERV);
   } else if (so && so->sa_family == AF_INET6) {
-    sts = getnameinfo (so, sizeof (struct sockaddr_in6), hostname, sizeof (hostname),
-                       servname, sizeof (servname), NI_NUMERICHOST | NI_NUMERICSERV);
+    struct sockaddr_in6* addr6 = (struct sockaddr_in6*) so;
+    if (IN6_IS_ADDR_V4MAPPED(&addr6->sin6_addr)) {
+      struct sockaddr_in addr4;
+      memset (&addr4, 0, sizeof(addr4));
+      addr4.sin_family = AF_INET;
+      addr4.sin_port = addr6->sin6_port;
+      memcpy (&addr4.sin_addr.s_addr, addr6->sin6_addr.s6_addr+12, sizeof(addr4.sin_addr.s_addr));
+      sts = getnameinfo ((struct sockaddr*) &addr4, sizeof (addr4),
+                         hostname, sizeof (hostname), servname, sizeof (servname),
+                         NI_NUMERICHOST | NI_NUMERICSERV);
+    } else {
+      sts = getnameinfo (so, sizeof (struct sockaddr_in6), hostname, sizeof (hostname), NULL, 0,
+                         NI_NUMERICHOST);
+    }
   }
+  
   if (sts != 0) {
     hostname[0] = servname[0] = '\0';
   }
@@ -930,20 +1097,31 @@ conninfo (struct MHD_Connection * conn)
 
 ////////////////////////////////////////////////////////////////////////
 
+/* Wrapper for MHD_add_response_header that logs an error if we
+   couldn't add the specified header.  */
+static void
+add_mhd_response_header (struct MHD_Response *r,
+			 const char *h, const char *v)
+{
+  if (MHD_add_response_header (r, h, v) == MHD_NO)
+    obatched(clog) << "Error: couldn't add '" << h << "' header" << endl;
+}
 
 static void
 add_mhd_last_modified (struct MHD_Response *resp, time_t mtime)
 {
-  struct tm *now = gmtime (&mtime);
-  if (now != NULL)
+  struct tm now;
+  struct tm *nowp = gmtime_r (&mtime, &now);
+  if (nowp != NULL)
     {
       char datebuf[80];
-      size_t rc = strftime (datebuf, sizeof (datebuf), "%a, %d %b %Y %T GMT", now);
+      size_t rc = strftime (datebuf, sizeof (datebuf), "%a, %d %b %Y %T GMT",
+                            nowp);
       if (rc > 0 && rc < sizeof (datebuf))
-        (void) MHD_add_response_header (resp, "Last-Modified", datebuf);
+        add_mhd_response_header (resp, "Last-Modified", datebuf);
     }
 
-  (void) MHD_add_response_header (resp, "Cache-Control", "public");
+  add_mhd_response_header (resp, "Cache-Control", "public");
 }
 
 
@@ -989,7 +1167,11 @@ handle_buildid_f_match (bool internal_req_t,
     }
   else
     {
-      MHD_add_response_header (r, "Content-Type", "application/octet-stream");
+      std::string file = b_source0.substr(b_source0.find_last_of("/")+1, b_source0.length());
+      add_mhd_response_header (r, "Content-Type", "application/octet-stream");
+      add_mhd_response_header (r, "X-DEBUGINFOD-SIZE",
+			       to_string(s.st_size).c_str());
+      add_mhd_response_header (r, "X-DEBUGINFOD-FILE", file.c_str());
       add_mhd_last_modified (r, s.st_mtime);
       if (verbose > 1)
         obatched(clog) << "serving file " << b_source0 << endl;
@@ -1151,23 +1333,32 @@ private:
   };
   deque<fdcache_entry> lru; // @head: most recently used
   long max_fds;
+  deque<fdcache_entry> prefetch; // prefetched
   long max_mbs;
+  long max_prefetch_mbs;
+  long max_prefetch_fds;
 
 public:
   void set_metrics()
   {
-    double total_mb = 0.0;
+    double fdcache_mb = 0.0;
+    double prefetch_mb = 0.0;
     for (auto i = lru.begin(); i < lru.end(); i++)
-      total_mb += i->fd_size_mb;
-    set_metric("fdcache_bytes", (int64_t)(total_mb*1024.0*1024.0));
+      fdcache_mb += i->fd_size_mb;
+    for (auto j = prefetch.begin(); j < prefetch.end(); j++)
+      prefetch_mb += j->fd_size_mb;
+    set_metric("fdcache_bytes", fdcache_mb*1024.0*1024.0);
     set_metric("fdcache_count", lru.size());
+    set_metric("fdcache_prefetch_bytes", prefetch_mb*1024.0*1024.0);
+    set_metric("fdcache_prefetch_count", prefetch.size());
   }
 
   void intern(const string& a, const string& b, string fd, off_t sz, bool front_p)
   {
     {
       unique_lock<mutex> lock(fdcache_lock);
-      for (auto i = lru.begin(); i < lru.end(); i++) // nuke preexisting copy
+      // nuke preexisting copy
+      for (auto i = lru.begin(); i < lru.end(); i++)
         {
           if (i->archive == a && i->entry == b)
             {
@@ -1177,33 +1368,45 @@ public:
               break; // must not continue iterating
             }
         }
+      // nuke preexisting copy in prefetch
+      for (auto i = prefetch.begin(); i < prefetch.end(); i++)
+        {
+          if (i->archive == a && i->entry == b)
+            {
+              unlink (i->fd.c_str());
+              prefetch.erase(i);
+              inc_metric("fdcache_op_count","op","prefetch_dequeue");
+              break; // must not continue iterating
+            }
+        }
       double mb = (sz+65535)/1048576.0; // round up to 64K block
       fdcache_entry n = { a, b, fd, mb };
       if (front_p)
         {
-          inc_metric("fdcache_op_count","op","enqueue_front");
+          inc_metric("fdcache_op_count","op","enqueue");
           lru.push_front(n);
         }
       else
         {
-          inc_metric("fdcache_op_count","op","enqueue_back");
-          lru.push_back(n);
+          inc_metric("fdcache_op_count","op","prefetch_enqueue");
+          prefetch.push_front(n);
         }
       if (verbose > 3)
         obatched(clog) << "fdcache interned a=" << a << " b=" << b
                        << " fd=" << fd << " mb=" << mb << " front=" << front_p << endl;
+      
+      set_metrics();
     }
-    set_metrics();
 
     // NB: we age the cache at lookup time too
     if (statfs_free_enough_p(tmpdir, "tmpdir", fdcache_mintmp))
       {
         inc_metric("fdcache_op_count","op","emerg-flush");
         obatched(clog) << "fdcache emergency flush for filling tmpdir" << endl;
-        this->limit(0, 0); // emergency flush
+        this->limit(0, 0, 0, 0); // emergency flush
       }
     else if (front_p)
-      this->limit(max_fds, max_mbs); // age cache if required
+      this->limit(max_fds, max_mbs, max_prefetch_fds, max_prefetch_mbs); // age cache if required
   }
 
   int lookup(const string& a, const string& b)
@@ -1219,7 +1422,21 @@ public:
               lru.erase(i); // invalidates i, so no more iteration!
               lru.push_front(n);
               inc_metric("fdcache_op_count","op","requeue_front");
-              fd = open(n.fd.c_str(), O_RDONLY); // NB: no problem if dup() fails; looks like cache miss
+              fd = open(n.fd.c_str(), O_RDONLY); 
+              break;
+            }
+        }
+      // Iterate through prefetch while fd == -1 to ensure that no duplication between lru and 
+      // prefetch occurs.
+      for ( auto i = prefetch.begin(); fd == -1 && i < prefetch.end(); ++i)
+        {
+          if (i->archive == a && i->entry == b)
+            { // found it; take the entry from the prefetch deque to the lru deque, since it has now been accessed.
+              fdcache_entry n = *i;
+              prefetch.erase(i);
+              lru.push_front(n);
+              inc_metric("fdcache_op_count","op","prefetch_access");
+              fd = open(n.fd.c_str(), O_RDONLY); 
               break;
             }
         }
@@ -1228,11 +1445,11 @@ public:
     if (statfs_free_enough_p(tmpdir, "tmpdir", fdcache_mintmp))
       {
         inc_metric("fdcache_op_count","op","emerg-flush");
-        obatched(clog) << "fdcache emergency flush for filling tmpdir";
-        this->limit(0, 0); // emergency flush
+        obatched(clog) << "fdcache emergency flush for filling tmpdir" << endl;
+        this->limit(0, 0, 0, 0); // emergency flush
       }
     else if (fd >= 0)
-      this->limit(max_fds, max_mbs); // age cache if required
+      this->limit(max_fds, max_mbs, max_prefetch_fds, max_prefetch_mbs); // age cache if required
 
     return fd;
   }
@@ -1248,6 +1465,14 @@ public:
             return true;
           }
       }
+    for (auto i = prefetch.begin(); i < prefetch.end(); i++)
+      {
+        if (i->archive == a && i->entry == b)
+          {
+            inc_metric("fdcache_op_count","op","prefetch_probe_hit");
+            return true;
+          }
+      }
     inc_metric("fdcache_op_count","op","probe_miss");
     return false;
   }
@@ -1258,7 +1483,7 @@ public:
     for (auto i = lru.begin(); i < lru.end(); i++)
       {
         if (i->archive == a && i->entry == b)
-          { // found it; move it to head of lru
+          { // found it; erase it from lru
             fdcache_entry n = *i;
             lru.erase(i); // invalidates i, so no more iteration!
             inc_metric("fdcache_op_count","op","clear");
@@ -1267,10 +1492,21 @@ public:
             return;
           }
       }
+    for (auto i = prefetch.begin(); i < prefetch.end(); i++)
+      {
+        if (i->archive == a && i->entry == b)
+          { // found it; erase it from lru
+            fdcache_entry n = *i;
+            prefetch.erase(i); // invalidates i, so no more iteration!
+            inc_metric("fdcache_op_count","op","prefetch_clear");
+            unlink (n.fd.c_str());
+            set_metrics();
+            return;
+          }
+      }
   }
 
-
-  void limit(long maxfds, long maxmbs, bool metrics_p = true)
+  void limit(long maxfds, long maxmbs, long maxprefetchfds, long maxprefetchmbs , bool metrics_p = true)
   {
     if (verbose > 3 && (this->max_fds != maxfds || this->max_mbs != maxmbs))
       obatched(clog) << "fdcache limited to maxfds=" << maxfds << " maxmbs=" << maxmbs << endl;
@@ -1278,7 +1514,8 @@ public:
     unique_lock<mutex> lock(fdcache_lock);
     this->max_fds = maxfds;
     this->max_mbs = maxmbs;
-
+    this->max_prefetch_fds = maxprefetchfds;
+    this->max_prefetch_mbs = maxprefetchmbs;
     long total_fd = 0;
     double total_mb = 0.0;
     for (auto i = lru.begin(); i < lru.end(); i++)
@@ -1286,7 +1523,7 @@ public:
         // accumulate totals from most recently used one going backward
         total_fd ++;
         total_mb += i->fd_size_mb;
-        if (total_fd > max_fds || total_mb > max_mbs)
+        if (total_fd > this->max_fds || total_mb > this->max_mbs)
           {
             // found the cut here point!
 
@@ -1304,6 +1541,29 @@ public:
             break;
           }
       }
+    total_fd = 0;
+    total_mb = 0.0;
+    for(auto i = prefetch.begin(); i < prefetch.end(); i++){
+      // accumulate totals from most recently used one going backward
+        total_fd ++;
+        total_mb += i->fd_size_mb;
+        if (total_fd > this->max_prefetch_fds || total_mb > this->max_prefetch_mbs)
+          {
+            // found the cut here point!
+            for (auto j = i; j < prefetch.end(); j++) // close all the fds from here on in
+              {
+                if (verbose > 3)
+                  obatched(clog) << "fdcache evicted from prefetch a=" << j->archive << " b=" << j->entry
+                                 << " fd=" << j->fd << " mb=" << j->fd_size_mb << endl;
+                if (metrics_p)
+                  inc_metric("fdcache_op_count","op","prefetch_evict");
+                unlink (j->fd.c_str());
+              }
+
+            prefetch.erase(i, prefetch.end()); // erase the nodes generally
+            break;
+          }
+    }
     if (metrics_p) set_metrics();
   }
 
@@ -1312,7 +1572,7 @@ public:
   {
     // unlink any fdcache entries in $TMPDIR
     // don't update metrics; those globals may be already destroyed
-    limit(0, 0, false);
+    limit(0, 0, 0, 0, false);
   }
 };
 static libarchive_fdcache fdcache;
@@ -1381,7 +1641,11 @@ handle_buildid_r_match (bool internal_req_p,
 
       inc_metric ("http_responses_total","result","archive fdcache");
 
-      MHD_add_response_header (r, "Content-Type", "application/octet-stream");
+      add_mhd_response_header (r, "Content-Type", "application/octet-stream");
+      add_mhd_response_header (r, "X-DEBUGINFOD-SIZE",
+			       to_string(fs.st_size).c_str());
+      add_mhd_response_header (r, "X-DEBUGINFOD-ARCHIVE", b_source0.c_str());
+      add_mhd_response_header (r, "X-DEBUGINFOD-FILE", b_source1.c_str());
       add_mhd_last_modified (r, fs.st_mtime);
       if (verbose > 1)
         obatched(clog) << "serving fdcache archive " << b_source0 << " file " << b_source1 << endl;
@@ -1499,7 +1763,7 @@ handle_buildid_r_match (bool internal_req_p,
           // responsible for unlinking it later.
           fdcache.intern(b_source0, fn,
                          tmppath, archive_entry_size(e),
-                         false); // prefetched ones go to back of lru
+                         false); // prefetched ones go to the prefetch cache
           prefetch_count --;
           close (fd); // we're not saving this fd to make a mhd-response from!
           continue;
@@ -1522,7 +1786,14 @@ handle_buildid_r_match (bool internal_req_p,
         }
       else
         {
-          MHD_add_response_header (r, "Content-Type", "application/octet-stream");
+          std::string file = b_source1.substr(b_source1.find_last_of("/")+1, b_source1.length());
+          add_mhd_response_header (r, "Content-Type",
+                                   "application/octet-stream");
+          add_mhd_response_header (r, "X-DEBUGINFOD-SIZE",
+                                   to_string(archive_entry_size(e)).c_str());
+          add_mhd_response_header (r, "X-DEBUGINFOD-ARCHIVE",
+                                   b_source0.c_str());
+          add_mhd_response_header (r, "X-DEBUGINFOD-FILE", file.c_str());
           add_mhd_last_modified (r, archive_entry_mtime(e));
           if (verbose > 1)
             obatched(clog) << "serving archive " << b_source0 << " file " << b_source1 << endl;
@@ -1617,7 +1888,7 @@ void debuginfod_pool_end(debuginfod_client* c)
 static struct MHD_Response*
 handle_buildid (MHD_Connection* conn,
                 const string& buildid /* unsafe */,
-                const string& artifacttype /* unsafe */,
+                string& artifacttype /* unsafe, cleanse on exception/return */,
                 const string& suffix /* unsafe */,
                 int *result_fd)
 {
@@ -1626,7 +1897,10 @@ handle_buildid (MHD_Connection* conn,
   if (artifacttype == "debuginfo") atype_code = "D";
   else if (artifacttype == "executable") atype_code = "E";
   else if (artifacttype == "source") atype_code = "S";
-  else throw reportable_exception("invalid artifacttype");
+  else {
+    artifacttype = "invalid"; // PR28242 ensure http_resposes metrics don't propagate unclean user data 
+    throw reportable_exception("invalid artifacttype");
+  }
 
   inc_metric("http_requests_total", "type", artifacttype);
   
@@ -1731,18 +2005,42 @@ handle_buildid (MHD_Connection* conn,
           if (xff != "")
             xff += string(", "); // comma separated list
 
+          unsigned int xff_count = 0;
+          for (auto&& i : xff){
+            if (i == ',') xff_count++;
+          }
+
+          // if X-Forwarded-For: exceeds N hops,
+          // do not delegate a local lookup miss to upstream debuginfods.
+          if (xff_count >= forwarded_ttl_limit)
+            throw reportable_exception(MHD_HTTP_NOT_FOUND, "not found, --forwared-ttl-limit reached \
+and will not query the upstream servers");
+
           // Compute the client's numeric IP address only - so can't merge with conninfo()
           const union MHD_ConnectionInfo *u = MHD_get_connection_info (conn,
                                                                        MHD_CONNECTION_INFO_CLIENT_ADDRESS);
           struct sockaddr *so = u ? u->client_addr : 0;
           char hostname[256] = ""; // RFC1035
-          if (so && so->sa_family == AF_INET)
+          if (so && so->sa_family == AF_INET) {
             (void) getnameinfo (so, sizeof (struct sockaddr_in), hostname, sizeof (hostname), NULL, 0,
                                 NI_NUMERICHOST);
-          else if (so && so->sa_family == AF_INET6)
-            (void) getnameinfo (so, sizeof (struct sockaddr_in6), hostname, sizeof (hostname), NULL, 0,
-                                NI_NUMERICHOST);
-
+          } else if (so && so->sa_family == AF_INET6) {
+            struct sockaddr_in6* addr6 = (struct sockaddr_in6*) so;
+            if (IN6_IS_ADDR_V4MAPPED(&addr6->sin6_addr)) {
+              struct sockaddr_in addr4;
+              memset (&addr4, 0, sizeof(addr4));
+              addr4.sin_family = AF_INET;
+              addr4.sin_port = addr6->sin6_port;
+              memcpy (&addr4.sin_addr.s_addr, addr6->sin6_addr.s6_addr+12, sizeof(addr4.sin_addr.s_addr));
+              (void) getnameinfo ((struct sockaddr*) &addr4, sizeof (addr4),
+                                  hostname, sizeof (hostname), NULL, 0,
+                                  NI_NUMERICHOST);
+            } else {
+              (void) getnameinfo (so, sizeof (struct sockaddr_in6), hostname, sizeof (hostname), NULL, 0,
+                                  NI_NUMERICHOST);
+            }
+          }
+          
           string xff_complete = string("X-Forwarded-For: ")+xff+string(hostname);
           debuginfod_add_http_header (client, xff_complete.c_str());
         }
@@ -1774,7 +2072,8 @@ handle_buildid (MHD_Connection* conn,
           auto r = MHD_create_response_from_fd ((uint64_t) s.st_size, fd);
           if (r)
             {
-              MHD_add_response_header (r, "Content-Type", "application/octet-stream");
+              add_mhd_response_header (r, "Content-Type",
+				       "application/octet-stream");
               add_mhd_last_modified (r, s.st_mtime);
               if (verbose > 1)
                 obatched(clog) << "serving file from upstream debuginfod/cache" << endl;
@@ -1884,6 +2183,29 @@ add_metric(const string& metric,
 
 // and more for higher arity labels if needed
 
+static void
+inc_metric(const string& metric,
+           const string& lname, const string& lvalue,
+           const string& rname, const string& rvalue)
+{
+  string key = (metric + "{"
+                + metric_label(lname, lvalue) + ","
+                + metric_label(rname, rvalue) + "}");
+  unique_lock<mutex> lock(metrics_lock);
+  metrics[key] ++;
+}
+static void
+add_metric(const string& metric,
+           const string& lname, const string& lvalue,
+           const string& rname, const string& rvalue,
+           double value)
+{
+  string key = (metric + "{"
+                + metric_label(lname, lvalue) + ","
+                + metric_label(rname, rvalue) + "}");
+  unique_lock<mutex> lock(metrics_lock);
+  metrics[key] += value;
+}
 
 static struct MHD_Response*
 handle_metrics (off_t* size)
@@ -1902,8 +2224,11 @@ handle_metrics (off_t* size)
   MHD_Response* r = MHD_create_response_from_buffer (os.size(),
                                                      (void*) os.c_str(),
                                                      MHD_RESPMEM_MUST_COPY);
-  *size = os.size();
-  MHD_add_response_header (r, "Content-Type", "text/plain");
+  if (r != NULL)
+    {
+      *size = os.size();
+      add_mhd_response_header (r, "Content-Type", "text/plain");
+    }
   return r;
 }
 
@@ -1915,8 +2240,11 @@ handle_root (off_t* size)
   MHD_Response* r = MHD_create_response_from_buffer (version.size (),
 						     (void *) version.c_str (),
 						     MHD_RESPMEM_PERSISTENT);
-  *size = version.size ();
-  MHD_add_response_header (r, "Content-Type", "text/plain");
+  if (r != NULL)
+    {
+      *size = version.size ();
+      add_mhd_response_header (r, "Content-Type", "text/plain");
+    }
   return r;
 }
 
@@ -1952,6 +2280,13 @@ handler_cb (void * /*cls*/,
     }
   *ptr = NULL;                     /* reset when done */
   
+  const char *maxsize_string = MHD_lookup_connection_value(connection, MHD_HEADER_KIND, "X-DEBUGINFOD-MAXSIZE");
+  long maxsize = 0;
+  if (maxsize_string != NULL && maxsize_string[0] != '\0')
+    maxsize = atol(maxsize_string);
+  else
+    maxsize = 0;
+
 #if MHD_VERSION >= 0x00097002
   enum MHD_Result rc;
 #else
@@ -1961,6 +2296,8 @@ handler_cb (void * /*cls*/,
   off_t http_size = -1;
   struct timespec ts_start, ts_end;
   clock_gettime (CLOCK_MONOTONIC, &ts_start);
+  double afteryou = 0.0;
+  string artifacttype, suffix;
 
   try
     {
@@ -1973,7 +2310,25 @@ handler_cb (void * /*cls*/,
 
       if (slash1 != string::npos && url1 == "/buildid")
         {
+          // PR27863: block this thread awhile if another thread is already busy
+          // fetching the exact same thing.  This is better for Everyone.
+          // The latecomer says "... after you!" and waits.
+          add_metric ("thread_busy", "role", "http-buildid-after-you", 1);
+#ifdef HAVE_PTHREAD_SETNAME_NP
+          (void) pthread_setname_np (pthread_self(), "mhd-buildid-after-you");
+#endif
+          struct timespec tsay_start, tsay_end;
+          clock_gettime (CLOCK_MONOTONIC, &tsay_start);
+          static unique_set<string> busy_urls;
+          unique_set_reserver<string> after_you(busy_urls, url_copy);
+          clock_gettime (CLOCK_MONOTONIC, &tsay_end);
+          afteryou = (tsay_end.tv_sec - tsay_start.tv_sec) + (tsay_end.tv_nsec - tsay_start.tv_nsec)/1.e9;
+          add_metric ("thread_busy", "role", "http-buildid-after-you", -1);
+          
           tmp_inc_metric m ("thread_busy", "role", "http-buildid");
+#ifdef HAVE_PTHREAD_SETNAME_NP
+          (void) pthread_setname_np (pthread_self(), "mhd-buildid");
+#endif
           size_t slash2 = url_copy.find('/', slash1+1);
           if (slash2 == string::npos)
             throw reportable_exception("/buildid/ webapi error, need buildid");
@@ -1981,7 +2336,7 @@ handler_cb (void * /*cls*/,
           string buildid = url_copy.substr(slash1+1, slash2-slash1-1);
 
           size_t slash3 = url_copy.find('/', slash2+1);
-          string artifacttype, suffix;
+
           if (slash3 == string::npos)
             {
               artifacttype = url_copy.substr(slash2+1);
@@ -2007,12 +2362,14 @@ handler_cb (void * /*cls*/,
       else if (url1 == "/metrics")
         {
           tmp_inc_metric m ("thread_busy", "role", "http-metrics");
-          inc_metric("http_requests_total", "type", "metrics");
+          artifacttype = "metrics";
+          inc_metric("http_requests_total", "type", artifacttype);
           r = handle_metrics(& http_size);
         }
       else if (url1 == "/")
         {
-          inc_metric("http_requests_total", "type", "/");
+          artifacttype = "/";
+          inc_metric("http_requests_total", "type", artifacttype);
           r = handle_root(& http_size);
         }
       else
@@ -2020,6 +2377,12 @@ handler_cb (void * /*cls*/,
 
       if (r == 0)
         throw reportable_exception("internal error, missing response");
+
+      if (maxsize > 0 && http_size > maxsize)
+        {
+          MHD_destroy_response(r);
+          throw reportable_exception(406, "File too large, max size=" + std::to_string(maxsize));
+        }
 
       rc = MHD_queue_response (connection, MHD_HTTP_OK, r);
       http_code = MHD_HTTP_OK;
@@ -2036,22 +2399,30 @@ handler_cb (void * /*cls*/,
 
   clock_gettime (CLOCK_MONOTONIC, &ts_end);
   double deltas = (ts_end.tv_sec - ts_start.tv_sec) + (ts_end.tv_nsec - ts_start.tv_nsec)/1.e9;
+  // afteryou: delay waiting for other client's identical query to complete
+  // deltas: total latency, including afteryou waiting
   obatched(clog) << conninfo(connection)
                  << ' ' << method << ' ' << url
                  << ' ' << http_code << ' ' << http_size
-                 << ' ' << (int)(deltas*1000) << "ms"
+                 << ' ' << (int)(afteryou*1000) << '+' << (int)((deltas-afteryou)*1000) << "ms"
                  << endl;
 
   // related prometheus metrics
   string http_code_str = to_string(http_code);
-  if (http_size >= 0)
-    add_metric("http_responses_transfer_bytes_sum","code",http_code_str,
-               http_size);
-  inc_metric("http_responses_transfer_bytes_count","code",http_code_str);
+  add_metric("http_responses_transfer_bytes_sum",
+             "code", http_code_str, "type", artifacttype, http_size);
+  inc_metric("http_responses_transfer_bytes_count",
+             "code", http_code_str, "type", artifacttype);
 
-  add_metric("http_responses_duration_milliseconds_sum","code",http_code_str,
-             deltas*1000); // prometheus prefers _seconds and floating point
-  inc_metric("http_responses_duration_milliseconds_count","code",http_code_str);
+  add_metric("http_responses_duration_milliseconds_sum",
+             "code", http_code_str, "type", artifacttype, deltas*1000); // prometheus prefers _seconds and floating point
+  inc_metric("http_responses_duration_milliseconds_count",
+             "code", http_code_str, "type", artifacttype);
+
+  add_metric("http_responses_after_you_milliseconds_sum",
+             "code", http_code_str, "type", artifacttype, afteryou*1000);
+  inc_metric("http_responses_after_you_milliseconds_count",
+             "code", http_code_str, "type", artifacttype);
 
   return rc;
 }
@@ -2100,7 +2471,8 @@ dwarf_extract_source_paths (Elf *elf, set<string>& debug_sourcefiles)
           struct MHD_Response *r = 0;
           try
             {
-              r = handle_buildid (0, buildid, "debuginfo", "", &alt_fd);
+              string artifacttype = "debuginfo";
+              r = handle_buildid (0, buildid, artifacttype, "", &alt_fd);
             }
           catch (const reportable_exception& e)
             {
@@ -2934,6 +3306,8 @@ thread_main_scanner (void* arg)
           e.report(cerr);
         }
 
+      scanq.done_front(); // let idlers run
+      
       if (fts_cached || fts_executable || fts_debuginfo || fts_sourcefiles || fts_sref || fts_sdef)
         {} // NB: not just if a successful scan - we might have encountered -ENOSPC & failed
       (void) statfs_free_enough_p(db_path, "database"); // report sqlite filesystem size
@@ -3135,7 +3509,7 @@ database_stats_report()
         throw sqlite_exception(rc, "step");
 
       obatched(clog)
-        << right << setw(20) << ((const char*) sqlite3_column_text(ps_query, 0) ?: (const char*) "NULL")
+        << ((const char*) sqlite3_column_text(ps_query, 0) ?: (const char*) "NULL")
         << " "
         << (sqlite3_column_text(ps_query, 1) ?: (const unsigned char*) "NULL")
         << endl;
@@ -3156,16 +3530,30 @@ void groom()
   clock_gettime (CLOCK_MONOTONIC, &ts_start);
 
   // scan for files that have disappeared
-  sqlite_ps files (db, "check old files", "select s.mtime, s.file, f.name from "
-                       BUILDIDS "_file_mtime_scanned s, " BUILDIDS "_files f "
-                       "where f.id = s.file");
-  sqlite_ps files_del_f_de (db, "nuke f_de", "delete from " BUILDIDS "_f_de where file = ? and mtime = ?");
-  sqlite_ps files_del_r_de (db, "nuke r_de", "delete from " BUILDIDS "_r_de where file = ? and mtime = ?");
-  sqlite_ps files_del_scan (db, "nuke f_m_s", "delete from " BUILDIDS "_file_mtime_scanned "
-                            "where file = ? and mtime = ?");
+  sqlite_ps files (db, "check old files",
+                   "select distinct s.mtime, s.file, f.name from "
+                   BUILDIDS "_file_mtime_scanned s, " BUILDIDS "_files f "
+                   "where f.id = s.file");
+  // NB: Because _ftime_mtime_scanned can contain both F and
+  // R records for the same file, this query would return duplicates if the
+  // DISTINCT qualifier were not there.
   files.reset();
+
+  // DECISION TIME - we enumerate stale fileids/mtimes
+  deque<pair<int64_t,int64_t> > stale_fileid_mtime;
+  
+  time_t time_start = time(NULL);
   while(1)
     {
+      // PR28514: limit grooming iteration to O(rescan time), to avoid
+      // slow filesystem tests over many files locking out rescans for
+      // too long.
+      if (rescan_s > 0 && (long)time(NULL) > (long)(time_start + rescan_s))
+        {
+          inc_metric("groomed_total", "decision", "aborted");
+          break;
+        }
+
       if (interrupted) break;
 
       int rc = files.step();
@@ -3176,24 +3564,74 @@ void groom()
       int64_t fileid = sqlite3_column_int64 (files, 1);
       const char* filename = ((const char*) sqlite3_column_text (files, 2) ?: "");
       struct stat s;
+      bool reg_include = !regexec (&file_include_regex, filename, 0, 0, 0);
+      bool reg_exclude = !regexec (&file_exclude_regex, filename, 0, 0, 0);
+
       rc = stat(filename, &s);
-      if (rc < 0 || (mtime != (int64_t) s.st_mtime))
+      if ( (regex_groom && reg_exclude && !reg_include) ||  rc < 0 || (mtime != (int64_t) s.st_mtime) )
         {
           if (verbose > 2)
-            obatched(clog) << "groom: forgetting file=" << filename << " mtime=" << mtime << endl;
-          files_del_f_de.reset().bind(1,fileid).bind(2,mtime).step_ok_done();
-          files_del_r_de.reset().bind(1,fileid).bind(2,mtime).step_ok_done();
-          files_del_scan.reset().bind(1,fileid).bind(2,mtime).step_ok_done();
+            obatched(clog) << "groom: stale file=" << filename << " mtime=" << mtime << endl;
+          stale_fileid_mtime.push_back(make_pair(fileid,mtime));
           inc_metric("groomed_total", "decision", "stale");
+          set_metric("thread_work_pending","role","groom", stale_fileid_mtime.size());
         }
       else
         inc_metric("groomed_total", "decision", "fresh");
-
+      
       if (sigusr1 != forced_rescan_count) // stop early if scan triggered
         break;
     }
   files.reset();
 
+  // ACTION TIME
+
+  // Now that we know which file/mtime tuples are stale, actually do
+  // the deletion from the database.  Doing this during the SELECT
+  // iteration above results in undefined behaviour in sqlite, as per
+  // https://www.sqlite.org/isolation.html
+
+  // We could shuffle stale_fileid_mtime[] here.  It'd let aborted
+  // sequences of nuke operations resume at random locations, instead
+  // of just starting over.  But it doesn't matter much either way,
+  // as long as we make progress.
+
+  sqlite_ps files_del_f_de (db, "nuke f_de", "delete from " BUILDIDS "_f_de where file = ? and mtime = ?");
+  sqlite_ps files_del_r_de (db, "nuke r_de", "delete from " BUILDIDS "_r_de where file = ? and mtime = ?");
+  sqlite_ps files_del_scan (db, "nuke f_m_s", "delete from " BUILDIDS "_file_mtime_scanned "
+                            "where file = ? and mtime = ?");
+
+  while (! stale_fileid_mtime.empty())
+    {
+      auto stale = stale_fileid_mtime.front();
+      stale_fileid_mtime.pop_front();
+      set_metric("thread_work_pending","role","groom", stale_fileid_mtime.size());
+
+      // PR28514: limit grooming iteration to O(rescan time), to avoid
+      // slow nuke_* queries over many files locking out rescans for too
+      // long.  We iterate over the files in random() sequence to avoid
+      // partial checks going over the same set.
+      if (rescan_s > 0 && (long)time(NULL) > (long)(time_start + rescan_s))
+        {
+          inc_metric("groomed_total", "action", "aborted");
+          break;
+        }
+
+      if (interrupted) break;
+
+      int64_t fileid = stale.first;
+      int64_t mtime = stale.second;
+      files_del_f_de.reset().bind(1,fileid).bind(2,mtime).step_ok_done();
+      files_del_r_de.reset().bind(1,fileid).bind(2,mtime).step_ok_done();
+      files_del_scan.reset().bind(1,fileid).bind(2,mtime).step_ok_done();
+      inc_metric("groomed_total", "action", "cleaned");
+      
+       if (sigusr1 != forced_rescan_count) // stop early if scan triggered
+        break;
+    }
+  stale_fileid_mtime.clear(); // no need for this any longer
+  set_metric("thread_work_pending","role","groom", stale_fileid_mtime.size());
+      
   // delete buildids with no references in _r_de or _f_de tables;
   // cascades to _r_sref & _f_s records
   sqlite_ps buildids_del (db, "nuke orphan buildids",
@@ -3220,8 +3658,8 @@ void groom()
   sqlite3_db_release_memory(dbq); // ... for both connections
   debuginfod_pool_groom(); // and release any debuginfod_client objects we've been holding onto
 
-  fdcache.limit(0,0); // release the fdcache contents
-  fdcache.limit(fdcache_fds,fdcache_mbs); // restore status quo parameters
+  fdcache.limit(0,0,0,0); // release the fdcache contents
+  fdcache.limit(fdcache_fds, fdcache_mbs, fdcache_prefetch_fds, fdcache_prefetch_mbs); // restore status quo parameters
 
   clock_gettime (CLOCK_MONOTONIC, &ts_end);
   double deltas = (ts_end.tv_sec - ts_start.tv_sec) + (ts_end.tv_nsec - ts_start.tv_nsec)/1.e9;
@@ -3310,7 +3748,15 @@ sigusr2_handler (int /* sig */)
 }
 
 
-
+static void // error logging callback from libmicrohttpd internals
+error_cb (void *arg, const char *fmt, va_list ap)
+{
+  (void) arg;
+  inc_metric("error_count","libmicrohttpd",fmt);
+  char errmsg[512];
+  (void) vsnprintf (errmsg, sizeof(errmsg), fmt, ap); // ok if slightly truncated
+  obatched(cerr) << "libmicrohttpd error: " << errmsg; // MHD_DLOG calls already include \n
+}
 
 
 // A user-defined sqlite function, to score the sharedness of the
@@ -3333,7 +3779,7 @@ static void sqlite3_sharedprefix_fn (sqlite3_context* c, int argc, sqlite3_value
       const unsigned char* a = sqlite3_value_text (argv[0]);
       const unsigned char* b = sqlite3_value_text (argv[1]);
       int i = 0;
-      while (*a++ == *b++)
+      while (*a != '\0' && *b != '\0' && *a++ == *b++)
         i++;
       sqlite3_result_int (c, i);
     }
@@ -3383,7 +3829,7 @@ main (int argc, char *argv[])
   if (scan_archives.size()==0 && !scan_files && source_paths.size()>0)
     obatched(clog) << "warning: without -F -R -U -Z, ignoring PATHs" << endl;
 
-  fdcache.limit(fdcache_fds, fdcache_mbs);
+  fdcache.limit(fdcache_fds, fdcache_mbs, fdcache_prefetch_fds, fdcache_prefetch_mbs);
 
   (void) signal (SIGPIPE, SIG_IGN); // microhttpd can generate it incidentally, ignore
   (void) signal (SIGINT, signal_handler); // ^C
@@ -3393,22 +3839,25 @@ main (int argc, char *argv[])
   (void) signal (SIGUSR2, sigusr2_handler); // end-user
 
   /* Get database ready. */
-  rc = sqlite3_open_v2 (db_path.c_str(), &db, (SQLITE_OPEN_READWRITE
-                                               |SQLITE_OPEN_URI
-                                               |SQLITE_OPEN_PRIVATECACHE
-                                               |SQLITE_OPEN_CREATE
-                                               |SQLITE_OPEN_FULLMUTEX), /* thread-safe */
-                        NULL);
-  if (rc == SQLITE_CORRUPT)
+  if (! passive_p)
     {
-      (void) unlink (db_path.c_str());
-      error (EXIT_FAILURE, 0,
-             "cannot open %s, deleted database: %s", db_path.c_str(), sqlite3_errmsg(db));
-    }
-  else if (rc)
-    {
-      error (EXIT_FAILURE, 0,
-             "cannot open %s, consider deleting database: %s", db_path.c_str(), sqlite3_errmsg(db));
+      rc = sqlite3_open_v2 (db_path.c_str(), &db, (SQLITE_OPEN_READWRITE
+                                                   |SQLITE_OPEN_URI
+                                                   |SQLITE_OPEN_PRIVATECACHE
+                                                   |SQLITE_OPEN_CREATE
+                                                   |SQLITE_OPEN_FULLMUTEX), /* thread-safe */
+                            NULL);
+      if (rc == SQLITE_CORRUPT)
+        {
+          (void) unlink (db_path.c_str());
+          error (EXIT_FAILURE, 0,
+                 "cannot open %s, deleted database: %s", db_path.c_str(), sqlite3_errmsg(db));
+        }
+      else if (rc)
+        {
+          error (EXIT_FAILURE, 0,
+                 "cannot open %s, consider deleting database: %s", db_path.c_str(), sqlite3_errmsg(db));
+        }
     }
 
   // open the readonly query variant
@@ -3426,8 +3875,10 @@ main (int argc, char *argv[])
     }
 
 
-  obatched(clog) << "opened database " << db_path << endl;
+  obatched(clog) << "opened database " << db_path
+                 << (db?" rw":"") << (dbq?" ro":"") << endl;
   obatched(clog) << "sqlite version " << sqlite3_version << endl;
+  obatched(clog) << "service mode " << (passive_p ? "passive":"active") << endl;
 
   // add special string-prefix-similarity function used in rpm sref/sdef resolution
   rc = sqlite3_create_function(dbq, "sharedprefix", 2, SQLITE_UTF8, NULL,
@@ -3436,42 +3887,42 @@ main (int argc, char *argv[])
     error (EXIT_FAILURE, 0,
            "cannot create sharedprefix function: %s", sqlite3_errmsg(dbq));
 
-  if (verbose > 3)
-    obatched(clog) << "ddl: " << DEBUGINFOD_SQLITE_DDL << endl;
-  rc = sqlite3_exec (db, DEBUGINFOD_SQLITE_DDL, NULL, NULL, NULL);
-  if (rc != SQLITE_OK)
+  if (! passive_p)
     {
-      error (EXIT_FAILURE, 0,
-             "cannot run database schema ddl: %s", sqlite3_errmsg(db));
+      if (verbose > 3)
+        obatched(clog) << "ddl: " << DEBUGINFOD_SQLITE_DDL << endl;
+      rc = sqlite3_exec (db, DEBUGINFOD_SQLITE_DDL, NULL, NULL, NULL);
+      if (rc != SQLITE_OK)
+        {
+          error (EXIT_FAILURE, 0,
+                 "cannot run database schema ddl: %s", sqlite3_errmsg(db));
+        }
     }
 
-  // Start httpd server threads.  Separate pool for IPv4 and IPv6, in
-  // case the host only has one protocol stack.
-  MHD_Daemon *d4 = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
+  // Start httpd server threads.  Use a single dual-homed pool.
+  MHD_Daemon *d46 = MHD_start_daemon ((connection_pool ? 0 : MHD_USE_THREAD_PER_CONNECTION)
 #if MHD_VERSION >= 0x00095300
                                      | MHD_USE_INTERNAL_POLLING_THREAD
 #else
                                      | MHD_USE_SELECT_INTERNALLY
 #endif
-                                     | MHD_USE_DEBUG, /* report errors to stderr */
-                                     http_port,
-                                     NULL, NULL, /* default accept policy */
-                                     handler_cb, NULL, /* handler callback */
-                                     MHD_OPTION_END);
-  MHD_Daemon *d6 = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
-#if MHD_VERSION >= 0x00095300
-                                     | MHD_USE_INTERNAL_POLLING_THREAD
-#else
-                                     | MHD_USE_SELECT_INTERNALLY
+#ifdef MHD_USE_EPOLL
+                                     | MHD_USE_EPOLL
 #endif
-                                     | MHD_USE_IPv6
+                                     | MHD_USE_DUAL_STACK
+#if MHD_VERSION >= 0x00095200
+                                     | MHD_USE_ITC
+#endif
                                      | MHD_USE_DEBUG, /* report errors to stderr */
                                      http_port,
                                      NULL, NULL, /* default accept policy */
                                      handler_cb, NULL, /* handler callback */
+                                     MHD_OPTION_EXTERNAL_LOGGER, error_cb, NULL,
+                                     (connection_pool ? MHD_OPTION_THREAD_POOL_SIZE : MHD_OPTION_END),
+                                     (connection_pool ? (int)connection_pool : MHD_OPTION_END),
                                      MHD_OPTION_END);
 
-  if (d4 == NULL && d6 == NULL) // neither ipv4 nor ipv6? boo
+  if (d46 == NULL)
     {
       sqlite3 *database = db;
       sqlite3 *databaseq = dbq;
@@ -3481,9 +3932,7 @@ main (int argc, char *argv[])
       error (EXIT_FAILURE, 0, "cannot start http server at port %d", http_port);
     }
 
-  obatched(clog) << "started http server on "
-                 << (d4 != NULL ? "IPv4 " : "")
-                 << (d6 != NULL ? "IPv6 " : "")
+  obatched(clog) << "started http server on IPv4 IPv6 "
                  << "port=" << http_port << endl;
 
   // add maxigroom sql if -G given
@@ -3506,31 +3955,41 @@ main (int argc, char *argv[])
     }
 
   // run extra -D sql if given
-  for (auto&& i: extra_ddl)
-    {
-      if (verbose > 1)
-        obatched(clog) << "extra ddl:\n" << i << endl;
-      rc = sqlite3_exec (db, i.c_str(), NULL, NULL, NULL);
-      if (rc != SQLITE_OK && rc != SQLITE_DONE && rc != SQLITE_ROW)
-        error (0, 0,
-               "warning: cannot run database extra ddl %s: %s", i.c_str(), sqlite3_errmsg(db));
-    }
+  if (! passive_p)
+    for (auto&& i: extra_ddl)
+      {
+        if (verbose > 1)
+          obatched(clog) << "extra ddl:\n" << i << endl;
+        rc = sqlite3_exec (db, i.c_str(), NULL, NULL, NULL);
+        if (rc != SQLITE_OK && rc != SQLITE_DONE && rc != SQLITE_ROW)
+          error (0, 0,
+                 "warning: cannot run database extra ddl %s: %s", i.c_str(), sqlite3_errmsg(db));
 
-  if (maxigroom)
-    obatched(clog) << "maxigroomed database" << endl;
+        if (maxigroom)
+          obatched(clog) << "maxigroomed database" << endl;
+      }
 
-  obatched(clog) << "search concurrency " << concurrency << endl;
-  obatched(clog) << "rescan time " << rescan_s << endl;
+  if (! passive_p)
+    obatched(clog) << "search concurrency " << concurrency << endl;
+  obatched(clog) << "webapi connection pool " << connection_pool
+                 << (connection_pool ? "" : " (unlimited)") << endl;
+  if (! passive_p)
+    obatched(clog) << "rescan time " << rescan_s << endl;
   obatched(clog) << "fdcache fds " << fdcache_fds << endl;
   obatched(clog) << "fdcache mbs " << fdcache_mbs << endl;
   obatched(clog) << "fdcache prefetch " << fdcache_prefetch << endl;
   obatched(clog) << "fdcache tmpdir " << tmpdir << endl;
   obatched(clog) << "fdcache tmpdir min% " << fdcache_mintmp << endl;
-  obatched(clog) << "groom time " << groom_s << endl;
+  if (! passive_p)
+    obatched(clog) << "groom time " << groom_s << endl;
+  obatched(clog) << "prefetch fds " << fdcache_prefetch_fds << endl;
+  obatched(clog) << "prefetch mbs " << fdcache_prefetch_mbs << endl;
+  obatched(clog) << "forwarded ttl limit " << forwarded_ttl_limit << endl;
+
   if (scan_archives.size()>0)
     {
       obatched ob(clog);
-      auto& o = ob << "scanning archive types ";
+      auto& o = ob << "accepting archive types ";
       for (auto&& arch : scan_archives)
 	o << arch.first << "(" << arch.second << ") ";
       o << endl;
@@ -3541,37 +4000,40 @@ main (int argc, char *argv[])
 
   vector<pthread_t> all_threads;
 
-  pthread_t pt;
-  rc = pthread_create (& pt, NULL, thread_main_groom, NULL);
-  if (rc)
-    error (EXIT_FAILURE, rc, "cannot spawn thread to groom database\n");
-  else
+  if (! passive_p)
     {
-#ifdef HAVE_PTHREAD_SETNAME_NP
-      (void) pthread_setname_np (pt, "groom");
-#endif
-      all_threads.push_back(pt);
-    }
-
-  if (scan_files || scan_archives.size() > 0)
-    {
-      rc = pthread_create (& pt, NULL, thread_main_fts_source_paths, NULL);
+      pthread_t pt;
+      rc = pthread_create (& pt, NULL, thread_main_groom, NULL);
       if (rc)
-        error (EXIT_FAILURE, rc, "cannot spawn thread to traverse source paths\n");
-#ifdef HAVE_PTHREAD_SETNAME_NP
-      (void) pthread_setname_np (pt, "traverse");
-#endif
-      all_threads.push_back(pt);
-
-      for (unsigned i=0; i<concurrency; i++)
+        error (EXIT_FAILURE, rc, "cannot spawn thread to groom database\n");
+      else
         {
-          rc = pthread_create (& pt, NULL, thread_main_scanner, NULL);
-          if (rc)
-            error (EXIT_FAILURE, rc, "cannot spawn thread to scan source files / archives\n");
 #ifdef HAVE_PTHREAD_SETNAME_NP
-          (void) pthread_setname_np (pt, "scan");          
+          (void) pthread_setname_np (pt, "groom");
 #endif
           all_threads.push_back(pt);
+        }
+
+      if (scan_files || scan_archives.size() > 0)
+        {
+          rc = pthread_create (& pt, NULL, thread_main_fts_source_paths, NULL);
+          if (rc)
+            error (EXIT_FAILURE, rc, "cannot spawn thread to traverse source paths\n");
+#ifdef HAVE_PTHREAD_SETNAME_NP
+          (void) pthread_setname_np (pt, "traverse");
+#endif
+          all_threads.push_back(pt);
+
+          for (unsigned i=0; i<concurrency; i++)
+            {
+              rc = pthread_create (& pt, NULL, thread_main_scanner, NULL);
+              if (rc)
+                error (EXIT_FAILURE, rc, "cannot spawn thread to scan source files / archives\n");
+#ifdef HAVE_PTHREAD_SETNAME_NP
+              (void) pthread_setname_np (pt, "scan");
+#endif
+              all_threads.push_back(pt);
+            }
         }
     }
   
@@ -3590,16 +4052,20 @@ main (int argc, char *argv[])
     pthread_join (it, NULL);
 
   /* Stop all the web service threads. */
-  if (d4) MHD_stop_daemon (d4);
-  if (d6) MHD_stop_daemon (d6);
+  if (d46) MHD_stop_daemon (d46);
 
-  /* With all threads known dead, we can clean up the global resources. */
-  rc = sqlite3_exec (db, DEBUGINFOD_SQLITE_CLEANUP_DDL, NULL, NULL, NULL);
-  if (rc != SQLITE_OK)
+  if (! passive_p)
     {
-      error (0, 0,
-             "warning: cannot run database cleanup ddl: %s", sqlite3_errmsg(db));
+      /* With all threads known dead, we can clean up the global resources. */
+      rc = sqlite3_exec (db, DEBUGINFOD_SQLITE_CLEANUP_DDL, NULL, NULL, NULL);
+      if (rc != SQLITE_OK)
+        {
+          error (0, 0,
+                 "warning: cannot run database cleanup ddl: %s", sqlite3_errmsg(db));
+        }
     }
+
+  debuginfod_pool_groom ();
 
   // NB: no problem with unconditional free here - an earlier failed regcomp would exit program
   (void) regfree (& file_include_regex);
@@ -3609,7 +4075,8 @@ main (int argc, char *argv[])
   sqlite3 *databaseq = dbq;
   db = dbq = 0; // for signal_handler not to freak
   (void) sqlite3_close (databaseq);
-  (void) sqlite3_close (database);
+  if (! passive_p)
+    (void) sqlite3_close (database);
 
   return 0;
 }

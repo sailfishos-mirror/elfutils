@@ -1,3 +1,268 @@
+2022-04-22  Mark Wielaard  <mark@klomp.org>
+
+	* Makefile.am (libdebuginfod): Add -lpthread.
+	(libdebuginfod_so_LDLIBS): Likewise.
+	* debuginfod-client.c (init_control): New static pthread_once_t.
+	(libcurl_init): New static function.
+	(debuginfod_begin): Use ptrace_once to call libcurl_init.
+	(libdebuginfod_ctor): Removed.
+	(libdebuginfod_dtor): Likewise.
+
+2022-04-24  Mark Wielaard  <mark@klomp.org>
+
+	* debuginfod.cxx (main): Add MHD_USE_ITC to MHD_start_daemon flags.
+
+2022-04-13  Aaron Merey  <amerey@redhat.com>
+
+	* debuginfod-client.c (debuginfod_query_server):
+	Drop st_mode check. Add st_size > 0 check.
+	Save target_mtime before calling
+	debuginfod_config_cache. unlink target_cache_path
+	on EACCESS. Create target_cache_path with DEFFILEMODE.
+
+2022-04-03  Frank Ch. Eigler <fche@redhat.com>
+
+	* debuginfod.cxx (main): Use single dual-stack daemon setup,
+	rather than duplicate ipv4 and ipv6.
+	(conninfo, handle_buildid): Represent ipv4-mapped ipv6 addresses
+	in their native ipv4 form for logging and X-F-F: purposes.
+	* debuginfod-client.c (debuginfod_add_http_header): Tolerate
+	colons in http header values.
+
+2022-04-03  Frank Ch. Eigler <fche@redhat.com>
+
+	* debuginfod.cxx (main): Use MHD_USE_EPOLL for libmicrohttpd, to
+	encourage more round-robin dispatch of incoming connections.
+
+2021-12-09  Alexander Kanavin <alex@linutronix.de>
+
+	* debuginfod-client.c (cache_clean_default_interval_s): Change type to
+	long from time_t.
+	(cache_miss_default_s): Likewise.
+	(cache_default_max_unused_age_s): Likewise.
+
+2021-12-09  Mark Wielaard  <mark@klomp.org>
+
+	* debuginfod.cxx (database_stats_report): Don't format clog
+	using 'right' and 'setw(20)'.
+
+2021-12-08  Frank Ch. Eigler  <fche@redhat.com>
+
+	* debuginfod.cxx (connection_pool): New global.
+	(parse_opt): Parse & check -C option to set it.
+	(error_cb): New callback for libmicrohttpd error counting.
+	(main): Activate MHD_OPTION_THREAD_POOL_SIZE if appropriate.
+	Activate error_cb.
+
+2021-12-04  Mark Wielaard  <mark@klomp.org>
+
+	* debuginfod.cxx (main): Call debuginfod_pool_groom before exit.
+
+2021-12-08  Mark Wielaard  <mark@klomp.org>
+
+	* debuginfod.cxx (add_mhd_response_header): New function.
+	(reportable_exception::mhd_send_response): Call
+	MHD_add_response_header.
+	(add_mhd_last_modified): Likewise.
+	(handle_buildid_f_match): Likewise.
+	(handle_buildid_r_match): Likewise.
+	(handle_metrics): Likewise. And check MHD_Response was actually
+	created.
+	(handle_root): Likewise.
+
+2021-12-08  Frank Ch. Eigler  <fche@redhat.com>
+
+	* debuginfod.cxx (intern): Call set_metrics() holding the fdcache mutex.
+
+2021-12-04  Mark Wielaard  <mark@klomp.org>
+
+	* debuginfod-client.c (debuginfod_query_server): Free winning_headers.
+	Reset response_data_size when clearing response_data.
+
+2021-12-01  Mark Wielaard  <mark@klomp.org>
+
+	* debuginfod-client.c (debuginfod_query_server): Free tmp_url on
+	realloc error. curl_free escaped_string on error. Fix error out
+	goto on curl_easy_init failure. Only cleanup data[i] handle and
+	response_data if it was initialized.
+
+2021-12-01  Mark Wielaard  <mark@klomp.org>
+
+	* debuginfod-client.c (timestamp): Use gmtime_r instead of gmtime.
+	(add_mhd_last_modified): Likewise.
+
+2021-11-10  Érico N. Rolim  <erico.erc@gmail.com>
+
+	* debuginfod.cxx: include "system.h" under 'extern "C"' block.
+
+2021-11-05  Frank Ch. Eigler  <fche@redhat.com>
+
+	PR28430
+	* debuginfod.cxx (parse_opt): Add "--passive" flag.  Complain
+	about inconsistent flags.
+	(main): In passive mode, suppress scan/groom/traverse threads and
+	other read-write database ops.
+
+2021-11-04  Frank Ch. Eigler  <fche@redhat.com>
+
+	PR28514
+	* debuginfod.cxx (groom): Rework into separate decision/action
+	phases.  Add new metrics to monitor progress.  Limit indefinite
+	operation times to avoid starving rescan.
+
+2021-10-23  Frank Ch. Eigler  <fche@redhat.com>
+
+	PR28240
+	* debuginfod-client.c (debuginfod_query_server): Correct
+	negative-hit cache check sequence for root user.
+
+2021-10-15  Mark Wielaard  <mark@klomp.org>
+
+	* debuginfod-client.c (debuginfod_query_server): Set
+	CURLOPT_PROTOCOLS.
+
+2021-10-06  Di Chen <dichen@redhat.com>
+
+	PR28242
+	* debuginfod.cxx (inc_metrics, add_metrics): Add two-tag variants.
+	(handler_cb): Call it with artifacttype for http_responses_* metrics.
+	(handle_buildid): Sanitize artifacttype if necessary.
+	(dwarf_extract_source_path): Pass sanitizable string param.
+
+2021-09-17  Noah Sanci  <nsanci@redhat.com>
+
+	* debuginfod-client.c (debuginfod_query_server): curl_multi_perform
+	now occurs before checking if response headers have arrived.
+
+2021-09-14  Frank Ch. Eigler <fche@redhat.com>
+
+	PRPR28339
+	* debuginfod.cxx (waitq::fronters): New field.
+	(waitq::wait_idle): Respect it.
+	(waitq::done_front): New function.
+	(thread_main_scanner): Call it to match wait_front().
+
+2021-09-12  Mark Wielaard  <mark@klomp.org>
+
+	* debuginfod.cxx (libarchive_fdcache::lookup): Add endl after
+	obatched(clog) line.
+2021-09-13  Noah Sanci  <nsanci@redhat.com>
+
+	* debuginfod-client.c (debuginfod_query_server): Removed constant
+	operations from a loop. curl_free memory.
+
+2021-09-06  Dmitry V. Levin  <ldv@altlinux.org>
+
+	* debuginfod-client.c (debuginfod_begin): Remove cast of calloc return
+	value.
+
+2021-08-28  Mark Wielaard  <mjw@redhat.com>
+
+	* debuginfod.cxx (parse_opt): Turn the -d arg ":memory:" into
+	"file::memory:?cache=shared" for the db_path.
+
+2021-08-20  Di Chen  <dichen@redhat.com>
+
+	* debuginfod.cxx (options): Add ARGP_KEY_FORWARDED_TTL_LIMIT.
+	(forwarded_ttl_limit): New static unsigned.
+	(parse_opt): Handle ARGP_KEY_FORWARDED_TTL_LIMIT.
+	(handle_buildid): Check forwarded_ttl_limit.
+	(main): Log forwarded ttl limit.
+
+2021-08-20  Saleem Abdulrasool  <abdulras@google.com>
+
+	* debuginfod.cxx: Remove error.h include.
+
+2021-08-19  Frank Ch. Eigler  <fche@redhat.com>
+
+	PR28249
+	* debuginfod.cxx (handler_cb): Fix after_you unique_set key
+	to the entire incoming URL.
+
+2021-08-02  Noah Sanci  <nsanci@redhat.com>
+
+	PR27277
+	* debuginfod-client.c (struct debuginfod_client): New field
+	winning_headers.
+	(struct handle_data): New field response_data, response_data_size.
+	(header_callback): Store received headers in response_data.
+	(debuginfod_query_server): Activate CURLOPT_HEADERFUNCTION.
+	Save winning response_data.
+	(debuginfod_end): free client winning headers.
+	* debuginfod.cxx (handle_buildid_f_match): remove X-DEBUGINFOD-FILE
+	path. Add X-DEBUGINFOD-FILE and X-DEBUGINFOD-SIZE headers.
+	(handle_buildid_r_match): remove X-DEBUGINFOD-FILE path. Add
+	X-DEBUGINFOD-FILE, X-DEBUGINFOD-SIZE
+	headers, and X-ARCHIVE headers.
+
+2021-07-26  Noah Sanci  <nsanci@redhat.com>
+
+	PR27982
+	* debuginfod-client.c (globals): added default_maxsize and
+	default_maxtime.
+	(debuginfod_query_server): Added DEBUGINFOD_MAXSIZE and
+	DEBUGINFOD_MAXTIME envvar processing.
+	* debuginfod.cxx (handler_cb): If the requested file exceeds
+	maxsize return code 406.
+	* debuginfod.h.in: Added DEBUGINFOD_MAXSIZE_ENV_VAR and
+	DEBUGINFOD_MAXTIME_ENV_VAR.
+
+2021-07-16  Noah Sanci  <nsanci@redhat.com>
+
+	PR28034
+	* debuginfod-client.c (debuginfod_query_server): % escape filename
+	so the completed url is processed properly.
+
+2021-06-28 Noah Sanci <nsanci@redhat.com>
+
+	PR25978
+	* debuginfod.cxx (options): Added --fdcache-prefetch-fds/mbs options.
+	(set_metric): Added a condition for fdcache_mintmp to ensure no
+	negative percentages or percentages larger than 100% are given.
+	(globals): Added fdcache_prefetch_mbs/fdcache_prefetch_fds.
+	(set_metrics): Differentiate between lru and prefetch metrics.
+	(intern): Added prefetch functionality for nuking preexisting copies
+	and incrementing prefetch metrics.
+	(lookup): Search prefetch cache and increment associated metrics. Upon
+	finding in the prefetch cache move the element to the lru cache.
+	(limit): Arguments updated. Update size of prefetch cache.
+	(main): Log prefetch and cache fds/mbs
+
+2021-07-06  Alice Zhang  <alizhang@redhat.com>
+
+	PR27531
+	* debuginfod-client.c (debuginfod_query_server): Retry failed queries
+	if error code is not ENOENT.
+	* debuginfod.h.in: Introduce DEBUGINFOD_RETRY_LIMIT_ENV_VAR.
+
+2021-07-01  Noah Sanci <nsanci@redhat.com>
+
+	PR27711
+	* debuginfod.cxx (options): Add --regex-groom, -r option.
+	(regex_groom): New static bool defaults to false.
+	(parse_opt): Handle 'r' option by setting regex_groom to true.
+	(groom): Introduce and use reg_include and reg_exclude.
+
+2021-07-09  Noah Sanci  <nsanci@redhat.com>
+
+	PR27983
+	* debuginfod-client.c (debuginfod_query_server): As full-length
+	urls are generated with standardized formats, ignore duplicates.
+	Created out1 and changed out2 error gotos. Updated url creation print
+	statements.
+	(globals): Removed url_delim_char, as it was no longer used.
+
+2021-06-18  Mark Wielaard  <mark@klomp.org>
+
+	* debuginfod-client.c (debuginfod_begin): Don't use client if
+	calloc call failed.
+
+2021-06-03  Frank Ch. Eigler <fche@redhat.com>
+
+	PR27863
+	* debuginfod.cxx (unique_set, unique_set_reserver): New classes.
+	(handler_cb): Use them to implement "after-you" queueing.
+
 2021-05-14  Frank Ch. Eigler <fche@redhat.com>
 
 	PR27859
