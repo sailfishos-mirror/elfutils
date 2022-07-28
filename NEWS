@@ -4,6 +4,8 @@ debuginfod: Add --disable-source-scan option.
 
 libdwfl: Add new function dwfl_get_debuginfod_client.
 
+libdwfl: Add new function dwfl_frame_reg.
+
 Version 0.187
 
 debuginfod: Support -C option for connection thread pooling.
