@@ -81,6 +81,7 @@ typedef struct Dwfl_Process Dwfl_Process;
   DWFL_ERROR (LIBEBL_BAD, N_("Internal error due to ebl"))		      \
   DWFL_ERROR (CORE_MISSING, N_("Missing data in core file"))		      \
   DWFL_ERROR (INVALID_REGISTER, N_("Invalid register"))			      \
+  DWFL_ERROR (REGISTER_VAL_UNKNOWN, N_("Unknown register value"))			      \
   DWFL_ERROR (PROCESS_MEMORY_READ, N_("Error reading process memory"))	      \
   DWFL_ERROR (PROCESS_NO_ARCH, N_("Couldn't find architecture of any ELF"))   \
   DWFL_ERROR (PARSE_PROC, N_("Error parsing /proc filesystem"))		      \
@@ -277,13 +278,15 @@ struct Dwfl_Frame
 };
 
 /* Fetch value from Dwfl_Frame->regs indexed by DWARF REGNO.
-   No error code is set if the function returns FALSE.  */
-bool __libdwfl_frame_reg_get (Dwfl_Frame *state, unsigned regno,
+   No error code is set if the function returns 0,
+   -1 on error (invalud DWARF register number),
+   1 if the value of the register in the frame is unknown.  */
+int __libdwfl_frame_reg_get (Dwfl_Frame *state, unsigned regno,
 			      Dwarf_Addr *val)
   internal_function;
 
 /* Store value to Dwfl_Frame->regs indexed by DWARF REGNO.
-   No error code is set if the function returns FALSE.  */
+   No error code is set if the function returns TRUE.  */
 bool __libdwfl_frame_reg_set (Dwfl_Frame *state, unsigned regno,
 			      Dwarf_Addr val)
   internal_function;
@@ -786,6 +789,7 @@ INTDECL (dwfl_getthread_frames)
 INTDECL (dwfl_getthreads)
 INTDECL (dwfl_thread_getframes)
 INTDECL (dwfl_frame_pc)
+INTDECL (dwfl_frame_reg)
 INTDECL (dwfl_get_debuginfod_client)
 
 /* Leading arguments standard to callbacks passed a Dwfl_Module.  */
