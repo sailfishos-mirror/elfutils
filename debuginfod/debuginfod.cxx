@@ -1610,7 +1610,52 @@ string canonicalized_archive_entry_pathname(struct archive_entry *e)
     return string("/")+fn;
 }
 
+// Try getting build_r match from fdcache.
+static struct MHD_Response*
+try_buildid_r_match_from_cache (const string& b_source0, const string& b_source1, int *result_fd)
+{
+  // check for a match in the fdcache first
+  struct stat fs;
+  int fd = fdcache.lookup(b_source0, b_source1);
+  if (fd >= 0) // got one!; NB: this is really an if() with a possible branch out to the end
+    {
+      int rc = fstat(fd, &fs);
+      if (rc < 0) // disappeared?
+        {
+          if (verbose)
+            obatched(clog) << "cannot fstat fdcache " << b_source0 << endl;
+          close(fd);
+          fdcache.clear(b_source0, b_source1);
+          return 0;
+        }
 
+      struct MHD_Response* r = MHD_create_response_from_fd (fs.st_size, fd);
+      if (r == 0)
+        {
+          if (verbose)
+            obatched(clog) << "cannot create fd-response for " << b_source0 << endl;
+          close(fd);
+          return 0;
+        }
+
+      inc_metric ("http_responses_total","result","archive fdcache");
+
+      add_mhd_response_header (r, "Content-Type", "application/octet-stream");
+      add_mhd_response_header (r, "X-DEBUGINFOD-SIZE",
+			       to_string(fs.st_size).c_str());
+      add_mhd_response_header (r, "X-DEBUGINFOD-ARCHIVE", b_source0.c_str());
+      add_mhd_response_header (r, "X-DEBUGINFOD-FILE", b_source1.c_str());
+      add_mhd_last_modified (r, fs.st_mtime);
+      if (verbose > 1)
+        obatched(clog) << "serving fdcache archive " << b_source0 << " file " << b_source1 << endl;
+      /* libmicrohttpd will close it. */
+      if (result_fd)
+        *result_fd = fd;
+      return r;
+    }
+
+  return NULL;
+}
 
 static struct MHD_Response*
 handle_buildid_r_match (bool internal_req_p,
@@ -1631,45 +1676,9 @@ handle_buildid_r_match (bool internal_req_p,
       return 0;
     }
 
-  // check for a match in the fdcache first
-  int fd = fdcache.lookup(b_source0, b_source1);
-  while (fd >= 0) // got one!; NB: this is really an if() with a possible branch out to the end
-    {
-      rc = fstat(fd, &fs);
-      if (rc < 0) // disappeared?
-        {
-          if (verbose)
-            obatched(clog) << "cannot fstat fdcache " << b_source0 << endl;
-          close(fd);
-          fdcache.clear(b_source0, b_source1);
-          break; // branch out of if "loop", to try new libarchive fetch attempt
-        }
-
-      struct MHD_Response* r = MHD_create_response_from_fd (fs.st_size, fd);
-      if (r == 0)
-        {
-          if (verbose)
-            obatched(clog) << "cannot create fd-response for " << b_source0 << endl;
-          close(fd);
-          break; // branch out of if "loop", to try new libarchive fetch attempt
-        }
-
-      inc_metric ("http_responses_total","result","archive fdcache");
-
-      add_mhd_response_header (r, "Content-Type", "application/octet-stream");
-      add_mhd_response_header (r, "X-DEBUGINFOD-SIZE",
-			       to_string(fs.st_size).c_str());
-      add_mhd_response_header (r, "X-DEBUGINFOD-ARCHIVE", b_source0.c_str());
-      add_mhd_response_header (r, "X-DEBUGINFOD-FILE", b_source1.c_str());
-      add_mhd_last_modified (r, fs.st_mtime);
-      if (verbose > 1)
-        obatched(clog) << "serving fdcache archive " << b_source0 << " file " << b_source1 << endl;
-      /* libmicrohttpd will close it. */
-      if (result_fd)
-        *result_fd = fd;
-      return r;
-      // NB: see, we never go around the 'loop' more than once
-    }
+  struct MHD_Response *r = try_buildid_r_match_from_cache (b_source0, b_source1, result_fd);
+  if (r != 0)
+    return r;
 
   // no match ... grumble, must process the archive
   string archive_decoder = "/dev/null";
@@ -1721,7 +1730,7 @@ handle_buildid_r_match (bool internal_req_p,
   // 2) extract the matching entry name (set r = result)
   // 3) extract some number of prefetched entries (just into fdcache)
   // 4) abort any further processing
-  struct MHD_Response* r = 0;                 // will set in stage 2
+  r = 0;                 // will set in stage 2
   unsigned prefetch_count =
     internal_req_p ? 0 : fdcache_prefetch;    // will decrement in stage 3
 
@@ -1743,7 +1752,15 @@ handle_buildid_r_match (bool internal_req_p,
         continue;
 
       if (fdcache.probe (b_source0, fn)) // skip if already interned
+      {
+        if (r == 0)
+        {
+          r = try_buildid_r_match_from_cache (b_source0, b_source1, result_fd);
+	  if (r != NULL)
+	    return r;
+        }
         continue;
+      }
 
       // extract this file to a temporary file
       char* tmppath = NULL;
@@ -1751,7 +1768,7 @@ handle_buildid_r_match (bool internal_req_p,
       if (rc < 0)
         throw libc_exception (ENOMEM, "cannot allocate tmppath");
       defer_dtor<void*,void> tmmpath_freer (tmppath, free);
-      fd = mkstemp (tmppath);
+      int fd = mkstemp (tmppath);
       if (fd < 0)
         throw libc_exception (errno, "cannot create temporary file");
       // NB: don't unlink (tmppath), as fdcache will take charge of it.
