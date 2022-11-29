@@ -218,6 +218,7 @@ endif
 
 if HAVE_ZSTD
 TESTS += run-readelf-compressed-zstd.sh
+export ELFUTILS_ZSTD = 1
 endif
 
 if DEBUGINFOD

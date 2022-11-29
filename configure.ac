@@ -417,9 +417,11 @@ AC_SUBST([BZ2_LIB])
 eu_ZIPLIB(lzma,LZMA,lzma,lzma_auto_decoder,[LZMA (xz)])
 AS_IF([test "x$with_lzma" = xyes], [LIBLZMA="liblzma"], [LIBLZMA=""])
 AC_SUBST([LIBLZMA])
-eu_ZIPLIB(zstd,ZSTD,zstd,ZSTD_decompress,[ZSTD (zst)])
+eu_ZIPLIB(zstd,ZSTD,zstd,ZSTD_compressStream2,[ZSTD (zst)])
 AS_IF([test "x$with_zstd" = xyes], [LIBZSTD="libzstd"], [LIBLZSTD=""])
 AC_SUBST([LIBZSTD])
+zstd_LIBS="$LIBS"
+AC_SUBST([zstd_LIBS])
 zip_LIBS="$LIBS"
 LIBS="$save_LIBS"
 AC_SUBST([zip_LIBS])
