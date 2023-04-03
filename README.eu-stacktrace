@@ -1,0 +1,6 @@
+# eu-stacktrace development branch
+
+Requirements:
+- /usr/include/sysprof-4 headers (e.g. `sysprof-devel` package on Fedora)
+
+...
