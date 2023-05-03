@@ -34,7 +34,7 @@ Requirements:
 
 Invoking `eu-stacktrace`:
 - mkfifo /tmp/test.fifo
-- eu-stacktrace </tmp/test.fifo >output=test.syscap &
+- eu-stacktrace </tmp/test.fifo >test.syscap &
 - sysprof-cli --use-fifo=/tmp/test.fifo test.syscap
 
 ## TODO
