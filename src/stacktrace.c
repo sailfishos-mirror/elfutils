@@ -103,10 +103,10 @@ parse_opt (int key, char *arg __attribute__ ((unused)),
 
     case ARGP_KEY_END:
       if (input_path == NULL)
-	argp_error (state, N_("-i PATH needs an input file or FIFO."));
+	input_path = "-"; /* default to stdin */
 
       if (output_path == NULL)
-	argp_error (state, N_("-o PATH needs an output path or FIFO."));
+	output_path = "-"; /* default to stdout */
 
       if (processing_mode == 0)
 	processing_mode = MODE_PASSTHRU;
@@ -165,11 +165,16 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
 #endif
 
   /* TODO Also handle common expansions e.g. ~/foo instead of /home/user/foo. */
-  /* TODO Also handle '-' path for stdin/stdout. */
-  input_fd = open (input_path, O_RDONLY);
+  if (strcmp (input_path, "-") == 0)
+    input_fd = STDIN_FILENO;
+  else
+    input_fd = open (input_path, O_RDONLY);
   if (input_fd < 0)
     error (EXIT_BAD, errno, N_("Cannot open input file or FIFO '%s'"), input_path);
-  output_fd = open (output_path, O_WRONLY);
+  if (strcmp (output_path, "-") == 0)
+    output_fd = STDOUT_FILENO;
+  else
+    output_fd = open (output_path, O_WRONLY);
   if (output_fd < 0)
     error (EXIT_BAD, errno, N_("Cannot open output file or FIFO '%s'"), output_path);
 

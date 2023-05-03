@@ -34,14 +34,13 @@ Requirements:
 
 Invoking `eu-stacktrace`:
 - mkfifo /tmp/test.fifo
-- eu-stacktrace --input=/tmp/test.fifo --output=test.syscap &
+- eu-stacktrace </tmp/test.fifo >output=test.syscap &
 - sysprof-cli --use-fifo=/tmp/test.fifo test.syscap
 
 ## TODO
 
-- support taking an FD for fork/exec pipes; then sysprof can fork eu-stacktrace
-- default to stdin/stdout for --input and --output
 - initial version of packet parsing for sysprof
+- sysprof should fork eu-stacktrace and pipe info via stdin/stdout
 - implement --mode=none
 - implement --mode=naive
 - implement --mode=caching
