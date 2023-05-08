@@ -1,9 +1,9 @@
 # eu-stacktrace development branch
 
-eu-stacktrace is (will be) a utility to process a stream of stack
+eu-stacktrace is (will be) a utility to process a stream of raw stack
 samples (such as those obtained from the Linux kernel's
-PERF_EVENT_SAMPLE facility) into a stream of stack traces (such as
-those obtained from PERF_EVENT_CALLCHAIN), freeing various profiling
+PERF_SAMPLE_STACK facility) into a stream of stack traces (such as
+those obtained from PERF_SAMPLE_CALLCHAIN), freeing various profiling
 utilities from having to implement their own backtracing logic.
 
 For the time being, eu-stacktrace is meant to be fed data from a
@@ -13,12 +13,17 @@ works as implementation proceeds.
 The goal is to work with various profiler data formats. For the
 prototype, Serhei is working to support sysprof's data format. We'd
 like to adapt sysprof to distros compiled with omit-framepointer,
-which will require sysprof to consume PERF_EVENT_SAMPLE data. After
+which will require sysprof to consume PERF_SAMPLE_STACK data. After
 that, supporting perf's native data format is an obvious prerequisite
 for merging this branch into elfutils. Ideally, we would like for
 eu-stacktrace to also convert between different profile data formats
 (e.g. taking sysprof data as input and emitting perf data, and
-vice-versa).
+vice-versa), but this may be out-of-scope given the amount of code
+that would need to be written to handle profile data other than stack
+traces.
+
+Link to latest roadmap and discussion thread:
+- 2023/05 https://sourceware.org/pipermail/elfutils-devel/2023q2/006151.html
 
 ## build & run (for now)
 
