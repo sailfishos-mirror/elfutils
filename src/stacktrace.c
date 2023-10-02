@@ -161,8 +161,7 @@ bool sysprof_reader_getheader (SysprofReader *reader,
 void sysprof_reader_bswap_frame (SysprofReader *reader,
 				 SysprofCaptureFrame *frame);
 bool sysprof_reader_ensure_space_for (SysprofReader *reader, size_t len);
-bool sysprof_reader_skip_frame (SysprofReader *reader);
-bool sysprof_reader_peek_frame (SysprofReader *reader, SysprofCaptureFrame *frame);
+SysprofCaptureFrame *sysprof_reader_next_frame (SysprofReader *reader);
 ptrdiff_t sysprof_reader_getframes (SysprofReader *reader,
 				    int (*callback) (SysprofCaptureFrame *frame,
 						     void *arg),
