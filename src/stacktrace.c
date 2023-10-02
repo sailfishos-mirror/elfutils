@@ -84,8 +84,28 @@
    option. */
 #define HAVE_SYSPROF_4_HEADERS
 #ifdef HAVE_SYSPROF_4_HEADERS
+
 #include <sysprof-4/sysprof-capture-types.h>
-#endif
+
+/* XXX: To be added to new versions of sysprof. */
+#ifndef SYSPROF_CAPTURE_FRAME_STACK_USER
+
+#undef SYSPROF_CAPTURE_FRAME_LAST
+#define SYSPROF_CAPTURE_FRAME_STACK_USER 18
+#define SYSPROF_CAPTURE_FRAME_LAST 19
+
+SYSPROF_ALIGNED_BEGIN(1)
+typedef struct
+{
+  SysprofCaptureFrame   frame;
+  uint64_t              size;
+  int32_t               tid;
+  unsigned char         data[0];
+} SysprofCaptureStackUser
+SYSPROF_ALIGNED_END(1);
+
+#endif // ifndef SYSPROF_CAPTURE_FRAME_STACK_USER
+#endif // ifdef HAVE_SYSPROF_4_HEADERS
 
 static char *input_path = NULL;
 static int input_fd = -1;
