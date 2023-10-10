@@ -32,8 +32,12 @@
 #endif
 
 #include <assert.h>
-#include <search.h>
+#include <eu-search.h>
 #include "libdwP.h"
+
+/* __libdw_findcu modifies "&dbg->next_tu_offset : &dbg->next_cu_offset".
+   May read or write, so mutual exclusion is enforced to prevent a race. */
+rwlock_define(static, next_tucu_offset_lock);
 
 static int
 findcu_cb (const void *arg1, const void *arg2)
@@ -221,7 +225,7 @@ __libdw_intern_next_unit (Dwarf *dbg, bool debug_types)
     Dwarf_Sig8_Hash_insert (&dbg->sig8_hash, unit_id8, newp);
 
   /* Add the new entry to the search tree.  */
-  if (tsearch (newp, tree, findcu_cb) == NULL)
+  if (eu_tsearch (newp, tree, findcu_cb) == NULL)
     {
       /* Something went wrong.  Undo the operation.  */
       *offsetp = oldoff;
@@ -242,28 +246,40 @@ __libdw_findcu (Dwarf *dbg, Dwarf_Off start, bool v4_debug_types)
 
   /* Maybe we already know that CU.  */
   struct Dwarf_CU fake = { .start = start, .end = 0 };
-  struct Dwarf_CU **found = tfind (&fake, tree, findcu_cb);
+  struct Dwarf_CU **found = eu_tfind (&fake, tree, findcu_cb);
+  struct Dwarf_CU *result = NULL;
+
   if (found != NULL)
     return *found;
 
+  rwlock_wrlock(next_tucu_offset_lock);
+
   if (start < *next_offset)
+    __libdw_seterrno (DWARF_E_INVALID_DWARF);
+  else
     {
-      __libdw_seterrno (DWARF_E_INVALID_DWARF);
-      return NULL;
+      /* No.  Then read more CUs.  */
+      while (1)
+	{
+	  struct Dwarf_CU *newp = __libdw_intern_next_unit (dbg,
+							    v4_debug_types);
+	  if (newp == NULL)
+	    {
+	      result = NULL;
+	      break;
+	    }
+
+	  /* Is this the one we are looking for?  */
+	  if (start < *next_offset || start == newp->start)
+	    {
+	      result = newp;
+	      break;
+	    }
+	}
     }
 
-  /* No.  Then read more CUs.  */
-  while (1)
-    {
-      struct Dwarf_CU *newp = __libdw_intern_next_unit (dbg, v4_debug_types);
-      if (newp == NULL)
-	return NULL;
-
-      /* Is this the one we are looking for?  */
-      if (start < *next_offset || start == newp->start)
-	return newp;
-    }
-  /* NOTREACHED */
+  rwlock_unlock(next_tucu_offset_lock);
+  return result;
 }
 
 struct Dwarf_CU *
@@ -291,7 +307,7 @@ __libdw_findcu_addr (Dwarf *dbg, void *addr)
     return NULL;
 
   struct Dwarf_CU fake = { .start = start, .end = 0 };
-  struct Dwarf_CU **found = tfind (&fake, tree, findcu_cb);
+  struct Dwarf_CU **found = eu_tfind (&fake, tree, findcu_cb);
 
   if (found != NULL)
     return *found;
@@ -306,7 +322,7 @@ __libdw_find_split_dbg_addr (Dwarf *dbg, void *addr)
   /* XXX Assumes split DWARF only has CUs in main IDX_debug_info.  */
   Elf_Data fake_data = { .d_buf = addr, .d_size = 0 };
   Dwarf fake = { .sectiondata[IDX_debug_info] = &fake_data };
-  Dwarf **found = tfind (&fake, &dbg->split_tree, __libdw_finddbg_cb);
+  Dwarf **found = eu_tfind (&fake, &dbg->split_tree, __libdw_finddbg_cb);
 
   if (found != NULL)
     return *found;
