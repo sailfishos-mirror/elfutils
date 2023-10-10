@@ -34,12 +34,18 @@
 #include "libelfP.h"
 
 #include <limits.h>
-#include <search.h>
+#include <eu-search.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+
+/* __libdw_link_skel_split() modifies "skel->split = split"
+   and "split->split = skel".
+   "cu->split" is read at multiple locations and conditionally updated.
+   Mutual exclusion is enforced to prevent a race. */
+rwlock_define(static, cu_split_lock);
 
 static void
 try_split_file (Dwarf_CU *cu, const char *dwo_path)
@@ -57,7 +63,7 @@ try_split_file (Dwarf_CU *cu, const char *dwo_path)
 	      if (split->unit_type == DW_UT_split_compile
 		  && cu->unit_id8 == split->unit_id8)
 		{
-		  if (tsearch (split->dbg, &cu->dbg->split_tree,
+		  if (eu_tsearch (split->dbg, &cu->dbg->split_tree,
 			       __libdw_finddbg_cb) == NULL)
 		    {
 		      /* Something went wrong.  Don't link.  */
@@ -65,8 +71,12 @@ try_split_file (Dwarf_CU *cu, const char *dwo_path)
 		      break;
 		    }
 
+		  rwlock_wrlock(cu_split_lock);
+
 		  /* Link skeleton and split compile units.  */
 		  __libdw_link_skel_split (cu, split);
+
+		  rwlock_unlock(cu_split_lock);
 
 		  /* We have everything we need from this ELF
 		     file.  And we are going to close the fd to
@@ -75,8 +85,13 @@ try_split_file (Dwarf_CU *cu, const char *dwo_path)
 		  break;
 		}
 	    }
+
+	  rwlock_rdlock(cu_split_lock);
+
 	  if (cu->split == (Dwarf_CU *) -1)
 	    dwarf_end (split_dwarf);
+
+	  rwlock_unlock(cu_split_lock);
 	}
       /* Always close, because we don't want to run out of file
 	 descriptors.  See also the elf_fcntl ELF_C_FDDONE call
@@ -150,9 +165,13 @@ Dwarf_CU *
 internal_function
 __libdw_find_split_unit (Dwarf_CU *cu)
 {
+  rwlock_rdlock(cu_split_lock);
+  Dwarf_CU *cu_split_local = cu->split;
+  rwlock_unlock(cu_split_lock);
+
   /* Only try once.  */
-  if (cu->split != (Dwarf_CU *) -1)
-    return cu->split;
+  if (cu_split_local != (Dwarf_CU *) -1)
+    return cu_split_local;
 
   /* We need a skeleton unit with a comp_dir and [GNU_]dwo_name attributes.
      The split unit will be the first in the dwo file and should have the
@@ -181,7 +200,11 @@ __libdw_find_split_unit (Dwarf_CU *cu)
 	      free (dwo_path);
 	    }
 
-	  if (cu->split == (Dwarf_CU *) -1)
+	  rwlock_rdlock(cu_split_lock);
+	  cu_split_local = cu->split;
+	  rwlock_unlock(cu_split_lock);
+
+	  if (cu_split_local == (Dwarf_CU *) -1)
 	    {
 	      /* Try compdir plus dwo_name.  */
 	      Dwarf_Attribute compdir;
@@ -203,9 +226,15 @@ __libdw_find_split_unit (Dwarf_CU *cu)
 	}
     }
 
+  rwlock_wrlock(cu_split_lock);
+
   /* If we found nothing, make sure we don't try again.  */
   if (cu->split == (Dwarf_CU *) -1)
-    cu->split = NULL;
+    {
+      cu->split = NULL;
+      cu_split_local = cu->split;
+    }
 
-  return cu->split;
+  rwlock_unlock(cu_split_lock);
+  return cu_split_local;
 }
