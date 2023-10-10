@@ -33,6 +33,9 @@ AM_CPPFLAGS += -I$(srcdir)/../libelf -I$(srcdir)/../libebl \
 if BUILD_STATIC
 AM_CFLAGS += $(fpic_CFLAGS)
 endif
+if USE_LOCKS
+  AM_CFLAGS += -pthread
+endif
 AM_CFLAGS += -fdollars-in-identifiers
 LEXCOMPILE = $(LEX) $(LFLAGS) $(AM_LFLAGS) -P$(<F:lex.l=)
 LEX_OUTPUT_ROOT = lex.$(<F:lex.l=)
