@@ -79,12 +79,10 @@ AC_DEFINE_UNQUOTED(DEFAULT_AR_DETERMINISTIC, $default_ar_deterministic,
 
 AC_ARG_ENABLE([thread-safety],
 AS_HELP_STRING([--enable-thread-safety],
-               [enable thread safety of libraries EXPERIMENTAL]),
+               [enable thread safety of libraries]),
                use_locks=$enableval, use_locks=no)
 AM_CONDITIONAL(USE_LOCKS, test "$use_locks" = yes)
 AS_IF([test "$use_locks" = yes], [AC_DEFINE(USE_LOCKS)])
-AS_IF([test "$use_locks" = yes],
-      [AC_MSG_WARN([thread-safety is EXPERIMENTAL tests might fail.])])
 
 AH_TEMPLATE([USE_LOCKS], [Defined if libraries should be thread-safe.])
 
@@ -937,10 +935,10 @@ AC_MSG_NOTICE([
     Symbol versioning                  : ${enable_symbol_versioning}
 
   NOT RECOMMENDED FEATURES (should all be no)
-    Experimental thread safety         : ${use_locks}
     install elf.h                      : ${install_elfh}
 
   OTHER FEATURES
+    Enable thread safety               : ${use_locks}
     Deterministic archives by default  : ${default_ar_deterministic}
     Native language support            : ${USE_NLS}
     Extra Valgrind annotations         : ${use_vg_annotations}
