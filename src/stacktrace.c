@@ -100,8 +100,19 @@ typedef struct
   SysprofCaptureFrame   frame;
   uint64_t              size;
   int32_t               tid;
+  uint32_t              padding;
   unsigned char         data[0];
 } SysprofCaptureStackUser
+SYSPROF_ALIGNED_END(1);
+
+/* Does not appear standalone; instead, appended to the end of a SysprofCaptureStackUser frame. */
+SYSPROF_ALIGNED_BEGIN(1)
+typedef struct
+{
+  uint32_t              n_regs;
+  uint32_t              padding;
+  uint64_t              regs[0];
+} SysprofCaptureUserRegs
 SYSPROF_ALIGNED_END(1);
 
 #endif // ifndef SYSPROF_CAPTURE_FRAME_STACK_USER
