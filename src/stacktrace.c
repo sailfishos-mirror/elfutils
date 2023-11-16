@@ -76,8 +76,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
+/* #include ELFUTILS_HEADER(dwfl) */
+#include "../libdwfl/libdwflP.h"
+/* XXX: Private header needed for sysprof_find_procfile. */
 
 #include <system.h>
+
+/* TODO: Enable to show detailed unwinder diagnostics. */
+/* #define DEBUG */
 
 /* TODO: Make optional through configury.  The #ifdefs are included
    now so we don't miss any code that needs to be controlled with this
@@ -123,7 +129,7 @@ static int input_fd = -1;
 static char *output_path = NULL;
 static int output_fd = -1;
 
-#define MODE_OPTS "none/passthru"
+#define MODE_OPTS "none/passthru/naive"
 #define MODE_NONE 0x0
 #define MODE_PASSTHRU 0x1
 #define MODE_NAIVE 0x2
@@ -425,6 +431,10 @@ parse_opt (int key, char *arg __attribute__ ((unused)),
 	{
 	  processing_mode = MODE_PASSTHRU;
 	}
+      else if (strcmp (arg, "naive") == 0)
+	{
+	  processing_mode = MODE_NAIVE;
+	}
       else
 	{
 	  argp_error (state, N_("Unsupported -m '%s', should be " MODE_OPTS "."), arg); 
@@ -451,6 +461,7 @@ parse_opt (int key, char *arg __attribute__ ((unused)),
 
       if (processing_mode == 0)
 	processing_mode = MODE_PASSTHRU;
+      /* TODO: Change the default to MODE_NAIVE once unwinding works reliably. */
 
       if (input_format == 0)
 	input_format = FORMAT_SYSPROF;
@@ -462,20 +473,21 @@ parse_opt (int key, char *arg __attribute__ ((unused)),
   return 0;
 }
 
-struct sysprof_passthru_info
-{
-  int output_fd;
-  SysprofReader *reader;
-  int pos; /* TODO for debugging purposes */
-};
-
 #ifdef HAVE_SYSPROF_4_HEADERS
+
 int
 sysprof_none_cb (SysprofCaptureFrame *frame __attribute__ ((unused)),
 		 void *arg __attribute__ ((unused)))
 {
   return SYSPROF_CB_OK;
 }
+
+struct sysprof_passthru_info
+{
+  int output_fd;
+  SysprofReader *reader;
+  int pos; /* TODO for debugging purposes */
+};
 
 int
 sysprof_passthru_cb (SysprofCaptureFrame *frame, void *arg)
@@ -487,6 +499,364 @@ sysprof_passthru_cb (SysprofCaptureFrame *frame, void *arg)
   assert ((spi->pos % SYSPROF_CAPTURE_ALIGN) == 0);
   if (n_write < 0)
     error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
+  return SYSPROF_CB_OK;
+}
+
+struct sysprof_unwind_info
+{
+  int output_fd;
+  SysprofReader *reader;
+  int pos; /* TODO for debugging purposes */
+  int nframes; /* TODO for debugging purposes */
+};
+
+struct __sample_arg
+{
+  int tid;
+  uint64_t base_addr;
+  uint64_t size;
+  char *data;
+  uint64_t pc;
+  uint64_t sp;
+};
+
+/* The next few functions Imitate the corefile interface for a single
+   stack sample, with very restricted access to registers and memory. */
+
+/* Just yields the single thread id matching the sample. */
+static pid_t
+sample_next_thread (Dwfl *dwfl __attribute__ ((unused)), void *dwfl_arg,
+		    void **thread_argp)
+{
+  struct __sample_arg *sample_arg = (struct __sample_arg *)dwfl_arg;
+  if (*thread_argp == NULL)
+    {
+      *thread_argp = (void *)0xea7b3375;
+      return sample_arg->tid;
+    }
+  else
+    return 0;
+}
+
+/* Just checks that the thread id matches the sample. */
+static bool
+sample_getthread (Dwfl *dwfl __attribute__ ((unused)), pid_t tid,
+		  void *dwfl_arg, void **thread_argp)
+{
+  struct __sample_arg *sample_arg = (struct __sample_arg *)dwfl_arg;
+  *thread_argp = (void *)sample_arg;
+  if (sample_arg->tid != tid)
+    {
+      /* TODO __libdwfl_seterrno (DWFL_E_ERRNO); */
+      return false;
+    }
+  return true;
+}
+
+static bool
+sample_memory_read (Dwfl *dwfl __attribute__ ((unused)), Dwarf_Addr addr, Dwarf_Word *result, void *arg)
+{
+  struct __sample_arg *sample_arg = (struct __sample_arg *)arg;
+#ifdef DEBUG
+  fprintf(stderr, "DEBUG memory_read base_addr=%lx addr=%lx => sample@%lx of %lx\n", sample_arg->base_addr, addr, addr - sample_arg->base_addr, sample_arg->size);
+#endif
+  /* Imitate read_cached_memory() with the stack sample data as the cache. */
+  if (addr < sample_arg->base_addr || addr - sample_arg->base_addr >= sample_arg->size)
+    return false;
+  char *d = &sample_arg->data[addr - sample_arg->base_addr];
+  if ((((uintptr_t) d) & (sizeof (unsigned long) - 1)) == 0)
+    *result = *(unsigned long *)d;
+  else
+    memcpy (result, d, sizeof (unsigned long));
+  return true;
+}
+
+/* TODO: Need to generalize this code across architectures. */
+static bool
+sample_set_initial_registers (Dwfl_Thread *thread, void *thread_arg)
+{
+  struct __sample_arg *sample_arg = (struct __sample_arg *)thread_arg;
+  dwfl_thread_state_register_pc (thread, sample_arg->pc);
+  /* TODO for comparison, i386 user_regs sp is 3, pc is 8 */
+  dwfl_thread_state_registers (thread, 7 /* x86_64 user_regs sp */, 1, &sample_arg->sp);
+  dwfl_thread_state_registers (thread, 16 /* x86_64 user_regs pc */, 1, &sample_arg->pc);
+  return true;
+}
+
+static void
+sample_detach (Dwfl *dwfl __attribute__ ((unused)), void *dwfl_arg)
+{
+  struct __sample_arg *sample_arg = (struct __sample_arg *)dwfl_arg;
+  free (sample_arg);
+}
+
+static const Dwfl_Thread_Callbacks sample_thread_callbacks =
+{
+  sample_next_thread,
+  sample_getthread,
+  sample_memory_read,
+  sample_set_initial_registers,
+  sample_detach,
+  NULL, /* sample_thread_detach */
+};
+
+int
+nop_find_debuginfo (Dwfl_Module *mod __attribute__((unused)),
+		    void **userdata __attribute__((unused)),
+		    const char *modname __attribute__((unused)),
+		    GElf_Addr base __attribute__((unused)),
+		    const char *file_name __attribute__((unused)),
+		    const char *debuglink_file __attribute__((unused)),
+		    GElf_Word debuglink_crc __attribute__((unused)),
+		    char **debuginfo_file_name __attribute__((unused)))
+{
+#ifdef DEBUG
+  fprintf(stderr, "DEBUG nop_find_debuginfo modname=%s file_name=%s debuglink_file=%s\n", modname, file_name, debuglink_file);
+#endif
+  return -1;
+}
+
+static const Dwfl_Callbacks sample_callbacks =
+{
+  .find_elf = dwfl_linux_proc_find_elf,
+  .find_debuginfo = nop_find_debuginfo, /* work with CFI only */
+};
+
+/* TODO: Code mirrors dwfl_linux_proc_attach();
+   should probably move this function to libdwfl/linux-pid-attach.c
+   and switch to including the public dwfl interface? */
+int
+sysprof_find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
+{
+  char buffer[36];
+  FILE *procfile;
+  int err = 0; /* The errno to return and set for dwfl->attcherr.  */
+
+  /* Make sure to report the actual PID (thread group leader) to
+     dwfl_attach_state.  */
+  snprintf (buffer, sizeof (buffer), "/proc/%ld/status", (long) *pid);
+  procfile = fopen (buffer, "r");
+  if (procfile == NULL)
+    {
+      err = errno;
+    fail:
+      if (dwfl->process == NULL && dwfl->attacherr == DWFL_E_NOERROR)
+	{
+	  errno = err;
+	  /* TODO: __libdwfl_canon_error not exported from libdwfl */
+	  /* dwfl->attacherr = __libdwfl_canon_error (DWFL_E_ERRNO); */
+	}
+      return err;
+    }
+
+  char *line = NULL;
+  size_t linelen = 0;
+  while (getline (&line, &linelen, procfile) >= 0)
+    if (startswith (line, "Tgid:"))
+      {
+	errno = 0;
+	char *endptr;
+	long val = strtol (&line[5], &endptr, 10);
+	if ((errno == ERANGE && val == LONG_MAX)
+	    || *endptr != '\n' || val < 0 || val != (pid_t) val)
+	  *pid = 0;
+	else
+	  *pid = (pid_t) val;
+	break;
+      }
+  free (line);
+  fclose (procfile);
+
+  if (*pid == 0)
+    {
+      err = ESRCH;
+      goto fail;
+    }
+
+  char name[64];
+  int i = snprintf (name, sizeof (name), "/proc/%ld/task", (long) *pid);
+  if (i <= 0 || i >= (ssize_t) sizeof (name) - 1)
+    {
+      errno = -ENOMEM;
+      goto fail;
+    }
+  DIR *dir = opendir (name);
+  if (dir == NULL)
+    {
+      err = errno;
+      goto fail;
+    }
+
+  i = snprintf (name, sizeof (name), "/proc/%ld/exe", (long) *pid);
+  assert (i > 0 && i < (ssize_t) sizeof (name) - 1);
+  *elf_fd = open (name, O_RDONLY);
+  if (*elf_fd >= 0)
+    {
+      *elf = elf_begin (*elf_fd, ELF_C_READ_MMAP, NULL);
+      if (*elf == NULL)
+	{
+	  /* Just ignore, dwfl_attach_state will fall back to trying
+	     to associate the Dwfl with one of the existing Dwfl_Module
+	     ELF images (to know the machine/class backend to use).  */
+#ifdef DEBUG
+	  fprintf(stderr, "DEBUG sysprof_find_profile pid %lld: elf not found",
+		  (long long)*pid);
+#endif
+	  close (*elf_fd);
+	  *elf_fd = -1;
+	}
+    }
+  else
+    *elf = NULL;
+  return 0;
+}
+
+Dwfl *
+sysprof_init_dwfl (struct sysprof_unwind_info *sui,
+		   SysprofCaptureStackUser *ev,
+		   SysprofCaptureUserRegs *regs)
+{
+  pid_t pid = ev->frame.pid;
+  /* TODO: Needs a per-process(?) caching scheme to avoid initializing on every sample. */
+  (void)sui;
+  Dwfl *dwfl = dwfl_begin (&sample_callbacks);
+
+  int err = dwfl_linux_proc_report (dwfl, pid);
+  if (err < 0)
+    {
+#ifdef DEBUG
+      fprintf(stderr, "DEBUG dwfl_linux_proc_report pid %lld: %s",
+	      (long long) pid, dwfl_errmsg (-1));
+#endif
+      return NULL;
+    }
+
+  /* TODO: Check if elf needs to be freed in sample_detach. */
+  Elf *elf = NULL;
+  int elf_fd;
+  err = sysprof_find_procfile (dwfl, &pid, &elf, &elf_fd);
+  if (err < 0)
+    {
+#ifdef DEBUG
+      fprintf(stderr, "DEBUG sysprof_find_procfile pid %lld: %s",
+	      (long long) pid, dwfl_errmsg (-1));
+#endif
+      return NULL;
+    }
+
+  if (regs->n_regs != 2) /* TODO: for now, handling only sp,pc */
+    return NULL;
+
+  struct __sample_arg *sample_arg = malloc (sizeof *sample_arg);
+  if (sample_arg == NULL)
+    {
+      if (elf != NULL) {
+	elf_end (elf);
+	close (elf_fd);
+      }
+      free (sample_arg);
+      return NULL;
+    }
+  sample_arg->tid = ev->tid;
+  sample_arg->size = ev->size;
+  sample_arg->data = (char *)&ev->data; /* TODO make unsigned? */
+  sample_arg->sp = regs->regs[0]; /* TODO doublecheck */
+  sample_arg->pc = regs->regs[1]; /* TODO doublecheck */
+  sample_arg->base_addr = sample_arg->sp; /* TODO doublecheck */
+#ifdef DEBUG
+  fprintf(stderr, "DEBUG sysprof_init_dwfl pid %lld: initial size=%ld sp=%lx pc=%lx\n", (long long) pid, sample_arg->size, sample_arg->sp, sample_arg->pc);
+#endif
+
+  if (! dwfl_attach_state (dwfl, elf, pid, &sample_thread_callbacks, sample_arg))
+    {
+#ifdef DEBUG
+      fprintf(stderr, "DEBUG dwfl_attach_state pid %lld: %s\n",
+	      (long long)pid, dwfl_errmsg(-1));
+#endif
+      elf_end (elf);
+      close (elf_fd);
+      free (sample_arg);
+      return NULL;
+    }
+  return dwfl;
+}
+
+void
+sysprof_recycle_dwfl (struct sysprof_unwind_info *sui __attribute__((unused)),
+		      Dwfl *dwfl)
+{
+  /* TODO: Needs a per-process(?) caching scheme to avoid de-initializing on every sample. */
+  dwfl_end (dwfl);
+}
+
+int
+sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
+{
+  Dwarf_Addr pc;
+  bool isactivation;
+  if (! dwfl_frame_pc (state, &pc, &isactivation))
+    return DWARF_CB_ABORT;
+
+#ifdef DEBUG
+  Dwarf_Addr pc_adjusted = pc - (isactivation ? 0 : 1);
+  Dwarf_Addr sp;
+  int rc = dwfl_frame_reg (state, 7 /* TODO make arch-independent */, &sp);
+  if (rc < 0)
+    {
+      fprintf(stderr, "DEBUG dwfl_frame_reg: %s\n",
+	      dwfl_errmsg(-1));
+      return DWARF_CB_ABORT;
+    }
+  fprintf(stderr, "DEBUG got a frame? pc_adjusted=%lx sp=%lx\n", pc_adjusted, sp);
+#endif
+
+  /* TODO add pc to output callchain; for now, just count and report frames */
+  struct sysprof_unwind_info *sui = (struct sysprof_unwind_info *)arg;
+  sui->nframes++;
+  return DWARF_CB_OK;
+}
+
+int
+sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
+{
+  struct sysprof_unwind_info *sui = (struct sysprof_unwind_info *)arg;
+  if (frame->type != SYSPROF_CAPTURE_FRAME_STACK_USER)
+    {
+      sysprof_reader_bswap_frame (sui->reader, frame); /* reverse the earlier bswap */
+      ssize_t n_write = write (sui->output_fd, frame, frame->len);
+      sui->pos += frame->len;
+      assert ((sui->pos % SYSPROF_CAPTURE_ALIGN) == 0);
+      if (n_write < 0)
+	error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
+      return SYSPROF_CB_OK;
+    }
+  SysprofCaptureStackUser *ev = (SysprofCaptureStackUser *)frame;
+  char *tail_ptr = (char *)ev;
+  tail_ptr += sizeof(SysprofCaptureStackUser) + ev->size;
+  SysprofCaptureUserRegs *regs = (SysprofCaptureUserRegs *)tail_ptr;
+#ifdef DEBUG
+  fprintf(stderr, "\n"); /* extra newline for padding */
+#endif
+  Dwfl *dwfl = sysprof_init_dwfl (sui, ev, regs);
+  if (dwfl == NULL)
+    {
+#ifdef DEBUG
+      fprintf(stderr, "DEBUG sysprof_init_dwfl pid %lld (failed)\n", (long long)frame->pid);
+#endif
+      sysprof_recycle_dwfl (sui, dwfl);
+      return SYSPROF_CB_OK;
+    }
+  sui->nframes = 0;
+  int rc = dwfl_getthread_frames (dwfl, ev->tid, sysprof_unwind_frame_cb, sui);
+  if (rc < 0)
+    {
+#ifdef DEBUG
+      fprintf(stderr, "DEBUG dwfl_getthread_frames pid %lld: %s\n", (long long)frame->pid, dwfl_errmsg(-1));
+#endif
+    }
+  /* TODO: Assemble and output callchain frame. */
+  fprintf(stderr, "sysprof_unwind_cb pid %lld: unwound %d frames\n", (long long)frame->pid, sui->nframes);
+  sysprof_recycle_dwfl (sui, dwfl);
   return SYSPROF_CB_OK;
 }
 #endif
@@ -554,8 +924,22 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
   ssize_t n_write = write (output_fd, &reader->header, sizeof reader->header);
   if (n_write < 0)
     error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
-  struct sysprof_passthru_info spi = { output_fd, reader, sizeof reader->header };
-  ptrdiff_t offset = sysprof_reader_getframes (reader, &sysprof_passthru_cb, &spi);
+  ptrdiff_t offset;
+  if (processing_mode == MODE_NONE)
+    {
+      struct sysprof_passthru_info sni = { output_fd, reader, sizeof reader->header };
+      offset = sysprof_reader_getframes (reader, &sysprof_none_cb, &sni);
+    }
+  else if (processing_mode == MODE_PASSTHRU)
+    {
+      struct sysprof_passthru_info spi = { output_fd, reader, sizeof reader->header };
+      offset = sysprof_reader_getframes (reader, &sysprof_passthru_cb, &spi);
+    }
+  else /* processing_mode == MODE_NAIVE */
+    {
+      struct sysprof_unwind_info sui = { output_fd, reader, sizeof reader->header, 0 };
+      offset = sysprof_reader_getframes (reader, &sysprof_unwind_cb, &sui);
+    }
   if (offset < 0)
     error (EXIT_BAD, errno, N_("No frames in file or FIFO '%s'"), input_path);
   sysprof_reader_end (reader);
