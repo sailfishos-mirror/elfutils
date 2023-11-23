@@ -502,12 +502,16 @@ sysprof_passthru_cb (SysprofCaptureFrame *frame, void *arg)
   return SYSPROF_CB_OK;
 }
 
+#define UNWIND_ADDR_INCREMENT 512
 struct sysprof_unwind_info
 {
   int output_fd;
   SysprofReader *reader;
   int pos; /* TODO for debugging purposes */
-  int nframes; /* TODO for debugging purposes */
+  int n_addrs;
+  int max_addrs;
+  Dwarf_Addr *addrs; /* allocate blocks of UNWIND_ADDR_INCREMENT */
+  void *outbuf;
 };
 
 struct __sample_arg
@@ -811,9 +815,14 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
   fprintf(stderr, "DEBUG got a frame? pc_adjusted=%lx sp=%lx\n", pc_adjusted, sp);
 #endif
 
-  /* TODO add pc to output callchain; for now, just count and report frames */
   struct sysprof_unwind_info *sui = (struct sysprof_unwind_info *)arg;
-  sui->nframes++;
+  if (sui->n_addrs >= sui->max_addrs)
+    {
+      sui->addrs = reallocarray (sui->addrs, sui->max_addrs + UNWIND_ADDR_INCREMENT, sizeof(Dwarf_Addr));
+      sui->max_addrs = sui->max_addrs + UNWIND_ADDR_INCREMENT;
+    }
+  sui->addrs[sui->n_addrs] = pc;
+  sui->n_addrs++;
   return DWARF_CB_OK;
 }
 
@@ -821,10 +830,11 @@ int
 sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
 {
   struct sysprof_unwind_info *sui = (struct sysprof_unwind_info *)arg;
+  ssize_t n_write;
   if (frame->type != SYSPROF_CAPTURE_FRAME_STACK_USER)
     {
       sysprof_reader_bswap_frame (sui->reader, frame); /* reverse the earlier bswap */
-      ssize_t n_write = write (sui->output_fd, frame, frame->len);
+      n_write = write (sui->output_fd, frame, frame->len);
       sui->pos += frame->len;
       assert ((sui->pos % SYSPROF_CAPTURE_ALIGN) == 0);
       if (n_write < 0)
@@ -847,7 +857,7 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
       sysprof_recycle_dwfl (sui, dwfl);
       return SYSPROF_CB_OK;
     }
-  sui->nframes = 0;
+  sui->n_addrs = 0;
   int rc = dwfl_getthread_frames (dwfl, ev->tid, sysprof_unwind_frame_cb, sui);
   if (rc < 0)
     {
@@ -855,8 +865,35 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
       fprintf(stderr, "DEBUG dwfl_getthread_frames pid %lld: %s\n", (long long)frame->pid, dwfl_errmsg(-1));
 #endif
     }
-  /* TODO: Assemble and output callchain frame. */
-  fprintf(stderr, "sysprof_unwind_cb pid %lld: unwound %d frames\n", (long long)frame->pid, sui->nframes);
+  fprintf(stderr, "sysprof_unwind_cb pid %lld: unwound %d frames\n", (long long)frame->pid, sui->n_addrs); /* TODO rename sui->nframes to sui->n_addrs */
+
+  /* Assemble and output callchain frame. */
+  /* TODO: assert(sizeof(Dwarf_Addr) == sizeof(SysprofCaptureAddress)); */
+  SysprofCaptureSample *ev_callchain;
+  size_t len = sizeof *ev_callchain + (sui->n_addrs * sizeof(Dwarf_Addr));
+  ev_callchain = (SysprofCaptureSample *)sui->outbuf; /* TODO replace reader->outbuf */
+  if (len > USHRT_MAX)
+    {
+#ifdef DEBUG
+      fprintf(stderr, "DEBUG sysprof_unwind_cb frame size %d is too large (max %d)\n", len, USHRT_MAX);
+#endif
+      sysprof_recycle_dwfl (sui, dwfl);
+      return SYSPROF_CB_OK;
+    }
+  SysprofCaptureFrame *out_frame = (SysprofCaptureFrame *)ev_callchain;
+  out_frame->len = len;
+  out_frame->cpu = ev->frame.cpu;
+  out_frame->pid = ev->frame.pid;
+  out_frame->time = ev->frame.time;
+  out_frame->type = SYSPROF_CAPTURE_FRAME_SAMPLE;
+  out_frame->padding1 = 0;
+  out_frame->padding2 = 0;
+  ev_callchain->n_addrs = sui->n_addrs;
+  ev_callchain->tid = ev->tid;
+  memcpy (ev_callchain->addrs, sui->addrs, (sui->n_addrs * sizeof(SysprofCaptureAddress)));
+  n_write = write (sui->output_fd, ev_callchain, len);
+  if (n_write < 0)
+    error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
   sysprof_recycle_dwfl (sui, dwfl);
   return SYSPROF_CB_OK;
 }
@@ -938,7 +975,14 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
     }
   else /* processing_mode == MODE_NAIVE */
     {
-      struct sysprof_unwind_info sui = { output_fd, reader, sizeof reader->header, 0 };
+      struct sysprof_unwind_info sui;
+      sui.output_fd = output_fd;
+      sui.reader = reader;
+      sui.pos = sizeof reader->header;
+      sui.n_addrs = 0;
+      sui.max_addrs = UNWIND_ADDR_INCREMENT;
+      sui.addrs = (Dwarf_Addr *)malloc (sui.max_addrs * sizeof(Dwarf_Addr));
+      sui.outbuf = (void *)malloc (USHRT_MAX * sizeof(uint8_t));
       offset = sysprof_reader_getframes (reader, &sysprof_unwind_cb, &sui);
     }
   if (offset < 0)
