@@ -107,7 +107,7 @@ typedef struct
   uint64_t              size;
   int32_t               tid;
   uint32_t              padding;
-  unsigned char         data[0];
+  uint8_t               data[0];
 } SysprofCaptureStackUser
 SYSPROF_ALIGNED_END(1);
 
@@ -513,11 +513,11 @@ struct sysprof_unwind_info
 struct __sample_arg
 {
   int tid;
-  uint64_t base_addr;
+  Dwarf_Addr base_addr;
   uint64_t size;
-  char *data;
-  uint64_t pc;
-  uint64_t sp;
+  uint8_t *data;
+  Dwarf_Addr pc;
+  Dwarf_Addr sp;
 };
 
 /* The next few functions Imitate the corefile interface for a single
@@ -563,7 +563,7 @@ sample_memory_read (Dwfl *dwfl __attribute__ ((unused)), Dwarf_Addr addr, Dwarf_
   /* Imitate read_cached_memory() with the stack sample data as the cache. */
   if (addr < sample_arg->base_addr || addr - sample_arg->base_addr >= sample_arg->size)
     return false;
-  char *d = &sample_arg->data[addr - sample_arg->base_addr];
+  uint8_t *d = &sample_arg->data[addr - sample_arg->base_addr];
   if ((((uintptr_t) d) & (sizeof (unsigned long) - 1)) == 0)
     *result = *(unsigned long *)d;
   else
@@ -759,10 +759,11 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
     }
   sample_arg->tid = ev->tid;
   sample_arg->size = ev->size;
-  sample_arg->data = (char *)&ev->data; /* TODO make unsigned? */
-  sample_arg->sp = regs->regs[0]; /* TODO doublecheck */
-  sample_arg->pc = regs->regs[1]; /* TODO doublecheck */
-  sample_arg->base_addr = sample_arg->sp; /* TODO doublecheck */
+  sample_arg->data = (uint8_t *)&ev->data;
+  /* TODO: make portable across architectures */
+  sample_arg->sp = regs->regs[0];
+  sample_arg->pc = regs->regs[1];
+  sample_arg->base_addr = sample_arg->sp;
 #ifdef DEBUG
   fprintf(stderr, "DEBUG sysprof_init_dwfl pid %lld: initial size=%ld sp=%lx pc=%lx\n", (long long) pid, sample_arg->size, sample_arg->sp, sample_arg->pc);
 #endif
@@ -831,7 +832,7 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
       return SYSPROF_CB_OK;
     }
   SysprofCaptureStackUser *ev = (SysprofCaptureStackUser *)frame;
-  char *tail_ptr = (char *)ev;
+  uint8_t *tail_ptr = (uint8_t *)ev;
   tail_ptr += sizeof(SysprofCaptureStackUser) + ev->size;
   SysprofCaptureUserRegs *regs = (SysprofCaptureUserRegs *)tail_ptr;
 #ifdef DEBUG
