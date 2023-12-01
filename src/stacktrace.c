@@ -486,7 +486,7 @@ struct sysprof_passthru_info
 {
   int output_fd;
   SysprofReader *reader;
-  int pos; /* TODO for debugging purposes */
+  int pos; /* for diagnostic purposes */
 };
 
 int
@@ -507,7 +507,7 @@ struct sysprof_unwind_info
 {
   int output_fd;
   SysprofReader *reader;
-  int pos; /* TODO for debugging purposes */
+  int pos; /* for diagnostic purposes */
   int n_addrs;
   int max_addrs;
   Dwarf_Addr *addrs; /* allocate blocks of UNWIND_ADDR_INCREMENT */
@@ -963,15 +963,18 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
   if (n_write < 0)
     error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
   ptrdiff_t offset;
+  unsigned long int output_pos = 0;
   if (processing_mode == MODE_NONE)
     {
       struct sysprof_passthru_info sni = { output_fd, reader, sizeof reader->header };
       offset = sysprof_reader_getframes (reader, &sysprof_none_cb, &sni);
+      output_pos = sni.pos;
     }
   else if (processing_mode == MODE_PASSTHRU)
     {
       struct sysprof_passthru_info spi = { output_fd, reader, sizeof reader->header };
       offset = sysprof_reader_getframes (reader, &sysprof_passthru_cb, &spi);
+      output_pos = spi.pos;
     }
   else /* processing_mode == MODE_NAIVE */
     {
@@ -984,9 +987,13 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
       sui.addrs = (Dwarf_Addr *)malloc (sui.max_addrs * sizeof(Dwarf_Addr));
       sui.outbuf = (void *)malloc (USHRT_MAX * sizeof(uint8_t));
       offset = sysprof_reader_getframes (reader, &sysprof_unwind_cb, &sui);
+      output_pos = sui.pos;
     }
-  if (offset < 0)
+  if (offset < 0 && output_pos <= sizeof reader->header)
     error (EXIT_BAD, errno, N_("No frames in file or FIFO '%s'"), input_path);
+  else if (offset < 0)
+    error (EXIT_BAD, errno, N_("Error processing file or FIFO '%s' at input offset %ld, output offset %ld"),
+	   input_path, reader->pos, output_pos);
   sysprof_reader_end (reader);
 #endif
 
