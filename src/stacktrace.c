@@ -715,15 +715,141 @@ sysprof_find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
   return 0;
 }
 
+/* TODO: This echoes lib/dynamicsizehash.* with some modifications. */
+typedef struct
+{
+  bool used;
+  pid_t pid;
+  Dwfl *dwfl;
+  char *comm;
+} dwfltab_ent;
+
+typedef struct
+{
+  ssize_t size;
+  ssize_t filled;
+  dwfltab_ent *table;
+} dwfltab;
+
+/* TODO: Store in sui, update below functions. */
+/* XXX initial size must be a prime */
+#define DWFLTAB_DEFAULT_SIZE 1021
+dwfltab default_table;
+
+/* XXX based on lib/dynamicsizehash.* *_init */
+void dwfltab_init(void)
+{
+  dwfltab *htab = &default_table;
+  htab->size = DWFLTAB_DEFAULT_SIZE;
+  htab->filled = 0;
+  htab->table = calloc ((htab->size + 1), sizeof(htab->table[0]));
+}
+
+/* XXX based on lib/dynamicsizehash.* *_find */
+dwfltab_ent *dwfltab_find(pid_t pid)
+{
+  dwfltab *htab = &default_table;
+  ssize_t idx = 1 + (htab->size > (ssize_t)pid ? (ssize_t)pid : (ssize_t)pid % htab->size);
+
+  if (!htab->table[idx].used)
+    goto found;
+  if (htab->table[idx].pid == pid)
+    goto found;
+
+  int64_t hash = 1 + pid % (htab->size - 2);
+  do
+    {
+      if (idx <= hash)
+	idx = htab->size + idx - hash;
+      else
+	idx -= hash;
+
+      if (!htab->table[idx].used)
+	goto found;
+      if (htab->table[idx].pid == pid)
+	goto found;
+    }
+  while (true);
+
+ found:
+  if (htab->table[idx].pid == 0)
+    {
+      /* TODO: Implement resizing or LRU eviction? */
+      if (100 * htab->filled > 90 * htab->size)
+	return NULL;
+      htab->table[idx].used = true;
+      htab->table[idx].pid = pid;
+      htab->filled += 1;
+    }
+  return &htab->table[idx];
+}
+
+Dwfl *
+pid_find_dwfl (pid_t pid)
+{
+  dwfltab_ent *entry = dwfltab_find(pid);
+  if (entry == NULL)
+    return NULL;
+  return entry->dwfl;
+}
+
+char *
+pid_find_comm (pid_t pid)
+{
+  dwfltab_ent *entry = dwfltab_find(pid);
+  if (entry == NULL)
+    return "<unknown>";
+  if (entry->comm != NULL)
+    return entry->comm;
+  char name[64];
+  int i = snprintf (name, sizeof(name), "/proc/%ld/comm", (long) pid);
+  FILE *procfile = fopen(name, "r");
+  if (procfile == NULL)
+    goto fail;
+  size_t linelen = 0;
+  i = getline(&entry->comm, &linelen, procfile);
+  if (i < 0)
+    {
+      free(entry->comm);
+      goto fail;
+    }
+  for (i = linelen - 1; i > 0; i--)
+    if (entry->comm[i] == '\n')
+	entry->comm[i] = '\0';
+  fclose(procfile);
+  goto done;
+ fail:
+  entry->comm = (char *)malloc(16);
+  snprintf (entry->comm, 16, "<unknown>");
+ done:
+  return entry->comm;
+}
+
+/* Cache dwfl structs in a basic hash table. */
+void
+pid_store_dwfl (pid_t pid, Dwfl *dwfl)
+{
+  dwfltab_ent *entry = dwfltab_find(pid);
+  if (entry == NULL)
+    return;
+  entry->pid = pid;
+  entry->dwfl = dwfl;
+  pid_find_comm(pid);
+  return;
+}
+
 Dwfl *
 sysprof_init_dwfl (struct sysprof_unwind_info *sui,
 		   SysprofCaptureStackUser *ev,
 		   SysprofCaptureUserRegs *regs)
 {
   pid_t pid = ev->frame.pid;
-  /* TODO: Needs a per-process(?) caching scheme to avoid initializing on every sample. */
   (void)sui;
-  Dwfl *dwfl = dwfl_begin (&sample_callbacks);
+
+  Dwfl *dwfl = pid_find_dwfl(pid);
+  if (dwfl != NULL)
+    return dwfl;
+  dwfl = dwfl_begin (&sample_callbacks);
 
   int err = dwfl_linux_proc_report (dwfl, pid);
   if (err < 0)
@@ -783,15 +909,8 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
       free (sample_arg);
       return NULL;
     }
+  pid_store_dwfl (pid, dwfl);
   return dwfl;
-}
-
-void
-sysprof_recycle_dwfl (struct sysprof_unwind_info *sui __attribute__((unused)),
-		      Dwfl *dwfl)
-{
-  /* TODO: Needs a per-process(?) caching scheme to avoid de-initializing on every sample. */
-  dwfl_end (dwfl);
 }
 
 int
@@ -831,6 +950,18 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
 {
   struct sysprof_unwind_info *sui = (struct sysprof_unwind_info *)arg;
   ssize_t n_write;
+
+  /* additional diagnostic to display process name */
+  char *comm = NULL;
+  if (frame->type == SYSPROF_CAPTURE_FRAME_SAMPLE || frame->type == SYSPROF_CAPTURE_FRAME_STACK_USER)
+      comm = pid_find_comm(frame->pid);
+
+  if (frame->type == SYSPROF_CAPTURE_FRAME_SAMPLE)
+    {
+      /* XXX additional diagnostics for comparing to eu-stacktrace unwind */
+      SysprofCaptureSample *ev_sample = (SysprofCaptureSample *)frame;
+      fprintf(stderr, "sysprof_unwind_cb pid %lld (%s): callchain sample with %d frames\n", (long long)frame->pid, comm, ev_sample->n_addrs);
+    }
   if (frame->type != SYSPROF_CAPTURE_FRAME_STACK_USER)
     {
       sysprof_reader_bswap_frame (sui->reader, frame); /* reverse the earlier bswap */
@@ -851,10 +982,7 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
   Dwfl *dwfl = sysprof_init_dwfl (sui, ev, regs);
   if (dwfl == NULL)
     {
-#ifdef DEBUG
-      fprintf(stderr, "DEBUG sysprof_init_dwfl pid %lld (failed)\n", (long long)frame->pid);
-#endif
-      sysprof_recycle_dwfl (sui, dwfl);
+      fprintf(stderr, "DEBUG sysprof_init_dwfl pid %lld (%s) (failed)\n", (long long)frame->pid, comm);
       return SYSPROF_CB_OK;
     }
   sui->n_addrs = 0;
@@ -865,7 +993,7 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
       fprintf(stderr, "DEBUG dwfl_getthread_frames pid %lld: %s\n", (long long)frame->pid, dwfl_errmsg(-1));
 #endif
     }
-  fprintf(stderr, "sysprof_unwind_cb pid %lld: unwound %d frames\n", (long long)frame->pid, sui->n_addrs); /* TODO rename sui->nframes to sui->n_addrs */
+  fprintf(stderr, "sysprof_unwind_cb pid %lld (%s): unwound %d frames\n", (long long)frame->pid, comm, sui->n_addrs);
 
   /* Assemble and output callchain frame. */
   /* TODO: assert(sizeof(Dwarf_Addr) == sizeof(SysprofCaptureAddress)); */
@@ -877,7 +1005,6 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
 #ifdef DEBUG
       fprintf(stderr, "DEBUG sysprof_unwind_cb frame size %d is too large (max %d)\n", len, USHRT_MAX);
 #endif
-      sysprof_recycle_dwfl (sui, dwfl);
       return SYSPROF_CB_OK;
     }
   SysprofCaptureFrame *out_frame = (SysprofCaptureFrame *)ev_callchain;
@@ -894,7 +1021,6 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
   n_write = write (sui->output_fd, ev_callchain, len);
   if (n_write < 0)
     error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
-  sysprof_recycle_dwfl (sui, dwfl);
   return SYSPROF_CB_OK;
 }
 #endif
@@ -978,6 +1104,7 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
     }
   else /* processing_mode == MODE_NAIVE */
     {
+      dwfltab_init();
       struct sysprof_unwind_info sui;
       sui.output_fd = output_fd;
       sui.reader = reader;
