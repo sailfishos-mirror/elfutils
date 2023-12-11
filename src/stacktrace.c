@@ -382,6 +382,7 @@ sysprof_reader_next_frame (SysprofReader *reader)
   /* if (frame->type < 0 || frame->type >= SYSPROF_CAPTURE_FRAME_LAST) */
   if (frame->type >= SYSPROF_CAPTURE_FRAME_LAST)
     return NULL;
+
   return frame;
 }
 
@@ -437,7 +438,7 @@ parse_opt (int key, char *arg __attribute__ ((unused)),
 	}
       else
 	{
-	  argp_error (state, N_("Unsupported -m '%s', should be " MODE_OPTS "."), arg); 
+	  argp_error (state, N_("Unsupported -m '%s', should be " MODE_OPTS "."), arg);
 	}
       break;
 
@@ -448,7 +449,7 @@ parse_opt (int key, char *arg __attribute__ ((unused)),
 	}
       else
 	{
-	  argp_error (state, N_("Unsupported -f '%s', should be " FORMAT_OPTS "."), arg); 
+	  argp_error (state, N_("Unsupported -f '%s', should be " FORMAT_OPTS "."), arg);
 	}
       break;
 
@@ -493,7 +494,7 @@ int
 sysprof_passthru_cb (SysprofCaptureFrame *frame, void *arg)
 {
   struct sysprof_passthru_info *spi = (struct sysprof_passthru_info *)arg;
-  sysprof_reader_bswap_frame (spi->reader, frame); /* reverse the prior bswap */
+  sysprof_reader_bswap_frame (spi->reader, frame); /* reverse the earlier bswap */
   ssize_t n_write = write (spi->output_fd, frame, frame->len);
   spi->pos += frame->len;
   assert ((spi->pos % SYSPROF_CAPTURE_ALIGN) == 0);
