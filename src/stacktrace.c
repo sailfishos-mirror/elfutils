@@ -861,6 +861,13 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
 #endif
       return NULL;
     }
+  err = dwfl_report_end (dwfl, NULL, NULL);
+  if (err != 0)
+    {
+      fprintf(stderr, "DEBUG dwfl_report_end pid %lld: %s",
+	      (long long) pid, dwfl_errmsg (-1));
+      return NULL;
+    }
 
   /* TODO: Check if elf needs to be freed in sample_detach. */
   Elf *elf = NULL;
