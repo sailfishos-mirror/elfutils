@@ -78,7 +78,7 @@
 #include <fcntl.h>
 /* #include ELFUTILS_HEADER(dwfl) */
 #include "../libdwfl/libdwflP.h"
-/* XXX: Private header needed for sysprof_find_procfile. */
+/* XXX: Private header needed for sysprof_find_procfile, sysprof_init_dwfl. */
 
 #include <system.h>
 
@@ -647,7 +647,7 @@ sysprof_find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
     {
       err = errno;
     fail:
-      if (dwfl->process == NULL && dwfl->attacherr == DWFL_E_NOERROR)
+      if (dwfl->process == NULL && dwfl->attacherr == DWFL_E_NOERROR) /* XXX requires libdwflP.h */
 	{
 	  errno = err;
 	  /* TODO: __libdwfl_canon_error not exported from libdwfl */
@@ -850,11 +850,16 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
 		   SysprofCaptureUserRegs *regs)
 {
   pid_t pid = ev->frame.pid;
-  (void)sui;
 
   Dwfl *dwfl = pid_find_dwfl(pid);
+  struct __sample_arg *sample_arg;
+  bool cached = false;
   if (dwfl != NULL)
-    return dwfl;
+    {
+      sample_arg = dwfl->process->callbacks_arg; /* XXX requires libdwflP.h */
+      cached = true;
+      goto reuse;
+    }
   dwfl = dwfl_begin (&sample_callbacks);
 
   int err = dwfl_linux_proc_report (dwfl, pid);
@@ -887,10 +892,7 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
       return NULL;
     }
 
-  if (regs->n_regs != 2) /* TODO: for now, handling only sp,pc */
-    return NULL;
-
-  struct __sample_arg *sample_arg = malloc (sizeof *sample_arg);
+  sample_arg = malloc (sizeof *sample_arg);
   if (sample_arg == NULL)
     {
       if (elf != NULL) {
@@ -898,6 +900,13 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
 	close (elf_fd);
       }
       free (sample_arg);
+      return NULL;
+    }
+
+ reuse:
+  if (regs->n_regs != 2) /* TODO: for now, handling only sp,pc */
+    {
+      free (sample_arg); /* TODO move earlier */
       return NULL;
     }
   sample_arg->tid = ev->tid;
@@ -911,7 +920,7 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
   fprintf(stderr, "DEBUG sysprof_init_dwfl pid %lld: initial size=%ld sp=%lx pc=%lx\n", (long long) pid, sample_arg->size, sample_arg->sp, sample_arg->pc);
 #endif
 
-  if (! dwfl_attach_state (dwfl, elf, pid, &sample_thread_callbacks, sample_arg))
+  if (!cached && ! dwfl_attach_state (dwfl, elf, pid, &sample_thread_callbacks, sample_arg))
     {
 #ifdef DEBUG
       fprintf(stderr, "DEBUG dwfl_attach_state pid %lld: %s\n",
@@ -922,7 +931,8 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
       free (sample_arg);
       return NULL;
     }
-  pid_store_dwfl (pid, dwfl);
+  if (!cached)
+    pid_store_dwfl (pid, dwfl);
   return dwfl;
 }
 
