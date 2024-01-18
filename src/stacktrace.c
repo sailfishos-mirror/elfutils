@@ -725,6 +725,9 @@ typedef struct
   pid_t pid;
   Dwfl *dwfl;
   char *comm;
+  int max_frames; /* for diagnostic purposes */
+  int total_samples; /* for diagnostic purposes */
+  int lost_samples; /* for diagnostic purposes */
 } dwfltab_ent;
 
 typedef struct
@@ -973,6 +976,15 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
       /* XXX additional diagnostics for comparing to eu-stacktrace unwind */
       SysprofCaptureSample *ev_sample = (SysprofCaptureSample *)frame;
       fprintf(stderr, "sysprof_unwind_cb pid %lld (%s): callchain sample with %d frames\n", (long long)frame->pid, comm, ev_sample->n_addrs);
+#ifdef DEBUG
+      /* Final diagnostics. */
+      dwfltab_ent *dwfl_ent = dwfltab_find(frame->pid);
+      if (dwfl_ent != NULL && ev_sample->n_addrs > dwfl_ent->max_frames)
+	dwfl_ent->max_frames = ev_sample->n_addrs;
+      dwfl_ent->total_samples ++;
+      if (ev_sample->n_addrs <= 2)
+	dwfl_ent->lost_samples ++;
+#endif
     }
   if (frame->type != SYSPROF_CAPTURE_FRAME_STACK_USER)
     {
@@ -1006,6 +1018,15 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
 #endif
     }
   fprintf(stderr, "sysprof_unwind_cb pid %lld (%s): unwound %d frames\n", (long long)frame->pid, comm, sui->n_addrs);
+#ifdef DEBUG
+  /* Final diagnostics. */
+  dwfltab_ent *dwfl_ent = dwfltab_find(frame->pid);
+  if (dwfl_ent != NULL && sui->n_addrs > dwfl_ent->max_frames)
+    dwfl_ent->max_frames = sui->n_addrs;
+  dwfl_ent->total_samples++;
+  if (sui->n_addrs <= 2)
+    dwfl_ent->lost_samples ++;
+#endif
 
   /* Assemble and output callchain frame. */
   /* TODO: assert(sizeof(Dwarf_Addr) == sizeof(SysprofCaptureAddress)); */
@@ -1126,6 +1147,16 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
       sui.addrs = (Dwarf_Addr *)malloc (sui.max_addrs * sizeof(Dwarf_Addr));
       sui.outbuf = (void *)malloc (USHRT_MAX * sizeof(uint8_t));
       offset = sysprof_reader_getframes (reader, &sysprof_unwind_cb, &sui);
+#ifdef DEBUG
+      /* Final diagnostics. */
+      for (unsigned idx = 0; idx < DWFLTAB_DEFAULT_SIZE; idx++)
+	{
+	  dwfltab *htab = &default_table;
+	  if (!htab->table[idx].used)
+	    continue;
+	  fprintf(stderr, "%d %s -- max %d frames, received %d samples, lost %d samples\n", htab->table[idx].pid, htab->table[idx].comm, htab->table[idx].max_frames, htab->table[idx].total_samples, htab->table[idx].lost_samples);
+	}
+#endif
       output_pos = sui.pos;
     }
   if (offset < 0 && output_pos <= sizeof reader->header)
