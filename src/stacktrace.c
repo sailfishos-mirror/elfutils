@@ -124,6 +124,8 @@ SYSPROF_ALIGNED_END(1);
 #endif // ifndef SYSPROF_CAPTURE_FRAME_STACK_USER
 #endif // ifdef HAVE_SYSPROF_4_HEADERS
 
+static int maxframes = 256;
+
 static char *input_path = NULL;
 static int input_fd = -1;
 static char *output_path = NULL;
@@ -943,6 +945,8 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
 #endif
 
   struct sysprof_unwind_info *sui = (struct sysprof_unwind_info *)arg;
+  if (sui->n_addrs > maxframes)
+    return DWARF_CB_ABORT;
   if (sui->n_addrs >= sui->max_addrs)
     {
       sui->addrs = reallocarray (sui->addrs, sui->max_addrs + UNWIND_ADDR_INCREMENT, sizeof(Dwarf_Addr));
