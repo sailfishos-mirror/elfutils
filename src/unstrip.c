@@ -903,10 +903,46 @@ collect_symbols (Elf *outelf, bool rel, Elf_Scn *symscn, Elf_Scn *strscn,
   if (s1->value > s2->value)						      \
     return 1
 
-/* Compare symbols with a consistent ordering,
-   but one only meaningful for equality.  */
+/* Symbol comparison used to sort symbols in preparation for deduplication.
+
+   This function must ensure a consistent ordering of duplicates even when
+   used with an unstable sort function such as qsort.  If duplicate symbols
+   aren't sorted in a consistent order, the symbol index map can become
+   corrupt.  */
 static int
 compare_symbols (const void *a, const void *b)
+{
+  const struct symbol *s1 = a;
+  const struct symbol *s2 = b;
+
+  CMP (value);
+  CMP (size);
+  CMP (shndx);
+
+  int res = s1->compare - s2->compare;
+  if (res != 0)
+    return res;
+
+  res = strcmp (s1->name, s2->name);
+  if (res != 0)
+    return res;
+
+  /* Duplicates still have distinct positions in the symbol index map.
+     Compare map positions to ensure that duplicate symbols are ordered
+     consistently even if the sort function is unstable.  */
+  CMP (map);
+  error_exit (0, "found two identical index map positions.");
+}
+
+/* Symbol comparison used to deduplicate symbols found in both the stripped
+   and unstripped input files.
+
+   Similar to compare_symbols, but does not differentiate symbols based
+   on their position in the symbol index map.  Duplicates can't be found
+   by comparing index map postions because duplicates still have distinct
+   positions in the map.  */
+static int
+compare_symbols_duplicate (const void *a, const void *b)
 {
   const struct symbol *s1 = a;
   const struct symbol *s2 = b;
@@ -1855,7 +1891,8 @@ more sections in stripped file than debug file -- arguments reversed?"));
 	    }
 
 	  struct symbol *n = s;
-	  while (n + 1 < &symbols[total_syms] && !compare_symbols (s, n + 1))
+	  while (n + 1 < &symbols[total_syms]
+		 && !compare_symbols_duplicate (s, n + 1))
 	    ++n;
 
 	  while (s < n)
