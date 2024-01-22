@@ -82,9 +82,6 @@
 
 #include <system.h>
 
-/* TODO: Enable to show detailed unwinder diagnostics. */
-/* #define DEBUG */
-
 /* TODO: Make optional through configury.  The #ifdefs are included
    now so we don't miss any code that needs to be controlled with this
    option. */
@@ -143,6 +140,16 @@ static int processing_mode;
 #define FORMAT_SYSPROF 0x2
 static int input_format;
 static int output_format = FORMAT_SYSPROF; /* TODO: add to cmdline args? */
+
+/* non-printable argp options.  */
+#define OPT_DEBUG	0x100
+
+/* Diagnostic options. */
+static bool show_memory_reads = false;
+static bool show_frames = false;
+static bool show_samples = false;
+static bool show_failures = true; /* TODO: disable by default in release version */
+static bool show_summary = true; /* TODO: disable by default in release version */
 
 /* Program exit codes.  All samples processed without any errors is
    GOOD.  Some non-fatal errors during processing is an ERROR.  A
@@ -455,6 +462,16 @@ parse_opt (int key, char *arg __attribute__ ((unused)),
 	}
       break;
 
+    case OPT_DEBUG:
+      show_memory_reads = true;
+      show_frames = true;
+      FALLTHROUGH;
+    case 'v':
+      show_samples = true;
+      show_failures = true;
+      show_summary = true;
+      break;
+
     case ARGP_KEY_END:
       if (input_path == NULL)
 	input_path = "-"; /* default to stdin */
@@ -512,7 +529,9 @@ struct sysprof_unwind_info
   SysprofReader *reader;
   int pos; /* for diagnostic purposes */
   int n_addrs;
-  int max_addrs;
+  int max_addrs; /* for diagnostic purposes */
+  Dwarf_Addr last_base; /* for diagnostic purposes */
+  Dwarf_Addr last_sp; /* for diagnostic purposes */
   Dwarf_Addr *addrs; /* allocate blocks of UNWIND_ADDR_INCREMENT */
   void *outbuf;
 };
@@ -564,9 +583,9 @@ static bool
 sample_memory_read (Dwfl *dwfl __attribute__ ((unused)), Dwarf_Addr addr, Dwarf_Word *result, void *arg)
 {
   struct __sample_arg *sample_arg = (struct __sample_arg *)arg;
-#ifdef DEBUG
-  fprintf(stderr, "DEBUG memory_read base_addr=%lx addr=%lx => sample@%lx of %lx\n", sample_arg->base_addr, addr, addr - sample_arg->base_addr, sample_arg->size);
-#endif
+  if (show_memory_reads)
+    fprintf(stderr, "* memory_read addr=%lx+(%lx) size=%lx\n",
+	    sample_arg->base_addr, addr - sample_arg->base_addr, sample_arg->size);
   /* Imitate read_cached_memory() with the stack sample data as the cache. */
   if (addr < sample_arg->base_addr || addr - sample_arg->base_addr >= sample_arg->size)
     return false;
@@ -705,10 +724,9 @@ sysprof_find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
 	  /* Just ignore, dwfl_attach_state will fall back to trying
 	     to associate the Dwfl with one of the existing Dwfl_Module
 	     ELF images (to know the machine/class backend to use).  */
-#ifdef DEBUG
-	  fprintf(stderr, "DEBUG sysprof_find_profile pid %lld: elf not found",
-		  (long long)*pid);
-#endif
+	  if (show_failures)
+	    fprintf(stderr, "sysprof_find_procfile pid %lld: elf not found",
+		    (long long)*pid);
 	  close (*elf_fd);
 	  *elf_fd = -1;
 	}
@@ -865,17 +883,17 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
   int err = dwfl_linux_proc_report (dwfl, pid);
   if (err < 0)
     {
-#ifdef DEBUG
-      fprintf(stderr, "DEBUG dwfl_linux_proc_report pid %lld: %s",
-	      (long long) pid, dwfl_errmsg (-1));
-#endif
+      if (show_failures)
+	fprintf(stderr, "dwfl_linux_proc_report pid %lld: %s",
+		(long long) pid, dwfl_errmsg (-1));
       return NULL;
     }
   err = dwfl_report_end (dwfl, NULL, NULL);
   if (err != 0)
     {
-      fprintf(stderr, "DEBUG dwfl_report_end pid %lld: %s",
-	      (long long) pid, dwfl_errmsg (-1));
+      if (show_failures)
+	fprintf(stderr, "dwfl_report_end pid %lld: %s",
+		(long long) pid, dwfl_errmsg (-1));
       return NULL;
     }
 
@@ -885,10 +903,9 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
   err = sysprof_find_procfile (dwfl, &pid, &elf, &elf_fd);
   if (err < 0)
     {
-#ifdef DEBUG
-      fprintf(stderr, "DEBUG sysprof_find_procfile pid %lld: %s",
-	      (long long) pid, dwfl_errmsg (-1));
-#endif
+      if (show_failures)
+	fprintf(stderr, "sysprof_find_procfile pid %lld: %s",
+		(long long) pid, dwfl_errmsg (-1));
       return NULL;
     }
 
@@ -916,16 +933,18 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
   sample_arg->sp = regs->regs[0];
   sample_arg->pc = regs->regs[1];
   sample_arg->base_addr = sample_arg->sp;
-#ifdef DEBUG
-  fprintf(stderr, "DEBUG sysprof_init_dwfl pid %lld: initial size=%ld sp=%lx pc=%lx\n", (long long) pid, sample_arg->size, sample_arg->sp, sample_arg->pc);
-#endif
+  sui->last_sp = sample_arg->base_addr;
+  sui->last_base = sample_arg->base_addr;
+
+  if (show_frames)
+    fprintf(stderr, "sysprof_init_dwfl pid %lld%s: size=%ld pc=%lx sp=%lx+(%lx)\n",
+	    (long long) pid, cached ? " (cached)" : "", sample_arg->size, sample_arg->pc, sample_arg->base_addr, sample_arg->sp - sample_arg->base_addr);
 
   if (!cached && ! dwfl_attach_state (dwfl, elf, pid, &sample_thread_callbacks, sample_arg))
     {
-#ifdef DEBUG
-      fprintf(stderr, "DEBUG dwfl_attach_state pid %lld: %s\n",
-	      (long long)pid, dwfl_errmsg(-1));
-#endif
+      if (show_failures)
+	fprintf(stderr, "dwfl_attach_state pid %lld: %s\n",
+		(long long)pid, dwfl_errmsg(-1));
       elf_end (elf);
       close (elf_fd);
       free (sample_arg);
@@ -942,24 +961,33 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
   Dwarf_Addr pc;
   bool isactivation;
   if (! dwfl_frame_pc (state, &pc, &isactivation))
-    return DWARF_CB_ABORT;
+    {
+      if (show_failures)
+	fprintf(stderr, "dwfl_frame_pc: %s\n",
+		dwfl_errmsg(-1));
+      return DWARF_CB_ABORT;
+    }
 
-#ifdef DEBUG
   Dwarf_Addr pc_adjusted = pc - (isactivation ? 0 : 1);
   Dwarf_Addr sp;
   int rc = dwfl_frame_reg (state, 7 /* TODO make arch-independent */, &sp);
   if (rc < 0)
     {
-      fprintf(stderr, "DEBUG dwfl_frame_reg: %s\n",
-	      dwfl_errmsg(-1));
+      if (show_failures)
+	fprintf(stderr, "dwfl_frame_reg: %s\n",
+		dwfl_errmsg(-1));
       return DWARF_CB_ABORT;
     }
-  fprintf(stderr, "DEBUG got a frame? pc_adjusted=%lx sp=%lx\n", pc_adjusted, sp);
-#endif
 
   struct sysprof_unwind_info *sui = (struct sysprof_unwind_info *)arg;
+  if (show_frames)
+    fprintf(stderr, "* frame %d: pc_adjusted=%lx sp=%lx+(%lx)\n",
+	    sui->n_addrs, pc_adjusted, sui->last_base, sp - sui->last_base);
+
   if (sui->n_addrs > maxframes)
     return DWARF_CB_ABORT;
+
+  sui->last_sp = sp;
   if (sui->n_addrs >= sui->max_addrs)
     {
       sui->addrs = reallocarray (sui->addrs, sui->max_addrs + UNWIND_ADDR_INCREMENT, sizeof(Dwarf_Addr));
@@ -985,16 +1013,19 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
     {
       /* XXX additional diagnostics for comparing to eu-stacktrace unwind */
       SysprofCaptureSample *ev_sample = (SysprofCaptureSample *)frame;
-      fprintf(stderr, "sysprof_unwind_cb pid %lld (%s): callchain sample with %d frames\n", (long long)frame->pid, comm, ev_sample->n_addrs);
-#ifdef DEBUG
-      /* Final diagnostics. */
-      dwfltab_ent *dwfl_ent = dwfltab_find(frame->pid);
-      if (dwfl_ent != NULL && ev_sample->n_addrs > dwfl_ent->max_frames)
-	dwfl_ent->max_frames = ev_sample->n_addrs;
-      dwfl_ent->total_samples ++;
-      if (ev_sample->n_addrs <= 2)
-	dwfl_ent->lost_samples ++;
-#endif
+      if (show_samples)
+	fprintf(stderr, "sysprof_unwind_cb pid %lld (%s): callchain sample with %d frames\n",
+		(long long)frame->pid, comm, ev_sample->n_addrs);
+      if (show_summary)
+	{
+	  /* For final diagnostics. */
+	  dwfltab_ent *dwfl_ent = dwfltab_find(frame->pid);
+	  if (dwfl_ent != NULL && ev_sample->n_addrs > dwfl_ent->max_frames)
+	    dwfl_ent->max_frames = ev_sample->n_addrs;
+	  dwfl_ent->total_samples ++;
+	  if (ev_sample->n_addrs <= 2)
+	    dwfl_ent->lost_samples ++;
+	}
     }
   if (frame->type != SYSPROF_CAPTURE_FRAME_STACK_USER)
     {
@@ -1010,33 +1041,41 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
   uint8_t *tail_ptr = (uint8_t *)ev;
   tail_ptr += sizeof(SysprofCaptureStackUser) + ev->size;
   SysprofCaptureUserRegs *regs = (SysprofCaptureUserRegs *)tail_ptr;
-#ifdef DEBUG
-  fprintf(stderr, "\n"); /* extra newline for padding */
-#endif
+  if (show_samples)
+    fprintf(stderr, "\n"); /* extra newline for padding */
   Dwfl *dwfl = sysprof_init_dwfl (sui, ev, regs);
   if (dwfl == NULL)
     {
-      fprintf(stderr, "DEBUG sysprof_init_dwfl pid %lld (%s) (failed)\n", (long long)frame->pid, comm);
+      if (show_failures)
+	fprintf(stderr, "sysprof_init_dwfl pid %lld (%s) (failed)\n",
+		(long long)frame->pid, comm);
       return SYSPROF_CB_OK;
     }
   sui->n_addrs = 0;
   int rc = dwfl_getthread_frames (dwfl, ev->tid, sysprof_unwind_frame_cb, sui);
   if (rc < 0)
     {
-#ifdef DEBUG
-      fprintf(stderr, "DEBUG dwfl_getthread_frames pid %lld: %s\n", (long long)frame->pid, dwfl_errmsg(-1));
-#endif
+      if (show_failures)
+	fprintf(stderr, "dwfl_getthread_frames pid %lld: %s\n",
+		(long long)frame->pid, dwfl_errmsg(-1));
     }
-  fprintf(stderr, "sysprof_unwind_cb pid %lld (%s): unwound %d frames\n", (long long)frame->pid, comm, sui->n_addrs);
-#ifdef DEBUG
-  /* Final diagnostics. */
-  dwfltab_ent *dwfl_ent = dwfltab_find(frame->pid);
-  if (dwfl_ent != NULL && sui->n_addrs > dwfl_ent->max_frames)
-    dwfl_ent->max_frames = sui->n_addrs;
-  dwfl_ent->total_samples++;
-  if (sui->n_addrs <= 2)
-    dwfl_ent->lost_samples ++;
-#endif
+  if (show_samples)
+    {
+      fprintf(stderr, "sysprof_unwind_cb pid %lld (%s): unwound %d frames\n",
+	      (long long)frame->pid, comm, sui->n_addrs);
+      fprintf(stderr, "DEBUG last_sp=%lx frame_depth=%ld\n",
+	      sui->last_sp, sui->last_sp - sui->last_base); /* TODO */
+    }
+  if (show_summary)
+    {
+      /* For final diagnostics. */
+      dwfltab_ent *dwfl_ent = dwfltab_find(frame->pid);
+      if (dwfl_ent != NULL && sui->n_addrs > dwfl_ent->max_frames)
+	dwfl_ent->max_frames = sui->n_addrs;
+      dwfl_ent->total_samples++;
+      if (sui->n_addrs <= 2)
+	dwfl_ent->lost_samples ++;
+    }
 
   /* Assemble and output callchain frame. */
   /* TODO: assert(sizeof(Dwarf_Addr) == sizeof(SysprofCaptureAddress)); */
@@ -1045,9 +1084,9 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
   ev_callchain = (SysprofCaptureSample *)sui->outbuf; /* TODO replace reader->outbuf */
   if (len > USHRT_MAX)
     {
-#ifdef DEBUG
-      fprintf(stderr, "DEBUG sysprof_unwind_cb frame size %d is too large (max %d)\n", len, USHRT_MAX);
-#endif
+      if (show_failures)
+	fprintf(stderr, "sysprof_unwind_cb frame size %ld is too large (max %d)\n",
+		len, USHRT_MAX);
       return SYSPROF_CB_OK;
     }
   SysprofCaptureFrame *out_frame = (SysprofCaptureFrame *)ev_callchain;
@@ -1088,6 +1127,11 @@ main (int argc, char **argv)
 	N_("Processing mode, default 'passthru'"), 0 },
       /* TODO: Should also support 'naive', 'caching'. */
       /* TODO: Add an option to control stack-stitching. */
+      { "verbose", 'v', NULL, 0,
+	N_("Show additional information for each unwound sample"), 0 },
+      { "debug", OPT_DEBUG, NULL, 0,
+	N_("Show additional information for each unwound frame"), 0 },
+      /* TODO: Add a 'quiet' option suppressing summaries + errors. */
       { "format", 'f', FORMAT_OPTS, 0,
 	N_("Input data format, default 'sysprof'"), 0 },
       /* TODO: Add an option to control output data format separately,
@@ -1153,20 +1197,25 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
       sui.reader = reader;
       sui.pos = sizeof reader->header;
       sui.n_addrs = 0;
+      sui.last_base = 0;
+      sui.last_sp = 0;
       sui.max_addrs = UNWIND_ADDR_INCREMENT;
       sui.addrs = (Dwarf_Addr *)malloc (sui.max_addrs * sizeof(Dwarf_Addr));
       sui.outbuf = (void *)malloc (USHRT_MAX * sizeof(uint8_t));
       offset = sysprof_reader_getframes (reader, &sysprof_unwind_cb, &sui);
-#ifdef DEBUG
-      /* Final diagnostics. */
-      for (unsigned idx = 0; idx < DWFLTAB_DEFAULT_SIZE; idx++)
+      if (show_summary)
 	{
-	  dwfltab *htab = &default_table;
-	  if (!htab->table[idx].used)
-	    continue;
-	  fprintf(stderr, "%d %s -- max %d frames, received %d samples, lost %d samples\n", htab->table[idx].pid, htab->table[idx].comm, htab->table[idx].max_frames, htab->table[idx].total_samples, htab->table[idx].lost_samples);
+	  /* Final diagnostics. */
+	  fprintf(stderr, "\n=== final summary ===\n");
+	  for (unsigned idx = 0; idx < DWFLTAB_DEFAULT_SIZE; idx++)
+	    {
+	      dwfltab *htab = &default_table;
+	      if (!htab->table[idx].used)
+		continue;
+	      fprintf(stderr, "%d %s -- max %d frames, received %d samples, lost %d samples\n",
+		      htab->table[idx].pid, htab->table[idx].comm, htab->table[idx].max_frames, htab->table[idx].total_samples, htab->table[idx].lost_samples);
+	    }
 	}
-#endif
       output_pos = sui.pos;
     }
   if (offset < 0 && output_pos <= sizeof reader->header)
