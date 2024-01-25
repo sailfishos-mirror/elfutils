@@ -151,6 +151,9 @@ static bool show_samples = false;
 static bool show_failures = true; /* TODO: disable by default in release version */
 static bool show_summary = true; /* TODO: disable by default in release version */
 
+/* Enable to show even more diagnostics on modules: */
+/* #define DEBUG_MODULES */
+
 /* Program exit codes.  All samples processed without any errors is
    GOOD.  Some non-fatal errors during processing is an ERROR.  A
    fatal error or no samples processed at all is BAD.  A command line
@@ -532,6 +535,9 @@ struct sysprof_unwind_info
   int max_addrs; /* for diagnostic purposes */
   Dwarf_Addr last_base; /* for diagnostic purposes */
   Dwarf_Addr last_sp; /* for diagnostic purposes */
+#ifdef DEBUG_MODULES
+  Dwfl *last_dwfl; /* for diagnostic purposes */
+#endif
   Dwarf_Addr *addrs; /* allocate blocks of UNWIND_ADDR_INCREMENT */
   void *outbuf;
 };
@@ -643,8 +649,9 @@ nop_find_debuginfo (Dwfl_Module *mod __attribute__((unused)),
 		    GElf_Word debuglink_crc __attribute__((unused)),
 		    char **debuginfo_file_name __attribute__((unused)))
 {
-#ifdef DEBUG
-  fprintf(stderr, "DEBUG nop_find_debuginfo modname=%s file_name=%s debuglink_file=%s\n", modname, file_name, debuglink_file);
+#ifdef DEBUG_MODULES
+  fprintf(stderr, "DEBUG nop_find_debuginfo modname=%s file_name=%s debuglink_file=%s\n",
+	  modname, file_name, debuglink_file);
 #endif
   return -1;
 }
@@ -985,6 +992,25 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
     }
 
   struct sysprof_unwind_info *sui = (struct sysprof_unwind_info *)arg;
+#ifdef DEBUG_MODULES
+  Dwfl_Module *mod = dwfl_addrmodule(sui->last_dwfl, pc);
+  if (mod == NULL)
+    {
+      fprintf(stderr, "* pc=%lx -> NO MODULE\n", pc);
+    }
+  else
+    {
+      const char *mainfile;
+      const char *debugfile;
+      const char *modname = dwfl_module_info (mod, NULL, NULL, NULL, NULL,
+					      NULL, &mainfile, &debugfile);
+      fprintf (stderr, "* module %s -> mainfile=%s debugfile=%s\n", modname, mainfile, debugfile);
+      Dwarf_Addr bias;
+      Dwarf_CFI *cfi_eh = dwfl_module_eh_cfi (mod, &bias);
+      if (cfi_eh == NULL)
+	fprintf(stderr, "* pc=%lx -> NO EH_CFI\n", pc);
+    }
+#endif
   if (show_frames)
     fprintf(stderr, "* frame %d: pc_adjusted=%lx sp=%lx+(%lx)\n",
 	    sui->n_addrs, pc_adjusted, sui->last_base, sp - sui->last_base);
@@ -1057,6 +1083,9 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
       return SYSPROF_CB_OK;
     }
   sui->n_addrs = 0;
+#ifdef DEBUG_MODULES
+  sui->last_dwfl = dwfl;
+#endif
   int rc = dwfl_getthread_frames (dwfl, ev->tid, sysprof_unwind_frame_cb, sui);
   if (rc < 0)
     {
