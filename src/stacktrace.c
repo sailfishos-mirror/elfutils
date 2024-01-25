@@ -544,6 +544,7 @@ struct __sample_arg
   uint8_t *data;
   Dwarf_Addr pc;
   Dwarf_Addr sp;
+  Dwarf_Addr *regs;
 };
 
 /* The next few functions Imitate the corefile interface for a single
@@ -604,7 +605,13 @@ sample_set_initial_registers (Dwfl_Thread *thread, void *thread_arg)
   struct __sample_arg *sample_arg = (struct __sample_arg *)thread_arg;
   dwfl_thread_state_register_pc (thread, sample_arg->pc);
   /* TODO for comparison, i386 user_regs sp is 3, pc is 8 */
+  dwfl_thread_state_registers (thread, 0, 1, &sample_arg->regs[0]);
+  dwfl_thread_state_registers (thread, 6, 1, &sample_arg->regs[6]);
   dwfl_thread_state_registers (thread, 7 /* x86_64 user_regs sp */, 1, &sample_arg->sp);
+  dwfl_thread_state_registers (thread, 12, 1, &sample_arg->regs[12]);
+  dwfl_thread_state_registers (thread, 13, 1, &sample_arg->regs[13]);
+  dwfl_thread_state_registers (thread, 14, 1, &sample_arg->regs[14]);
+  dwfl_thread_state_registers (thread, 15, 1, &sample_arg->regs[15]);
   dwfl_thread_state_registers (thread, 16 /* x86_64 user_regs pc */, 1, &sample_arg->pc);
   return true;
 }
@@ -868,6 +875,8 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
 		   SysprofCaptureUserRegs *regs)
 {
   pid_t pid = ev->frame.pid;
+  if (regs->n_regs < 18) /* XXX now expecting a full-ish register sample */
+    return NULL;
 
   Dwfl *dwfl = pid_find_dwfl(pid);
   struct __sample_arg *sample_arg;
@@ -921,17 +930,13 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
     }
 
  reuse:
-  if (regs->n_regs != 2) /* TODO: for now, handling only sp,pc */
-    {
-      free (sample_arg); /* TODO move earlier */
-      return NULL;
-    }
   sample_arg->tid = ev->tid;
   sample_arg->size = ev->size;
   sample_arg->data = (uint8_t *)&ev->data;
   /* TODO: make portable across architectures */
-  sample_arg->sp = regs->regs[0];
-  sample_arg->pc = regs->regs[1];
+  sample_arg->sp = regs->regs[7];
+  sample_arg->pc = regs->regs[16];
+  sample_arg->regs = regs->regs;
   sample_arg->base_addr = sample_arg->sp;
   sui->last_sp = sample_arg->base_addr;
   sui->last_base = sample_arg->base_addr;
