@@ -151,8 +151,13 @@ static bool show_samples = false;
 static bool show_failures = true; /* TODO: disable by default in release version */
 static bool show_summary = true; /* TODO: disable by default in release version */
 
-/* Enable to show even more diagnostics on modules: */
+/* Enables even more diagnostics on modules: */
 /* #define DEBUG_MODULES */
+
+/* Enables standard access to DWARF debuginfo, matching stack.c.
+   This is of dubious benefit -- for profiling, we really should
+   aim to resolve everything with minimal overhead using eh CFI. */
+/* #define FIND_DEBUGINFO */
 
 /* Program exit codes.  All samples processed without any errors is
    GOOD.  Some non-fatal errors during processing is an ERROR.  A
@@ -639,6 +644,19 @@ static const Dwfl_Thread_Callbacks sample_thread_callbacks =
   NULL, /* sample_thread_detach */
 };
 
+#ifdef FIND_DEBUGINFO
+
+static char *debuginfo_path = NULL;
+
+static const Dwfl_Callbacks sample_callbacks =
+  {
+    .find_elf = dwfl_linux_proc_find_elf,
+    .find_debuginfo = dwfl_standard_find_debuginfo,
+    .debuginfo_path = &debuginfo_path,
+  };
+
+#else
+
 int
 nop_find_debuginfo (Dwfl_Module *mod __attribute__((unused)),
 		    void **userdata __attribute__((unused)),
@@ -650,7 +668,7 @@ nop_find_debuginfo (Dwfl_Module *mod __attribute__((unused)),
 		    char **debuginfo_file_name __attribute__((unused)))
 {
 #ifdef DEBUG_MODULES
-  fprintf(stderr, "DEBUG nop_find_debuginfo modname=%s file_name=%s debuglink_file=%s\n",
+  fprintf(stderr, "nop_find_debuginfo: modname=%s file_name=%s debuglink_file=%s\n",
 	  modname, file_name, debuglink_file);
 #endif
   return -1;
@@ -661,6 +679,8 @@ static const Dwfl_Callbacks sample_callbacks =
   .find_elf = dwfl_linux_proc_find_elf,
   .find_debuginfo = nop_find_debuginfo, /* work with CFI only */
 };
+
+#endif /* FIND_DEBUGINFO */
 
 /* TODO: Code mirrors dwfl_linux_proc_attach();
    should probably move this function to libdwfl/linux-pid-attach.c
