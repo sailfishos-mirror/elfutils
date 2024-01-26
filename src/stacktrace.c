@@ -1016,7 +1016,13 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
 	    sui->n_addrs, pc_adjusted, sui->last_base, sp - sui->last_base);
 
   if (sui->n_addrs > maxframes)
-    return DWARF_CB_ABORT;
+    {
+      /* XXX very rarely, the unwinder can loop infinitely; worth investigating? */
+      if (show_failures)
+	fprintf(stderr, "sysprof_unwind_frame_cb: sample exceeded maxframes %d\n",
+		maxframes);
+      return DWARF_CB_ABORT;
+    }
 
   sui->last_sp = sp;
   if (sui->n_addrs >= sui->max_addrs)
@@ -1097,8 +1103,6 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
     {
       fprintf(stderr, "sysprof_unwind_cb pid %lld (%s): unwound %d frames\n",
 	      (long long)frame->pid, comm, sui->n_addrs);
-      fprintf(stderr, "DEBUG last_sp=%lx frame_depth=%ld\n",
-	      sui->last_sp, sui->last_sp - sui->last_base); /* TODO */
     }
   if (show_summary)
     {
