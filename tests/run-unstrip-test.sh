@@ -33,6 +33,13 @@ testrun ${abs_top_builddir}/src/unstrip -o testfile.unstrip $stripped $debugfile
 
 testrun ${abs_top_builddir}/src/elfcmp --hash-inexact $original testfile.unstrip
 
+tempfiles syms-orig syms-testfile
+
+${abs_top_builddir}/tests/elf-print-reloc-syms $original > syms-orig
+${abs_top_builddir}/tests/elf-print-reloc-syms testfile.unstrip > syms-testfile
+
+testrun diff syms-orig syms-testfile
+
 # Also test modifying the file in place.
 
 rm -f testfile.inplace
