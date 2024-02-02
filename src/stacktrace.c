@@ -82,13 +82,17 @@
 
 #include <system.h>
 
-/* TODO: Make optional through configury.  The #ifdefs are included
-   now so we don't miss any code that needs to be controlled with this
-   option. */
-#define HAVE_SYSPROF_4_HEADERS
-#ifdef HAVE_SYSPROF_4_HEADERS
-
+#if HAVE_SYSPROF_6_HEADERS
+#include <sysprof-6/sysprof-capture-types.h>
+#define HAVE_SYSPROF_HEADERS 1
+#elif HAVE_SYSPROF_4_HEADERS
 #include <sysprof-4/sysprof-capture-types.h>
+#define HAVE_SYSPROF_HEADERS 1
+#else
+#define HAVE_SYSPROF_HEADERS 0
+#endif
+
+#if HAVE_SYSPROF_HEADERS
 
 /* XXX: To be added to new versions of sysprof. */
 #ifndef SYSPROF_CAPTURE_FRAME_STACK_USER
@@ -118,8 +122,8 @@ typedef struct
 } SysprofCaptureUserRegs
 SYSPROF_ALIGNED_END(1);
 
-#endif // ifndef SYSPROF_CAPTURE_FRAME_STACK_USER
-#endif // ifdef HAVE_SYSPROF_4_HEADERS
+#endif /* SYSPROF_CAPTURE_FRAME_STACK_USER */
+#endif /* HAVE_SYSPROF_HEADERS */
 
 static int maxframes = 256;
 
@@ -171,7 +175,7 @@ static bool show_summary = true; /* TODO: disable by default in release version 
 /* Sysprof format support.
    TODO: Could split into a separate file or even a library. */
 
-#ifdef HAVE_SYSPROF_4_HEADERS
+#if HAVE_SYSPROF_HEADERS
 
 /* XXX based on sysprof src/libsysprof-capture/sysprof-capture-reader.c
 
@@ -422,7 +426,7 @@ sysprof_reader_getframes (SysprofReader *reader,
   return 0;
 }
 
-#endif /* HAVE_SYSPROF4_HEADERS */
+#endif /* HAVE_SYSPROF_HEADERS */
 
 /* Main program. */
 
@@ -501,7 +505,7 @@ parse_opt (int key, char *arg __attribute__ ((unused)),
   return 0;
 }
 
-#ifdef HAVE_SYSPROF_4_HEADERS
+#if HAVE_SYSPROF_HEADERS
 
 int
 sysprof_none_cb (SysprofCaptureFrame *frame __attribute__ ((unused)),
@@ -1163,7 +1167,7 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
     error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
   return SYSPROF_CB_OK;
 }
-#endif
+#endif /* HAVE_SYSPROF_HEADERS */
 
 int
 main (int argc, char **argv)
@@ -1222,7 +1226,7 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
   if (output_fd < 0)
     error (EXIT_BAD, errno, N_("Cannot open output file or FIFO '%s'"), output_path);
 
-#ifndef HAVE_SYSPROF_4_HEADERS
+#if !(HAVE_SYSPROF_HEADERS)
   /* TODO: Should hide corresponding command line options when this is the case. */
   error (EXIT_BAD, 0, N_("Sysprof support is not available in this version."));
 #else
