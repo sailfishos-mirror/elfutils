@@ -879,6 +879,34 @@ AC_ARG_ENABLE(debuginfod-urls,
 AC_SUBST(DEBUGINFOD_URLS, $default_debuginfod_urls)                
 AC_CONFIG_FILES([config/profile.sh config/profile.csh])
 
+AC_ARG_ENABLE([sysprof],AS_HELP_STRING([--enable-sysprof], [Include Sysprof support in eu-stacktrace]))
+AS_IF([test "x$enable_sysprof" != "xno"], [
+            enable_sysprof=no
+            AC_CACHE_CHECK([for sysprof-6/sysprof-capture-types.h], ac_cv_has_sysprof_6_headers,
+              [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[#include <sysprof-6/sysprof-capture-types.h>]])],
+                         ac_cv_has_sysprof_6_headers=yes, ac_cv_has_sysprof_6_headers=no)])
+            AM_CONDITIONAL(HAVE_SYSPROF_6_HEADERS, test "x$ac_cv_has_sysprof_6_headers" = xyes)
+            AS_IF([test "x$ac_cv_has_sysprof_6_headers" = xyes], [
+                        AC_DEFINE(HAVE_SYSPROF_6_HEADERS)
+                        enable_sysprof=yes
+            ])
+            AH_TEMPLATE([HAVE_SYSPROF_6_HEADERS], [Define to 1 if `sysprof-6/sysprof-capture-types.h`
+                                                   is provided by the system, 0 otherwise.])
+            AC_CACHE_CHECK([for sysprof-4/sysprof-capture-types.h], ac_cv_has_sysprof_4_headers,
+              [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[#include <sysprof-4/sysprof-capture-types.h>]])],
+                         ac_cv_has_sysprof_4_headers=yes, ac_cv_has_sysprof_4_headers=no)])
+            AM_CONDITIONAL(HAVE_SYSPROF_4_HEADERS, test "x$ac_cv_has_sysprof_4_headers" = xyes)
+            AS_IF([test "x$ac_cv_has_sysprof_4_headers" = xyes], [
+                        AC_DEFINE(HAVE_SYSPROF_4_HEADERS)
+                        enable_sysprof=yes
+            ])
+            AH_TEMPLATE([HAVE_SYSPROF_4_HEADERS], [Define to 1 if `sysprof-4/sysprof-capture-types.h`
+                                                   is provided by the system, 0 otherwise.])
+            if test "x$enable_sysprof" = "xno"; then
+                        AC_MSG_ERROR([sysprof headers not found, use --disable-sysprof to disable.])
+            fi
+])
+
 AC_OUTPUT
 
 AC_MSG_NOTICE([
@@ -916,6 +944,7 @@ AC_MSG_NOTICE([
     libdebuginfod client support       : ${enable_libdebuginfod}
     Debuginfod server support          : ${enable_debuginfod}
     Default DEBUGINFOD_URLS            : ${default_debuginfod_urls}
+    Sysprof support in eu-stacktrace   : ${enable_sysprof}
 
   EXTRA TEST FEATURES (used with make check)
     have bunzip2 installed (required)  : ${HAVE_BUNZIP2}
