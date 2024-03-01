@@ -21,14 +21,9 @@
 # Output/files/lines matched should equal what is done through addr2line
 # which uses dwfl_module_getsrc. This test uses dwarf_addrdie and
 # dwarf_getsrc_die
-testfiles testfile testfile-inlines testfile-lex-inlines
-tempfiles testfile-no-aranges testfile-inlines-no-aranges
+testfiles testfile testfile-inlines testfile-no-aranges
+testfiles testfile-lex-inlines testfile-inlines-no-aranges
 tempfiles testfile-lex-inlines-no-aranges good.out getsrc_die.out
-
-# Each test should also pass with no .debug_aranges present.
-objcopy --remove-section .debug_aranges testfile testfile-no-aranges
-objcopy --remove-section .debug_aranges testfile-inlines testfile-inlines-no-aranges
-objcopy --remove-section .debug_aranges testfile-lex-inlines testfile-lex-inlines-no-aranges
 
 cat > good.out <<\EOF
 /home/drepper/gnu/new-bu/build/ttt/f.c:3
@@ -36,6 +31,8 @@ cat > good.out <<\EOF
 EOF
 
 cat good.out | testrun_compare ${abs_top_builddir}/tests/getsrc_die testfile 0x08048468 0x0804845c
+
+# Each test should also pass with no .debug_aranges present.
 cat good.out | testrun_compare ${abs_top_builddir}/tests/getsrc_die testfile-no-aranges 0x08048468 0x0804845c
 
 cat > good.out <<\EOF
