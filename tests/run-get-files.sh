@@ -303,8 +303,8 @@ EOF
 cat files > define-files.out
 cat files >> define-files.out
 cat files >> define-files.out
-echo -e " file[44] = \"include/asm/abc.c\"" >> define-files.out
-echo -e " file[45] = \"include/linux/01.c\"" >> define-files.out
+echo ' file[44] = "include/asm/abc.c"' >> define-files.out
+echo ' file[45] = "include/linux/01.c"' >> define-files.out
 
 cat define-files.out | testrun_compare ${abs_builddir}/get-files-define-file testfile-define-file
 
