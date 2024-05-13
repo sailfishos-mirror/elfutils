@@ -33,7 +33,7 @@
 #include "libdwflP.h"
 #include "libdwP.h"
 #include "memory-access.h"
-#include <search.h>
+#include <eu-search.h>
 
 
 static inline Dwarf_Arange *
@@ -198,7 +198,7 @@ intern_cu (Dwfl_Module *mod, Dwarf_Off cuoff, struct dwfl_cu **result)
 
   struct dwfl_cu key;
   key.die.cu = die->cu;
-  struct dwfl_cu **found = tsearch (&key, &mod->lazy_cu_root, &compare_cukey);
+  struct dwfl_cu **found = eu_tsearch (&key, &mod->lazy_cu_root, &compare_cukey);
   if (unlikely (found == NULL))
     return DWFL_E_NOMEM;
 
