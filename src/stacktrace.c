@@ -137,7 +137,7 @@ static int output_fd = -1;
 #define MODE_PASSTHRU 0x1
 #define MODE_NAIVE 0x2
 #define MODE_CACHING 0x3
-static int processing_mode;
+static int processing_mode = MODE_NAIVE;
 
 #define FORMAT_OPTS "sysprof"
 #define FORMAT_PERF 0x1
@@ -1186,7 +1186,7 @@ main (int argc, char **argv)
 
       { NULL, 0, NULL, 0, N_("Processing options:"), 0 },
       { "mode", 'm', MODE_OPTS, 0,
-	N_("Processing mode, default 'passthru'"), 0 },
+	N_("Processing mode, default 'naive'"), 0 },
       /* TODO: Should also support 'naive', 'caching'. */
       /* TODO: Add an option to control stack-stitching. */
       { "verbose", 'v', NULL, 0,
