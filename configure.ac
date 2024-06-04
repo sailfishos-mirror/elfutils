@@ -868,7 +868,7 @@ fi
 # pronounce judgment on ima signature support
 if test "x$enable_debuginfod_ima_verification" = "xno"; then
    true
-elif test "x$ac_cv_lib_rpm_headerGet$ac_cv_lib_crypto_EVP_MD_CTX_new$ac_cv_header_imaevm_h" = "xyesyesyes"; then
+elif test "x$ac_cv_lib_rpm_headerGet$ac_cv_have_decl_RPMSIGTAG_FILESIGNATURES$ac_cv_lib_crypto_EVP_MD_CTX_new$ac_cv_header_imaevm_h" = "xyesyesyesyes"; then
    enable_debuginfod_ima_verification=yes
 elif test "x$enable_debuginfod_ima_verification" = "xyes"; then
    AC_MSG_ERROR([unable to enable debuginfod ima verification])
