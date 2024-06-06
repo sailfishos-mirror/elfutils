@@ -1,54 +1,61 @@
 # eu-stacktrace development branch
 
-eu-stacktrace is (will be) a utility to process a stream of raw stack
-samples (such as those obtained from the Linux kernel's
+eu-stacktrace is an in-development utility to process a stream of raw
+stack samples (such as those obtained from the Linux kernel's
 PERF_SAMPLE_STACK facility) into a stream of stack traces (such as
 those obtained from PERF_SAMPLE_CALLCHAIN), freeing various profiling
 utilities from having to implement their own backtracing logic.
 
 For the time being, eu-stacktrace is meant to be fed data from a
-profiling tool via a pipe or fifo. We will see how well this idea
-works as implementation proceeds.
+profiling tool via a pipe or fifo. If the overhead from this turns out
+to be excessive, 'plan B' is to make the eu-stacktrace functionality
+available as an elfutils library API.
 
-The goal is to work with various profiler data formats. For the
+Our goal is to work with various profiler data formats. For the
 prototype, Serhei is working to support sysprof's data format. We'd
 like to adapt sysprof to distros compiled with omit-framepointer,
-which will require sysprof to consume PERF_SAMPLE_STACK data. After
-that, supporting perf's native data format is an obvious prerequisite
-for merging this branch into elfutils. Ideally, we would like for
-eu-stacktrace to also convert between different profile data formats
-(e.g. taking sysprof data as input and emitting perf data, and
-vice-versa), but this may be out-of-scope given the amount of code
-that would need to be written to handle profile data other than stack
-traces.
-
-Link to latest roadmap and discussion thread:
-- 2023/05 https://sourceware.org/pipermail/elfutils-devel/2023q2/006151.html
+which will require extending sysprof with an option to consume
+PERF_SAMPLE_STACK data. After that, supporting perf's native data
+format is an obvious prerequisite for merging the branch into
+elfutils.
 
 ## build & run (for now)
 
 Requirements:
-- /usr/include/sysprof-4 headers (e.g. `sysprof-devel` package on Fedora)
+- /usr/include/sysprof-6 headers (e.g. `sysprof-devel` package on Fedora)
 - `sysprof` polkit actions installed systemwide (e.g. `sysprof` package on Fedora)
 - sysprof with the serhei/samples-via-fifo patchset [1]
-  - some detailed notes on how I compiled sysprof via jhbuild here [2];
-    these are unlikely to fit your needs exactly but include useful hints
 
 [1]: https://git.sr.ht/~serhei/sysprof-experiments/log/serhei/samples-via-fifo
-[2]: https://git.sr.ht/~serhei/config-files/tree/master/item/setup-development.md#1b-setup-for-codesysprofcode-development-with-codejhbuildcode-providing-upstream-gnome-apps-to-test-against
 
-Invoking `eu-stacktrace`:
-- mkfifo /tmp/test.fifo
-- eu-stacktrace </tmp/test.fifo >test.syscap &
-- sysprof-cli --use-fifo=/tmp/test.fifo test.syscap
+Example build sequence:
+
+    git clone -b users/serhei/eu-stacktrace https://git.sr.ht/~serhei/sysprof-experiments
+    cd elfutils
+    ./configure --prefix=/opt/elfutils
+    make
+    sudo make install
+    
+    git clone https://git.sr.ht/~serhei/sysprof-experiments
+    cd sysprof
+    meson --prefix=/opt/elfutils build
+    cd build
+    ninja
+    sudo ninja install
+
+Then invoke sysprof with eu-stacktrace:
+
+    sudo /opt/elfutils/bin/sysprof-cli --use-stacktrace --stacktrace-path=/opt/elfutils/bin/eu-stacktrace
+
+Or invoke eu-stacktrace manually with a fifo:
+
+    mkfifo /tmp/test.fifo
+    sudo /opt/elfutils/bin/eu-stacktrace </tmp/test.fifo >test.syscap &
+    sudo /opt/elfutils/bin/sysprof-cli --use-fifo=/tmp/test.fifo test.syscap
 
 ## TODO
 
-- initial version of packet parsing for sysprof
-- sysprof should fork eu-stacktrace and pipe info via stdin/stdout
-- implement --mode=none
-- implement --mode=naive
-- implement --mode=caching
+- bugfixes for sysprof-cli --use-stacktrace mode
+- portability (the current version works with x86_64)
 - testsuite
 - implement --format=perf; make sysprof headers optional through configury
-- ?? perhaps support for converting between input/output formats
