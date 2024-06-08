@@ -30,15 +30,18 @@ Requirements:
 
 Example build sequence:
 
-    git clone -b users/serhei/eu-stacktrace https://git.sr.ht/~serhei/sysprof-experiments
+    sudo mkdir -p /opt/elfutils
+    
+    git clone -b users/serhei/eu-stacktrace https://sourceware.org/git/elfutils.git
     cd elfutils
+    autoreconf -i -f
     ./configure --prefix=/opt/elfutils
     make
     sudo make install
     
     git clone https://git.sr.ht/~serhei/sysprof-experiments
     cd sysprof
-    meson --prefix=/opt/elfutils build
+    meson setup --prefix=/opt/elfutils build
     cd build
     ninja
     sudo ninja install
