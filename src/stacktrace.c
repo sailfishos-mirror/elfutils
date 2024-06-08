@@ -122,10 +122,10 @@ typedef struct
 } SysprofCaptureUserRegs
 SYSPROF_ALIGNED_END(1);
 
+static int maxframes = 256;
+
 #endif /* SYSPROF_CAPTURE_FRAME_STACK_USER */
 #endif /* HAVE_SYSPROF_HEADERS */
-
-static int maxframes = 256;
 
 static char *input_path = NULL;
 static int input_fd = -1;
