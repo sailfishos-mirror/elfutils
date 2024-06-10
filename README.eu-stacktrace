@@ -46,15 +46,15 @@ Example build sequence:
     ninja
     sudo ninja install
 
-Then invoke sysprof with eu-stacktrace:
-
-    /opt/elfutils/bin/sysprof-cli --use-stacktrace --stacktrace-path=/opt/elfutils/bin/eu-stacktrace
-
-Or invoke eu-stacktrace manually with a fifo:
+Invoke eu-stacktrace manually with a fifo:
 
     mkfifo /tmp/test.fifo
     sudo /opt/elfutils/bin/eu-stacktrace </tmp/test.fifo >test.syscap &
     /opt/elfutils/bin/sysprof-cli --use-fifo=/tmp/test.fifo test.syscap
+
+Then invoke sysprof with eu-stacktrace (there are some issues remaining to debug):
+
+    /opt/elfutils/bin/sysprof-cli --use-stacktrace --stacktrace-path=/opt/elfutils/bin/eu-stacktrace
 
 ## current issues
 
