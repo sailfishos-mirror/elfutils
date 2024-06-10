@@ -48,17 +48,21 @@ Example build sequence:
 
 Then invoke sysprof with eu-stacktrace:
 
-    sudo /opt/elfutils/bin/sysprof-cli --use-stacktrace --stacktrace-path=/opt/elfutils/bin/eu-stacktrace
+    /opt/elfutils/bin/sysprof-cli --use-stacktrace --stacktrace-path=/opt/elfutils/bin/eu-stacktrace
 
 Or invoke eu-stacktrace manually with a fifo:
 
     mkfifo /tmp/test.fifo
     sudo /opt/elfutils/bin/eu-stacktrace </tmp/test.fifo >test.syscap &
-    sudo /opt/elfutils/bin/sysprof-cli --use-fifo=/tmp/test.fifo test.syscap
+    /opt/elfutils/bin/sysprof-cli --use-fifo=/tmp/test.fifo test.syscap
+
+## current issues
+
+- eu-stacktrace must be run with sudo for full access to executable files
+- portability (the current prototype works with x86_64 only)
 
 ## TODO
 
-- bugfixes for sysprof-cli --use-stacktrace mode
-- portability (the current version works with x86_64)
+- bugfixes as described in 'current issues' above
 - testsuite
 - implement --format=perf; make sysprof headers optional through configury
