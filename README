@@ -8,3 +8,12 @@ downloads.
 
 Sources
 =======
+
+fedora-39-ima.der
+fedora-40-ima.der
+fedora-41-ima.der
+fedora-42-ima.der
+fedora-ima-ca.der
+    https://kojipkgs.fedoraproject.org//packages/fedora-repos/40/2/noarch/fedora-gpg-keys-40-2.noarch.rpm
+
+
