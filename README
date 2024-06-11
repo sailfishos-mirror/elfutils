@@ -1,0 +1,10 @@
+
+This branch is a repository of collected RPM IMA signing
+keys/certificates for various distribution levels we have encountered.
+A debuginfod user could download this branch somewhere, add it to
+their $DEBUGINFOD_IMA_CERT_PATH environment variable, and then enjoy
+increased integrity assurance of a wider assortment of debuginfod
+downloads.
+
+Sources
+=======
