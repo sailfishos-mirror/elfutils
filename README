@@ -16,4 +16,7 @@ fedora-42-ima.der
 fedora-ima-ca.der
     https://kojipkgs.fedoraproject.org//packages/fedora-repos/40/2/noarch/fedora-gpg-keys-40-2.noarch.rpm
 
-
+rhelima.der
+rhelima_centos.der
+rhelimaca1.der
+    https://gitlab.com/redhat/centos-stream/rpms/kernel/-/tree/c9s commit 26d3245d51b
