@@ -1,0 +1,67 @@
+.TH ELF_GETSHDRNUM 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf_getshdrnum \- retrieve the number of section headers in an ELF file
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "int elf_getshdrnum(Elf *" elf ", size_t *" shnum ");"
+
+.SH DESCRIPTION
+The .B elf_getshdrnum function retrieves the number of section headers in the ELF object referred to by .I elf. The number of section headers is stored in the location pointed to by .I shnum.
+
+.SH PARAMETERS
+.TP
+.I elf
+An .I Elf pointer to the ELF object from which the number of section headers is to be retrieved.
+
+.TP
+.I shnum
+A pointer to a .I size_t variable where the number of section headers will be stored.
+
+.SH RETURN VALUE
+The .B elf_getshdrnum function returns 0 on success. On error, it returns -1 and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf_getshdrnum fails, it sets the following error codes:
+
+.TP
+.B ELFARG
+The .I elf or .I shnum parameter is NULL or invalid.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.SH EXAMPLES
+.B "Example 1: Retrieve the number of section headers in an ELF file"
+.nf
+.in +4
+#include <libelf.h>
+
+Elf *elf = ...; // Assume elf is a valid Elf pointer
+size_t shnum;
+
+if (elf_getshdrnum(elf, &shnum) != 0) {
+    // Handle error
+} else {
+    // Use shnum
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf_getshdr (3),
+.BR elf_getshdrstrndx (3),
+.BR elf_getscn (3),
+.BR elf (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team. 
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

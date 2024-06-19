@@ -1,0 +1,60 @@
+.TH ELF_END 3 "May 2024" "elfutils 0.186" "Library Functions Manual"
+.SH NAME
+elf_end \- terminate ELF descriptor
+
+.SH SYNOPSIS
+.nf
+#include <libelf.h>
+
+int elf_end(Elf *elf);
+.fi
+
+.SH DESCRIPTION
+.B elf_end
+releases all resources associated with the ELF descriptor
+.I elf.
+This function should be called when the application is done using the ELF descriptor to ensure that all associated resources are properly freed.
+
+.SH PARAMETERS
+.TP
+.I elf
+Pointer to the ELF descriptor to be terminated.
+
+.SH RETURN VALUE
+.B elf_end
+returns the number of active ELF descriptors. If
+.I elf
+is NULL, it returns 0.
+
+.SH EXAMPLES
+.nf
+Elf *elf = elf_begin(fd, ELF_C_READ, NULL);
+if (elf == NULL) {
+    printf("Error: %s\n", elf_errmsg(-1));
+} else {
+    // Use the ELF descriptor
+    ...
+    // Terminate the ELF descriptor
+    elf_end(elf);
+}
+.fi
+
+.SH SEE ALSO
+.BR elf_begin (3),
+.BR elf_memory (3),
+.BR elf_errmsg (3),
+.BR elf (5)
+
+.SH AUTHOR
+Written by the elfutils development team.
+
+.SH REPORTING BUGS
+Report bugs to <elfutils-devel@sourceware.org>.
+
+.SH COPYRIGHT
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+.SH HISTORY
+.B elf_end
+first appeared in elfutils 0.186.
+

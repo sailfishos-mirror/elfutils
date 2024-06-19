@@ -1,0 +1,62 @@
+.TH ELF32_CHECKSUM 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf32_checksum \- compute the checksum for an ELF32 object
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "uint32_t elf32_checksum(Elf *" elf ");"
+
+.SH DESCRIPTION
+The .B elf32_checksum function computes a checksum for the ELF32 object referred to by .I elf. This checksum can be used to verify the integrity of the ELF32 object.
+
+.SH PARAMETERS
+.TP
+.I elf
+An .I Elf pointer to the ELF32 object for which the checksum is to be computed. The ELF object must be valid and of type ELFCLASS32.
+
+.SH RETURN VALUE
+The .B elf32_checksum function returns a .I uint32_t value representing the computed checksum. If an error occurs, it returns 0 and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf32_checksum fails, it sets the following error codes:
+
+.TP
+.B ELFARG
+The .I elf parameter is NULL or invalid.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.SH EXAMPLES
+.B "Example 1: Compute the checksum for an ELF32 object"
+.nf
+.in +4
+#include <libelf.h>
+#include <stdio.h>
+
+Elf *elf = ...; // Assume elf is a valid Elf pointer for an ELF32 object
+
+uint32_t checksum = elf32_checksum(elf);
+if (checksum == 0) {
+    // Handle error
+} else {
+    printf("Checksum for the ELF32 object: %u\n", checksum);
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf (3),
+.BR elf64_checksum (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

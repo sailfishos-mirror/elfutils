@@ -1,0 +1,70 @@
+.TH ELF32_XLATETOF 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf32_xlatetof \- translate ELF32 data to file representation
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "int elf32_xlatetof(Elf_Data *" dst ", const Elf_Data *" src ", unsigned int " encoding ");"
+
+.SH DESCRIPTION
+The .B elf32_xlatetof function translates ELF32 data from its memory representation to its file representation. This function is typically used to convert data from memory into a format suitable for writing to an ELF file.
+
+.SH PARAMETERS
+.TP
+.I dst
+An .I Elf_Data pointer to a structure where the translated data will be stored. The destination structure must be properly initialized.
+
+.TP
+.I src
+A constant .I Elf_Data pointer to a structure containing the source data in its memory representation.
+
+.TP
+.I encoding
+An .I unsigned int value specifying the encoding of the destination data. This parameter can be either .B ELFDATA2LSB (little-endian) or .B ELFDATA2MSB (big-endian).
+
+.SH RETURN VALUE
+The .B elf32_xlatetof function returns 0 on success. If an error occurs, it returns -1 and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf32_xlatetof fails, it sets the following error codes:
+
+.TP
+.B ELFARG
+One or more of the parameters are NULL or invalid.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.SH EXAMPLES
+.B "Example 1: Translate ELF32 data from memory to file representation"
+.nf
+.in +4
+#include <libelf.h>
+
+Elf_Data src; // Assume src is properly initialized and contains memory representation data
+Elf_Data dst;
+
+if (elf32_xlatetof(&dst, &src, ELFDATA2LSB) != 0) {
+    // Handle error
+} else {
+    // Process the translated data in dst
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf (3),
+.BR elf32_xlatetom (3),
+.BR elf64_xlatetof (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

@@ -1,0 +1,64 @@
+.TH ELF_GETAROFF 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf_getaroff \- retrieve the offset of the current archive member in an ELF archive
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "off_t elf_getaroff(Elf *" elf ");"
+
+.SH DESCRIPTION
+The .B elf_getaroff function retrieves the file offset of the current archive member within the ELF archive referred to by .I elf. This offset is the position in the archive file where the header of the current member begins.
+
+.SH PARAMETERS
+.TP
+.I elf
+An .I Elf pointer to the ELF archive from which the offset of the current archive member is to be retrieved. The ELF archive must be valid.
+
+.SH RETURN VALUE
+The .B elf_getaroff function returns the offset of the current archive member on success. If an error occurs, it returns -1 and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf_getaroff fails, it sets the following error codes:
+
+.TP
+.B ELFARG
+The .I elf parameter is NULL or invalid.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.SH EXAMPLES
+.B "Example 1: Retrieve the offset of the current archive member in an ELF archive"
+.nf
+.in +4
+#include <libelf.h>
+
+Elf *elf = ...; // Assume elf is a valid Elf pointer for an archive
+
+off_t offset = elf_getaroff(elf);
+if (offset == -1) {
+    // Handle error
+} else {
+    printf("Offset of current archive member: %ld\n", offset);
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf (3),
+.BR elf_getarhdr (3),
+.BR elf_begin (3),
+.BR elf_next (3),
+.BR elf_end (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

@@ -1,0 +1,75 @@
+.TH ELF_GETARSYM 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf_getarsym \- retrieve the archive symbol table for an ELF archive
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "Elf_Arsym *elf_getarsym(Elf *" elf ", size_t *" ptr ", size_t *" nsyms ");"
+
+.SH DESCRIPTION
+The .B elf_getarsym function retrieves the archive symbol table for the ELF archive referred to by .I elf. The function returns an array of .I Elf_Arsym structures, which provide information about the symbols in the archive.
+
+.SH PARAMETERS
+.TP
+.I elf
+An .I Elf pointer to the ELF archive from which the symbol table is to be retrieved. The ELF archive must be valid.
+
+.TP
+.I ptr
+A pointer to a .I size_t variable where the number of bytes used to store the symbol table will be stored. If .I ptr is NULL, this information is not returned.
+
+.TP
+.I nsyms
+A pointer to a .I size_t variable where the number of symbols in the symbol table will be stored. If .I nsyms is NULL, this information is not returned.
+
+.SH RETURN VALUE
+The .B elf_getarsym function returns a pointer to an array of .I Elf_Arsym structures on success. If an error occurs, it returns NULL and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf_getarsym fails, it sets the following error codes:
+
+.TP
+.B ELFARG
+The .I elf parameter is NULL or invalid.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.SH EXAMPLES
+.B "Example 1: Retrieve the archive symbol table for an ELF archive"
+.nf
+.in +4
+#include <libelf.h>
+
+Elf *elf = ...; // Assume elf is a valid Elf pointer for an archive
+size_t nsyms;
+
+Elf_Arsym *arsym = elf_getarsym(elf, NULL, &nsyms);
+if (arsym == NULL) {
+    // Handle error
+} else {
+    for (size_t i = 0; i < nsyms; ++i) {
+        printf("Symbol: %s, Offset: %zu\n", arsym[i].as_name, arsym[i].as_off);
+    }
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf (3),
+.BR elf_getarhdr (3),
+.BR elf_begin (3),
+.BR elf_next (3),
+.BR elf_end (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

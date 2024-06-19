@@ -1,0 +1,84 @@
+.TH ELF_FLAGDATA 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf_flagdata \- set or clear flags for an ELF data descriptor
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "unsigned int elf_flagdata(Elf_Data *" data ", Elf_Cmd " cmd ", unsigned int " flags ");"
+
+.SH DESCRIPTION
+The .B elf_flagdata function sets or clears flags for the data descriptor referred to by .I data in an ELF object. This function can be used to control various aspects of how the data is handled.
+
+.SH PARAMETERS
+.TP
+.I data
+An .I Elf_Data pointer to the data descriptor for which the flags are to be set or cleared. The data descriptor must be valid.
+
+.TP
+.I cmd
+An .I Elf_Cmd value specifying the operation to be performed. This can be one of the following:
+.RS
+.IP \- ELF_C_SET
+Set the specified flags.
+.IP \- ELF_C_CLR
+Clear the specified flags.
+.RE
+
+.TP
+.I flags
+An .I unsigned int value specifying the flags to be set or cleared. Possible flags include:
+.RS
+.IP \- ELF_F_DIRTY
+Indicate that the data descriptor has been modified.
+.RE
+
+.SH RETURN VALUE
+The .B elf_flagdata function returns the updated flags for the data descriptor. If an error occurs, it returns 0 and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf_flagdata fails, it sets the following error codes:
+
+.TP
+.B ELFARG
+The .I data parameter is NULL or invalid.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.SH EXAMPLES
+.B "Example 1: Set the ELF_F_DIRTY flag for an ELF data descriptor"
+.nf
+.in +4
+#include <libelf.h>
+
+Elf *elf = ...; // Assume elf is a valid Elf pointer
+Elf_Scn *scn = ...; // Assume scn is a valid section descriptor
+Elf_Data *data = ...; // Assume data is a valid data descriptor
+
+if (elf_flagdata(data, ELF_C_SET, ELF_F_DIRTY) == 0) {
+    // Handle error
+} else {
+    // Flag set successfully
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf (3),
+.BR elf_flagehdr (3),
+.BR elf_flagelf (3),
+.BR elf_flagphdr (3),
+.BR elf_flagscn (3),
+.BR elf_flagshdr (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

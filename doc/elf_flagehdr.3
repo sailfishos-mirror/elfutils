@@ -1,0 +1,82 @@
+.TH ELF_FLAGEHDR 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf_flagehdr \- set or clear flags for an ELF header
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "unsigned int elf_flagehdr(Elf *" elf ", Elf_Cmd " cmd ", unsigned int " flags ");"
+
+.SH DESCRIPTION
+The .B elf_flagehdr function sets or clears flags for the ELF header of the ELF descriptor referred to by .I elf. This function can be used to control various aspects of how the ELF header is handled.
+
+.SH PARAMETERS
+.TP
+.I elf
+An .I Elf pointer to the ELF descriptor for which the header flags are to be set or cleared. The ELF descriptor must be valid.
+
+.TP
+.I cmd
+An .I Elf_Cmd value specifying the operation to be performed. This can be one of the following:
+.RS
+.IP \- ELF_C_SET
+Set the specified flags.
+.IP \- ELF_C_CLR
+Clear the specified flags.
+.RE
+
+.TP
+.I flags
+An .I unsigned int value specifying the flags to be set or cleared. Possible flags include:
+.RS
+.IP \- ELF_F_DIRTY
+Indicate that the ELF header has been modified.
+.RE
+
+.SH RETURN VALUE
+The .B elf_flagehdr function returns the updated flags for the ELF header. If an error occurs, it returns 0 and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf_flagehdr fails, it sets the following error codes:
+
+.TP
+.B ELFARG
+The .I elf parameter is NULL or invalid.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.SH EXAMPLES
+.B "Example 1: Set the ELF_F_DIRTY flag for an ELF header"
+.nf
+.in +4
+#include <libelf.h>
+
+Elf *elf = ...; // Assume elf is a valid Elf pointer
+
+if (elf_flagehdr(elf, ELF_C_SET, ELF_F_DIRTY) == 0) {
+    // Handle error
+} else {
+    // Flag set successfully
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf (3),
+.BR elf_flagdata (3),
+.BR elf_flagelf (3),
+.BR elf_flagphdr (3),
+.BR elf_flagscn (3),
+.BR elf_flagshdr (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

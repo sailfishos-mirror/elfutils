@@ -1,0 +1,74 @@
+.TH ELF64_GETPHDR 3 "May 2024" "elfutils 0.186" "Library Functions Manual"
+.SH NAME
+elf64_getphdr \- retrieve the program header for a 64-bit ELF descriptor
+
+.SH SYNOPSIS
+.nf
+#include <libelf.h>
+
+Elf64_Phdr *elf64_getphdr(Elf *elf);
+.fi
+
+.SH DESCRIPTION
+.B elf64_getphdr
+retrieves the program header table for the given 64-bit ELF descriptor
+.I elf.
+The program header table contains information about the segments of the ELF file, which are used during the execution of the program.
+
+.SH PARAMETERS
+.TP
+.I elf
+Pointer to the ELF descriptor from which to retrieve the program header table.
+
+.SH RETURN VALUE
+On success,
+.B elf64_getphdr
+returns a pointer to the 
+.B Elf64_Phdr
+structure. If the ELF descriptor is invalid or not a 64-bit ELF, it returns NULL and sets an error code retrievable by
+.BR elf_errno (3).
+
+.SH EXAMPLES
+.nf
+Elf *elf = elf_begin(fd, ELF_C_READ, NULL);
+if (elf == NULL) {
+    printf("Error: %s\n", elf_errmsg(-1));
+} else {
+    Elf64_Ehdr *ehdr = elf64_getehdr(elf);
+    if (ehdr == NULL) {
+        printf("Error retrieving ELF header: %s\n", elf_errmsg(-1));
+    } else {
+        Elf64_Phdr *phdr = elf64_getphdr(elf);
+        if (phdr == NULL) {
+            printf("Error retrieving program header: %s\n", elf_errmsg(-1));
+        } else {
+            // Process the program header
+            for (int i = 0; i < ehdr->e_phnum; i++) {
+                printf("Program Header %d: Type: %d\n", i, phdr[i].p_type);
+            }
+        }
+    }
+    elf_end(elf);
+}
+.fi
+
+.SH SEE ALSO
+.BR elf_begin (3),
+.BR elf_end (3),
+.BR elf_errmsg (3),
+.BR elf64_getehdr (3),
+.BR elf (5)
+
+.SH AUTHOR
+Written by the elfutils development team.
+
+.SH REPORTING BUGS
+Report bugs to <elfutils-devel@sourceware.org>.
+
+.SH COPYRIGHT
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+.SH HISTORY
+.B elf64_getphdr
+first appeared in elfutils 0.186.
+

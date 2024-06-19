@@ -1,0 +1,74 @@
+.TH ELF64_NEWEHDR 3 "May 2024" "elfutils 0.186" "Library Functions Manual"
+.SH NAME
+elf64_newehdr \- create a new 64-bit ELF header
+
+.SH SYNOPSIS
+.nf
+#include <libelf.h>
+
+Elf64_Ehdr *elf64_newehdr(Elf *elf);
+.fi
+
+.SH DESCRIPTION
+.B elf64_newehdr
+creates a new 64-bit ELF header for the given ELF descriptor 
+.I elf.
+This function initializes a new 
+.B Elf64_Ehdr
+structure and associates it with the ELF descriptor.
+
+.SH PARAMETERS
+.TP
+.I elf
+Pointer to the ELF descriptor for which a new ELF header is to be created.
+
+.SH RETURN VALUE
+On success,
+.B elf64_newehdr
+returns a pointer to the newly created 
+.B Elf64_Ehdr
+structure. If the ELF descriptor is invalid, it returns NULL and sets an error code retrievable by
+.BR elf_errno (3).
+
+.SH EXAMPLES
+.nf
+Elf *elf = elf_begin(fd, ELF_C_WRITE, NULL);
+if (elf == NULL) {
+    printf("Error: %s\n", elf_errmsg(-1));
+} else {
+    Elf64_Ehdr *ehdr = elf64_newehdr(elf);
+    if (ehdr == NULL) {
+        printf("Error creating new ELF header: %s\n", elf_errmsg(-1));
+    } else {
+        // Initialize ELF header fields
+        ehdr->e_ident[EI_MAG0] = ELFMAG0;
+        ehdr->e_ident[EI_MAG1] = ELFMAG1;
+        ehdr->e_ident[EI_MAG2] = ELFMAG2;
+        ehdr->e_ident[EI_MAG3] = ELFMAG3;
+        ehdr->e_type = ET_EXEC;
+        // Additional header field initialization
+    }
+    elf_end(elf);
+}
+.fi
+
+.SH SEE ALSO
+.BR elf_begin (3),
+.BR elf_end (3),
+.BR elf_errmsg (3),
+.BR elf64_getehdr (3),
+.BR elf (5)
+
+.SH AUTHOR
+Written by the elfutils development team.
+
+.SH REPORTING BUGS
+Report bugs to <elfutils-devel@sourceware.org>.
+
+.SH COPYRIGHT
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+.SH HISTORY
+.B elf64_newehdr
+first appeared in elfutils 0.186.
+

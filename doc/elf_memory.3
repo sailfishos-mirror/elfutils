@@ -1,0 +1,60 @@
+.TH ELF_MEMORY 3 "May 2024" "elfutils 0.186" "Library Functions Manual"
+.SH NAME
+elf_memory \- initialize an ELF descriptor for an in-memory ELF object
+
+.SH SYNOPSIS
+.nf
+#include <libelf.h>
+
+Elf *elf_memory(char *image, size_t size);
+.fi
+
+.SH DESCRIPTION
+.B elf_memory
+creates and initializes an ELF descriptor for an ELF object stored in memory. The function takes two arguments:
+.TP
+.I image
+Pointer to the memory location where the ELF image is stored.
+.TP
+.I size
+The size of the ELF image in bytes.
+
+This function allows manipulation of ELF data that is not associated with a file, but rather exists entirely in memory.
+
+.SH RETURN VALUE
+On success,
+.B elf_memory
+returns a pointer to the
+.B Elf
+structure. On failure, it returns NULL and sets an error code retrievable by
+.BR elf_errno (3).
+
+.SH EXAMPLES
+.nf
+char *elf_data = ...; // ELF data in memory
+size_t elf_size = ...; // Size of the ELF data
+Elf *elf = elf_memory(elf_data, elf_size);
+if (elf == NULL) {
+    printf("Error: %s\n", elf_errmsg(-1));
+}
+.fi
+
+.SH SEE ALSO
+.BR elf_begin (3),
+.BR elf_end (3),
+.BR elf_errmsg (3),
+.BR elf (5)
+
+.SH AUTHOR
+Written by the elfutils development team.
+
+.SH REPORTING BUGS
+Report bugs to <elfutils-devel@sourceware.org>.
+
+.SH COPYRIGHT
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+.SH HISTORY
+.B elf_memory
+first appeared in elfutils 0.186.
+

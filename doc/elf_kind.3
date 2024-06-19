@@ -1,0 +1,77 @@
+.TH ELF_KIND 3 "May 2024" "elfutils 0.186" "Library Functions Manual"
+.SH NAME
+elf_kind \- get the kind of an ELF descriptor
+
+.SH SYNOPSIS
+.nf
+#include <libelf.h>
+
+Elf_Kind elf_kind(Elf *elf);
+.fi
+
+.SH DESCRIPTION
+.B elf_kind
+returns the kind of the ELF descriptor 
+.I elf.
+The kind indicates whether the descriptor refers to an executable, a shared object, a core file, or other types of ELF files.
+
+.SH PARAMETERS
+.TP
+.I elf
+Pointer to the ELF descriptor whose kind is to be determined.
+
+.SH RETURN VALUE
+.B elf_kind
+returns one of the following constants defined in <libelf.h>:
+.TP
+.B ELF_K_NONE
+The ELF descriptor is not valid.
+.TP
+.B ELF_K_AR
+The descriptor refers to an archive.
+.TP
+.B ELF_K_ELF
+The descriptor refers to an ELF file.
+.TP
+.B ELF_K_NUM
+The number of ELF kinds defined.
+
+.SH EXAMPLES
+.nf
+Elf *elf = elf_begin(fd, ELF_C_READ, NULL);
+if (elf == NULL) {
+    printf("Error: %s\n", elf_errmsg(-1));
+} else {
+    Elf_Kind kind = elf_kind(elf);
+    switch (kind) {
+    case ELF_K_ELF:
+        printf("This is an ELF file.\n");
+        break;
+    case ELF_K_AR:
+        printf("This is an archive.\n");
+        break;
+    default:
+        printf("Unknown ELF kind.\n");
+    }
+    elf_end(elf);
+}
+.fi
+
+.SH SEE ALSO
+.BR elf_begin (3),
+.BR elf_end (3),
+.BR elf (5)
+
+.SH AUTHOR
+Written by the elfutils development team.
+
+.SH REPORTING BUGS
+Report bugs to <elfutils-devel@sourceware.org>.
+
+.SH COPYRIGHT
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+.SH HISTORY
+.B elf_kind
+first appeared in elfutils 0.186.
+

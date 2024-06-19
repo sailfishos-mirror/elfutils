@@ -1,0 +1,49 @@
+.TH ELF_GNU_HASH 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf_gnu_hash \- compute a GNU-style hash value for a string
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "unsigned long elf_gnu_hash(const char *" name ");"
+
+.SH DESCRIPTION
+The .B elf_gnu_hash function computes a GNU-style hash value for the specified string .I name. This hash function is used for hashing symbol names in ELF files that use the GNU hash table format.
+
+.SH PARAMETERS
+.TP
+.I name
+A constant .I char pointer to the null-terminated string for which the hash value is to be computed.
+
+.SH RETURN VALUE
+The .B elf_gnu_hash function returns an .I unsigned long value representing the GNU-style hash of the specified string.
+
+.SH ERRORS
+The function does not set any errors.
+
+.SH EXAMPLES
+.B "Example 1: Compute the GNU-style hash value for a symbol name"
+.nf
+.in +4
+#include <libelf.h>
+#include <stdio.h>
+
+const char *symbol_name = "my_symbol";
+unsigned long hash_value = elf_gnu_hash(symbol_name);
+printf("GNU hash value for '%s': %lu\n", symbol_name, hash_value);
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf (3),
+.BR elf_hash (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

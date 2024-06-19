@@ -1,0 +1,78 @@
+.TH ELF64_NEWPHDR 3 "May 2024" "elfutils 0.186" "Library Functions Manual"
+.SH NAME
+elf64_newphdr \- create a new program header for a 64-bit ELF descriptor
+
+.SH SYNOPSIS
+.nf
+#include <libelf.h>
+
+Elf64_Phdr *elf64_newphdr(Elf *elf, size_t phnum);
+.fi
+
+.SH DESCRIPTION
+.B elf64_newphdr
+creates a new program header table for the given 64-bit ELF descriptor 
+.I elf.
+This function allocates a new 
+.B Elf64_Phdr
+structure with 
+.I phnum
+entries and associates it with the ELF descriptor.
+
+.SH PARAMETERS
+.TP
+.I elf
+Pointer to the ELF descriptor for which a new program header table is to be created.
+.TP
+.I phnum
+The number of entries in the new program header table.
+
+.SH RETURN VALUE
+On success,
+.B elf64_newphdr
+returns a pointer to the newly created 
+.B Elf64_Phdr
+structure. If the ELF descriptor is invalid or the program header table cannot be created, it returns NULL and sets an error code retrievable by
+.BR elf_errno (3).
+
+.SH EXAMPLES
+.nf
+Elf *elf = elf_begin(fd, ELF_C_WRITE, NULL);
+if (elf == NULL) {
+    printf("Error: %s\n", elf_errmsg(-1));
+} else {
+    size_t phnum = 5; // Number of program headers
+    Elf64_Phdr *phdr = elf64_newphdr(elf, phnum);
+    if (phdr == NULL) {
+        printf("Error creating new program header: %s\n", elf_errmsg(-1));
+    } else {
+        // Initialize program header fields
+        for (size_t i = 0; i < phnum; i++) {
+            phdr[i].p_type = PT_LOAD;
+            // Additional initialization
+        }
+    }
+    elf_end(elf);
+}
+.fi
+
+.SH SEE ALSO
+.BR elf_begin (3),
+.BR elf_end (3),
+.BR elf_errno (3),
+.BR elf64_getphdr (3),
+.BR elf (5)
+
+.SH AUTHOR
+Written by the elfutils development team.
+
+.SH REPORTING BUGS
+Report bugs to <elfutils-devel@sourceware.org>.
+
+.SH COPYRIGHT
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+.SH HISTORY
+.B elf64_newphdr
+first appeared in elfutils 0.186.
+

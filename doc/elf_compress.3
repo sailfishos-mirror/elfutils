@@ -1,0 +1,75 @@
+.TH ELF_COMPRESS 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf_compress \- compress sections in an ELF file
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "int elf_compress(Elf_Scn *" scn ", unsigned int " compression_type ", int " flags ");"
+
+.SH DESCRIPTION
+The .B elf_compress function compresses the section referred to by .I scn in an ELF object. The type of compression and additional flags can be specified.
+
+.SH PARAMETERS
+.TP
+.I scn
+An .I Elf_Scn pointer to the section descriptor to be compressed. The section descriptor must be valid.
+
+.TP
+.I compression_type
+An .I unsigned int value specifying the type of compression to use. Typically, this corresponds to one of the ELF compression types defined in the ELF standard (e.g., .B ELFCOMPRESS_ZLIB).
+
+.TP
+.I flags
+An .I int value specifying additional options for compression. Possible values include .B ELF_F_COMPR_ZLIB, which indicates that the section should be compressed using the ZLIB algorithm.
+
+.SH RETURN VALUE
+The .B elf_compress function returns 0 on success. On error, it returns -1 and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf_compress fails, it sets the following error codes:
+
+.TP
+.B ELFARG
+The .I scn parameter is NULL or invalid.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.TP
+.B ELFCOMPR
+Compression failed due to an issue with the compression algorithm or the data being compressed.
+
+.SH EXAMPLES
+.B "Example 1: Compress a section in an ELF file using ZLIB"
+.nf
+.in +4
+#include <libelf.h>
+
+Elf *elf = ...; // Assume elf is a valid Elf pointer
+Elf_Scn *scn = ...; // Assume scn is a valid section descriptor
+
+if (elf_compress(scn, ELFCOMPRESS_ZLIB, 0) != 0) {
+    // Handle error
+} else {
+    // Section is now compressed
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf_getscn (3),
+.BR elf32_getshdr (3),
+.BR elf64_getshdr (3),
+.BR elf (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

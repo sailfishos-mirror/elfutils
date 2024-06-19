@@ -1,0 +1,47 @@
+.TH ELF_FILL 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf_fill \- set the fill byte for padding in ELF data structures
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "void elf_fill(char " fill );"
+
+.SH DESCRIPTION
+The .B elf_fill function sets the fill byte to be used for padding in ELF data structures. This function can be used to specify the byte value that should be used to fill unused space in sections or other data structures within an ELF file.
+
+.SH PARAMETERS
+.TP
+.I fill
+A .I char value specifying the byte to be used for padding.
+
+.SH RETURN VALUE
+The .B elf_fill function does not return a value.
+
+.SH ERRORS
+The function does not set any errors.
+
+.SH EXAMPLES
+.B "Example 1: Set the fill byte to 0xFF for padding in ELF data structures"
+.nf
+.in +4
+#include <libelf.h>
+
+elf_fill(0xFF);
+
+// Continue with ELF library operations where padding will use 0xFF
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

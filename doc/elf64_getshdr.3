@@ -1,0 +1,64 @@
+.TH ELF64_GETSHDR 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf64_getshdr \- retrieve the section header for a section descriptor in an ELF64 file
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "Elf64_Shdr *elf64_getshdr(Elf_Scn *" scn ");"
+
+.SH DESCRIPTION
+The .B elf64_getshdr function retrieves the section header for the section descriptor referred to by .I scn in an ELF64 object. The section header contains metadata about the section, such as its type, size, and memory offset.
+
+.SH PARAMETERS
+.TP
+.I scn
+An .I Elf_Scn pointer to the section descriptor whose section header is to be retrieved. The section descriptor must be valid.
+
+.SH RETURN VALUE
+The .B elf64_getshdr function returns a pointer to the .I Elf64_Shdr structure representing the section header. If an error occurs, it returns NULL and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf64_getshdr fails, it sets the following error codes:
+
+.TP
+.B ELFARG
+The .I scn parameter is NULL or invalid.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.SH EXAMPLES
+.B "Example 1: Retrieve the section header for a section descriptor"
+.nf
+.in +4
+#include <libelf.h>
+
+Elf *elf = ...; // Assume elf is a valid Elf pointer
+Elf_Scn *scn = ...; // Assume scn is a valid section descriptor
+
+Elf64_Shdr *shdr = elf64_getshdr(scn);
+if (shdr == NULL) {
+    // Handle error
+} else {
+    // Use shdr
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf_getscn (3),
+.BR elf_nextscn (3),
+.BR elf_ndxscn (3),
+.BR elf (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team. 
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

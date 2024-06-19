@@ -1,0 +1,69 @@
+.TH ELF_CNTL 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf_cntl \- control ELF descriptor state
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "int elf_cntl(Elf *" elf ", Elf_Cmd " cmd ");"
+
+.SH DESCRIPTION
+The .B elf_cntl function is used to control the state of an ELF descriptor referred to by .I elf. This function can be used to perform operations such as flushing internal buffers to the underlying file.
+
+.SH PARAMETERS
+.TP
+.I elf
+An .I Elf pointer to the ELF descriptor for which the control operation is to be performed. The ELF descriptor must be valid.
+
+.TP
+.I cmd
+An .I Elf_Cmd value specifying the control operation to be performed. The supported command is:
+.RS
+.IP \- ELF_C_FDREAD
+Flushes internal buffers to the underlying file, ensuring that any modifications made to the ELF object are written out.
+.RE
+
+.SH RETURN VALUE
+The .B elf_cntl function returns 0 on success. If an error occurs, it returns -1 and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf_cntl fails, it sets the following error codes:
+
+.TP
+.B ELFARG
+The .I elf parameter is NULL or invalid, or the .I cmd parameter is not supported.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.SH EXAMPLES
+.B "Example 1: Flush internal buffers to the underlying file for an ELF descriptor"
+.nf
+.in +4
+#include <libelf.h>
+
+Elf *elf = ...; // Assume elf is a valid Elf pointer
+
+if (elf_cntl(elf, ELF_C_FDREAD) != 0) {
+    // Handle error
+} else {
+    // Buffers successfully flushed
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf (3),
+.BR elf_begin (3),
+.BR elf_end (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

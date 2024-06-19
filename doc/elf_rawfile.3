@@ -1,0 +1,68 @@
+.TH ELF_RAWFILE 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf_rawfile \- retrieve the raw ELF file data
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "char *elf_rawfile(Elf *" elf ", size_t *" size ");"
+
+.SH DESCRIPTION
+The .B elf_rawfile function retrieves a pointer to the raw data of the ELF file referred to by .I elf. It also optionally returns the size of the raw data.
+
+.SH PARAMETERS
+.TP
+.I elf
+An .I Elf pointer to the ELF descriptor for which the raw file data is to be retrieved. The ELF descriptor must be valid.
+
+.TP
+.I size
+A pointer to a .I size_t variable where the size of the raw data will be stored. If .I size is NULL, the size information is not returned.
+
+.SH RETURN VALUE
+The .B elf_rawfile function returns a pointer to the raw data of the ELF file. If an error occurs, it returns NULL and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf_rawfile fails, it sets the following error codes:
+
+.TP
+.B ELFARG
+The .I elf parameter is NULL or invalid.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.SH EXAMPLES
+.B "Example 1: Retrieve the raw data of an ELF file"
+.nf
+.in +4
+#include <libelf.h>
+
+Elf *elf = ...; // Assume elf is a valid Elf pointer
+size_t size;
+
+char *data = elf_rawfile(elf, &size);
+if (data == NULL) {
+    // Handle error
+} else {
+    // Use the raw data
+    printf("Size of raw data: %zu\n", size);
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf (3),
+.BR elf_begin (3),
+.BR elf_end (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

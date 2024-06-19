@@ -1,0 +1,64 @@
+.TH ELF32_GETCHDR 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf32_getchdr \- retrieve the command header for a command descriptor in an ELF32 file
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "Elf32_Chdr *elf32_getchdr(Elf_Cmd *" cmd ");"
+
+.SH DESCRIPTION
+The .B elf32_getchdr function retrieves the command header for the command descriptor referred to by .I cmd in an ELF32 object. The command header contains metadata about the command, such as its type, size, and memory offset.
+
+.SH PARAMETERS
+.TP
+.I cmd
+An .I Elf_Cmd pointer to the command descriptor whose command header is to be retrieved. The command descriptor must be valid.
+
+.SH RETURN VALUE
+The .B elf32_getchdr function returns a pointer to the .I Elf32_Chdr structure representing the command header. If an error occurs, it returns NULL and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf32_getchdr fails, it sets the following error codes:
+
+.TP
+.B ELFARG
+The .I cmd parameter is NULL or invalid.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.SH EXAMPLES
+.B "Example 1: Retrieve the command header for a command descriptor"
+.nf
+.in +4
+#include <libelf.h>
+
+Elf *elf = ...; // Assume elf is a valid Elf pointer
+Elf_Cmd *cmd = ...; // Assume cmd is a valid command descriptor
+
+Elf32_Chdr *chdr = elf32_getchdr(cmd);
+if (chdr == NULL) {
+    // Handle error
+} else {
+    // Use chdr
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf_getcmd (3),
+.BR elf_nextcmd (3),
+.BR elf_ndxcmd (3),
+.BR elf (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team. 
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

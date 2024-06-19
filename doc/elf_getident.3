@@ -1,0 +1,74 @@
+.TH ELF_GETIDENT 3 "May 2024" "elfutils 0.186" "Library Functions Manual"
+.SH NAME
+elf_getident \- retrieve the identification bytes for an ELF descriptor
+
+.SH SYNOPSIS
+.nf
+#include <libelf.h>
+
+char *elf_getident(Elf *elf, size_t *size);
+.fi
+
+.SH DESCRIPTION
+.B elf_getident
+returns a pointer to the identification bytes of the ELF descriptor 
+.I elf.
+The identification bytes are part of the ELF file's header, which includes important metadata about the file format.
+
+.SH PARAMETERS
+.TP
+.I elf
+Pointer to the ELF descriptor from which to retrieve the identification bytes.
+.TP
+.I size
+Pointer to a
+.B size_t
+variable where the size of the identification bytes will be stored. If
+.I size
+is NULL, no size will be stored.
+
+.SH RETURN VALUE
+On success,
+.B elf_getident
+returns a pointer to the identification bytes. If the ELF descriptor is invalid, it returns NULL and sets an error code retrievable by
+.BR elf_errno (3).
+
+.SH EXAMPLES
+.nf
+Elf *elf = elf_begin(fd, ELF_C_READ, NULL);
+if (elf == NULL) {
+    printf("Error: %s\n", elf_errmsg(-1));
+} else {
+    size_t size;
+    char *ident = elf_getident(elf, &size);
+    if (ident == NULL) {
+        printf("Error retrieving identification bytes: %s\n", elf_errmsg(-1));
+    } else {
+        printf("Identification bytes (size %zu): ", size);
+        for (size_t i = 0; i < size; i++) {
+            printf("%02x ", (unsigned char)ident[i]);
+        }
+        printf("\n");
+    }
+    elf_end(elf);
+}
+.fi
+
+.SH SEE ALSO
+.BR elf_begin (3),
+.BR elf_end (3),
+.BR elf (5)
+
+.SH AUTHOR
+Written by the elfutils development team.
+
+.SH REPORTING BUGS
+Report bugs to <elfutils-devel@sourceware.org>.
+
+.SH COPYRIGHT
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+.SH HISTORY
+.B elf_getident
+first appeared in elfutils 0.186.
+

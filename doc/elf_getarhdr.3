@@ -1,0 +1,65 @@
+.TH ELF_GETARHDR 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf_getarhdr \- retrieve the archive header for an ELF archive member
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "Elf_Arhdr *elf_getarhdr(Elf *" elf ");"
+
+.SH DESCRIPTION
+The .B elf_getarhdr function retrieves the archive header for the current member of the ELF archive referred to by .I elf. This function is used to access metadata about the archive member, such as its name, date, user ID, group ID, mode, and size.
+
+.SH PARAMETERS
+.TP
+.I elf
+An .I Elf pointer to the ELF archive member for which the archive header is to be retrieved. The ELF archive member must be valid.
+
+.SH RETURN VALUE
+The .B elf_getarhdr function returns a pointer to an .I Elf_Arhdr structure representing the archive header. If an error occurs, it returns NULL and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf_getarhdr fails, it sets the following error codes:
+
+.TP
+.B ELFARG
+The .I elf parameter is NULL or invalid.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.SH EXAMPLES
+.B "Example 1: Retrieve the archive header for an ELF archive member"
+.nf
+.in +4
+#include <libelf.h>
+
+Elf *elf = ...; // Assume elf is a valid Elf pointer for an archive member
+
+Elf_Arhdr *arhdr = elf_getarhdr(elf);
+if (arhdr == NULL) {
+    // Handle error
+} else {
+    // Use the retrieved archive header
+    printf("Member name: %s\n", arhdr->ar_name);
+    printf("Member size: %ld\n", arhdr->ar_size);
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf (3),
+.BR elf_begin (3),
+.BR elf_next (3),
+.BR elf_end (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

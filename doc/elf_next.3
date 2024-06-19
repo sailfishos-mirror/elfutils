@@ -1,0 +1,55 @@
+.TH ELF_NEXT 3 "May 2024" "elfutils 0.186" "Library Functions Manual"
+.SH NAME
+elf_next \- advance to the next ELF descriptor
+
+.SH SYNOPSIS
+.nf
+#include <libelf.h>
+
+Elf *elf_next(Elf *elf);
+.fi
+
+.SH DESCRIPTION
+.B elf_next
+advances to the next ELF descriptor associated with the current ELF descriptor. This function is used when processing multiple ELF descriptors within the same ELF file.
+
+The function takes one argument:
+.TP
+.I elf
+Pointer to the current ELF descriptor.
+
+.SH RETURN VALUE
+On success,
+.B elf_next
+returns a pointer to the next
+.B Elf
+structure. If there are no more descriptors, it returns NULL.
+
+.SH EXAMPLES
+.nf
+Elf *elf = elf_begin(fd, ELF_C_READ, NULL);
+while (elf != NULL) {
+    // Process the current ELF descriptor
+    elf = elf_next(elf);
+}
+.fi
+
+.SH SEE ALSO
+.BR elf_begin (3),
+.BR elf_end (3),
+.BR elf_errmsg (3),
+.BR elf (5)
+
+.SH AUTHOR
+Written by the elfutils development team.
+
+.SH REPORTING BUGS
+Report bugs to <elfutils-devel@sourceware.org>.
+
+.SH COPYRIGHT
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+.SH HISTORY
+.B elf_next
+first appeared in elfutils 0.186.
+

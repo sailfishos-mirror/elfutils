@@ -1,0 +1,68 @@
+.TH ELF_RAWDATA 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf_rawdata \- retrieve raw data from an ELF section
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "Elf_Data *elf_rawdata(Elf_Scn *" scn ", Elf_Data *" data ");"
+
+.SH DESCRIPTION
+The .B elf_rawdata function retrieves the raw, unprocessed data from the section descriptor referred to by .I scn in an ELF object. If .I data is NULL, the function returns the first data descriptor for the section. If .I data is not NULL, the function returns the next data descriptor following .I data in the section.
+
+This function is useful for accessing the raw contents of a section, as it exists in the ELF file, without any processing or interpretation.
+
+.SH PARAMETERS
+.TP
+.I scn
+An .I Elf_Scn pointer to the section descriptor from which the raw data is to be retrieved. The section descriptor must be valid.
+
+.TP
+.I data
+An .I Elf_Data pointer to the current data descriptor. If NULL, the function returns the first data descriptor for the section. If not NULL, the function returns the next data descriptor following this one in the section.
+
+.SH RETURN VALUE
+The .B elf_rawdata function returns a pointer to the .I Elf_Data structure representing the raw data descriptor. If an error occurs, it returns NULL and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf_rawdata fails, it sets the following error codes:
+
+.TP
+.B ELFARG
+The .I scn parameter is NULL or invalid.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.SH EXAMPLES
+.B "Example 1: Retrieve all raw data descriptors for a section"
+.nf
+.in +4
+#include <libelf.h>
+
+Elf *elf = ...; // Assume elf is a valid Elf pointer
+Elf_Scn *scn = ...; // Assume scn is a valid section descriptor
+Elf_Data *data = NULL;
+
+while ((data = elf_rawdata(scn, data)) != NULL) {
+    // Process each raw data descriptor
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf (3),
+.BR elf_getscn (3),
+.BR elf_getdata (3),
+.BR elf_newdata (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

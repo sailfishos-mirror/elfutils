@@ -1,0 +1,63 @@
+.TH ELF_GETBASE 3 "May 2024" "elfutils 0.186" "Library Functions Manual"
+.SH NAME
+elf_getbase \- retrieve the base offset of an ELF descriptor
+
+.SH SYNOPSIS
+.nf
+#include <libelf.h>
+
+off_t elf_getbase(Elf *elf);
+.fi
+
+.SH DESCRIPTION
+.B elf_getbase
+returns the base offset of the ELF descriptor 
+.I elf.
+This base offset is the position within the file where the ELF data begins.
+
+.SH PARAMETERS
+.TP
+.I elf
+Pointer to the ELF descriptor whose base offset is to be determined.
+
+.SH RETURN VALUE
+On success,
+.B elf_getbase
+returns the base offset as an
+.B off_t
+value. If the ELF descriptor is invalid, it returns -1.
+
+.SH EXAMPLES
+.nf
+Elf *elf = elf_begin(fd, ELF_C_READ, NULL);
+if (elf == NULL) {
+    printf("Error: %s\n", elf_errmsg(-1));
+} else {
+    off_t base = elf_getbase(elf);
+    if (base == -1) {
+        printf("Error retrieving base offset: %s\n", elf_errmsg(-1));
+    } else {
+        printf("Base offset: %ld\n", base);
+    }
+    elf_end(elf);
+}
+.fi
+
+.SH SEE ALSO
+.BR elf_begin (3),
+.BR elf_end (3),
+.BR elf (5)
+
+.SH AUTHOR
+Written by the elfutils development team.
+
+.SH REPORTING BUGS
+Report bugs to <elfutils-devel@sourceware.org>.
+
+.SH COPYRIGHT
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+.SH HISTORY
+.B elf_getbase
+first appeared in elfutils 0.186.
+

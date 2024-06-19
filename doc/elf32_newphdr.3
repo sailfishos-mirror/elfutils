@@ -1,0 +1,73 @@
+.TH ELF32_NEWPHDR 3 "June 2024" "Elfutils" "Library Functions Manual"
+
+.SH NAME
+elf32_newphdr \- create a new program header table for an ELF32 file
+
+.SH SYNOPSIS
+.B #include <libelf.h>
+
+.BI "Elf32_Phdr *elf32_newphdr(Elf *" elf ", size_t " count ");"
+
+.SH DESCRIPTION
+The .B elf32_newphdr function creates a new program header table for the ELF object referred to by .I elf. The number of entries in the new program header table is specified by .I count.
+
+The function allocates a new array of .I Elf32_Phdr structures and makes it the program header table for the ELF object. Any previously existing program header table is discarded.
+
+The program header table describes the segments of the ELF file. Each segment specifies information necessary for the system to prepare the program for execution.
+
+.SH PARAMETERS
+.TP
+.I elf
+An .I Elf pointer to the ELF object for which a new program header table is to be created.
+
+.TP
+.I count
+A .I size_t value representing the number of entries in the new program header table.
+
+.SH RETURN VALUE
+The .B elf32_newphdr function returns a pointer to the first .I Elf32_Phdr structure in the newly created program header table. If an error occurs, it returns NULL and sets an appropriate error code.
+
+.SH ERRORS
+If .B elf32_newphdr fails, it sets the following error codes:
+
+.TP
+.B ELFMEM
+Memory allocation failed.
+
+.TP
+.B ELFARG
+The .I elf parameter is NULL, or .I count is zero.
+
+.TP
+.B ELFERR
+An unspecified internal error occurred.
+
+.SH EXAMPLES
+.B "Example 1: Create a new program header table with 5 entries"
+.nf
+.in +4
+#include <libelf.h>
+
+Elf *elf = ...; // Assume elf is a valid Elf pointer
+size_t count = 5;
+
+Elf32_Phdr *phdr = elf32_newphdr(elf, count);
+if (phdr == NULL) {
+    // Handle error
+}
+.in -4
+.fi
+
+.SH SEE ALSO
+.BR elf32_getphdr (3),
+.BR elf64_newphdr (3),
+.BR elf (3),
+.BR libelf (3)
+
+.SH AUTHORS
+Elfutils was written by the Elfutils development team.
+
+.SH COPYRIGHT
+Copyright © 2024 Elfutils Development Team. 
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
