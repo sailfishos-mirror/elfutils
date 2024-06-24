@@ -76,6 +76,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
+#include <signal.h>
 /* #include ELFUTILS_HEADER(dwfl) */
 #include "../libdwfl/libdwflP.h"
 /* XXX: Private header needed for sysprof_find_procfile, sysprof_init_dwfl. */
@@ -131,6 +132,8 @@ static char *input_path = NULL;
 static int input_fd = -1;
 static char *output_path = NULL;
 static int output_fd = -1;
+
+static int signal_count = 0;
 
 #define MODE_OPTS "none/passthru/naive"
 #define MODE_NONE 0x0
@@ -427,6 +430,22 @@ sysprof_reader_getframes (SysprofReader *reader,
 }
 
 #endif /* HAVE_SYSPROF_HEADERS */
+
+/* Required to match our signal handling with that of a sysprof parent process. */
+static void sigint_handler (int /* signo */)
+{
+  if (signal_count >= 2)
+    {
+      exit(1);
+    }
+
+  if (signal_count == 0)
+    {
+      fprintf (stderr, "%s\n", "Waiting for input to finish. Press twice more ^C to force exit.");
+    }
+
+  signal_count ++;
+}
 
 /* Main program. */
 
@@ -1226,6 +1245,9 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
   if (output_fd < 0)
     error (EXIT_BAD, errno, N_("Cannot open output file or FIFO '%s'"), output_path);
 
+  /* TODO: Only really needed if launched from sysprof and inheriting its signals. */
+  if (signal (SIGINT, sigint_handler) == SIG_ERR)
+    error (EXIT_BAD, errno, N_("Cannot set signal handler for SIGINT"));
 #if !(HAVE_SYSPROF_HEADERS)
   /* TODO: Should hide corresponding command line options when this is the case. */
   error (EXIT_BAD, 0, N_("Sysprof support is not available in this version."));
