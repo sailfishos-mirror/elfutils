@@ -30,31 +30,58 @@
 #include <config.h>
 #endif
 
-#include <stdlib.h>
 #include "eu-search.h"
 
-rwlock_define(static, search_find_lock);
+#include <stdio.h>
 
-void *eu_tsearch(const void *key, void **rootp,
-		 int (*compar)(const void *, const void *))
+void *eu_tsearch (const void *key, search_tree *tree,
+		  int (*compare)(const void *, const void *))
 {
-  void *ret = NULL;
-  rwlock_wrlock(search_find_lock);
+  rwlock_wrlock (tree->lock);
+  void *ret = tsearch (key, &tree->root, compare);
+  rwlock_unlock (tree->lock);
 
-  ret = tsearch(key, rootp, compar);
-
-  rwlock_unlock(search_find_lock);
   return ret;
 }
 
-void *eu_tfind(const void *key, void *const *rootp,
-	       int (*compar)(const void *, const void *))
+void *eu_tfind (const void *key, search_tree *tree,
+	        int (*compare)(const void *, const void *))
 {
-  void *ret = NULL;
-  rwlock_rdlock(search_find_lock);
+  rwlock_rdlock (tree->lock);
+  void *ret = tfind (key, &tree->root, compare);
+  rwlock_unlock (tree->lock);
 
-  ret = tfind(key, rootp, compar);
-
-  rwlock_unlock(search_find_lock);
   return ret;
+}
+
+void *eu_tdelete (const void *key, search_tree *tree,
+		  int (*compare)(const void *, const void *))
+{
+  rwlock_wrlock (tree->lock);
+  void *ret = tdelete (key, &tree->root, compare);
+  rwlock_unlock (tree->lock);
+
+  return ret;
+}
+
+void eu_tdestroy (search_tree *tree, void (*free_node)(void *))
+{
+  rwlock_wrlock (tree->lock);
+
+  tdestroy (tree->root, free_node);
+  tree->root = NULL;
+
+  rwlock_unlock (tree->lock);
+}
+
+void eu_search_tree_init (search_tree *tree)
+{
+  tree->root = NULL;
+  rwlock_init (tree->lock);
+}
+
+void eu_search_tree_fini (search_tree *tree, void (*free_node)(void *))
+{
+  eu_tdestroy (tree, free_node);
+  rwlock_fini (tree->lock);
 }

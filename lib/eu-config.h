@@ -29,6 +29,8 @@
 #ifndef EU_CONFIG_H
 #define EU_CONFIG_H	1
 
+#include <stdio.h>
+
 #ifdef USE_LOCKS
 # include <pthread.h>
 # include <assert.h>
@@ -40,9 +42,14 @@
   ({ int _err = pthread_ ## call; assert_perror (_err); })
 # define rwlock_init(lock)		RWLOCK_CALL (init (&lock, NULL))
 # define rwlock_fini(lock)		RWLOCK_CALL (destroy (&lock))
-# define rwlock_rdlock(lock)		RWLOCK_CALL (rdlock (&lock))
-# define rwlock_wrlock(lock)		RWLOCK_CALL (wrlock (&lock))
-# define rwlock_unlock(lock)		RWLOCK_CALL (unlock (&lock))
+
+# define rwlock_rdlock(lock)            RWLOCK_CALL (rdlock (&lock))
+# define rwlock_wrlock(lock)            RWLOCK_CALL (wrlock (&lock))
+# define rwlock_unlock(lock)            RWLOCK_CALL (unlock (&lock))
+
+//# define rwlock_rdlock(lock)		({ printf ("rw locking %lx\n", (unsigned long) &lock); fflush(NULL); RWLOCK_CALL (rdlock (&lock)); })
+//# define rwlock_wrlock(lock)		({ printf ("wr locking %lx\n", (unsigned long) &lock); fflush(NULL); RWLOCK_CALL (wrlock (&lock)); })
+//# define rwlock_unlock(lock)		({ printf ("unlocking %lx\n", (unsigned long) &lock); fflush(NULL); RWLOCK_CALL (unlock (&lock)); })
 # define once(once_control, init_routine)  \
   ONCE_CALL (once (&once_control, init_routine))
 #else

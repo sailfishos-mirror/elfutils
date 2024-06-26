@@ -84,8 +84,7 @@ __libelf_readall (Elf *elf)
 
       /* If this is an archive and we have derived descriptors get the
 	 locks for all of them.  */
-      rwlock_unlock(elf->lock); // lock will be reacquired next line
-      libelf_acquire_all (elf);
+      libelf_acquire_all_children (elf);
 
       if (elf->maximum_size == ~((size_t) 0))
 	{
@@ -117,6 +116,7 @@ __libelf_readall (Elf *elf)
 	    {
 	      /* Something went wrong.  */
 	    read_error:
+	      rwlock_unlock (elf->lock);
 	      __libelf_seterrno (ELF_E_READ_ERROR);
 	      free (mem);
 	    }
@@ -142,8 +142,9 @@ __libelf_readall (Elf *elf)
 	__libelf_seterrno (ELF_E_NOMEM);
 
       /* Free the locks on the children.  */
-      libelf_release_all (elf); // lock is released
+      libelf_release_all_children (elf);
     }
 
+  rwlock_unlock (elf->lock);
   return (char *) elf->map_address;
 }

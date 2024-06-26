@@ -37,7 +37,7 @@
 
 /* __libdw_findcu modifies "&dbg->next_tu_offset : &dbg->next_cu_offset".
    May read or write, so mutual exclusion is enforced to prevent a race. */
-rwlock_define(static, next_tucu_offset_lock);
+//rwlock_define(static, next_tucu_offset_lock);
 
 static int
 findcu_cb (const void *arg1, const void *arg2)
@@ -105,7 +105,7 @@ __libdw_intern_next_unit (Dwarf *dbg, bool debug_types)
 {
   Dwarf_Off *const offsetp
     = debug_types ? &dbg->next_tu_offset : &dbg->next_cu_offset;
-  void **tree = debug_types ? &dbg->tu_tree : &dbg->cu_tree;
+  search_tree *tree = debug_types ? &dbg->tu_tree : &dbg->cu_tree;
 
   Dwarf_Off oldoff = *offsetp;
   uint16_t version;
@@ -171,7 +171,8 @@ __libdw_intern_next_unit (Dwarf *dbg, bool debug_types)
   newp->orig_abbrev_offset = newp->last_abbrev_offset = abbrev_offset;
   newp->files = NULL;
   newp->lines = NULL;
-  newp->locs = NULL;
+  newp->locs_tree.root = NULL;
+  rwlock_init (newp->locs_tree.lock);
   newp->split = (Dwarf_CU *) -1;
   newp->base_address = (Dwarf_Addr) -1;
   newp->addr_base = (Dwarf_Off) -1;
@@ -240,7 +241,7 @@ struct Dwarf_CU *
 internal_function
 __libdw_findcu (Dwarf *dbg, Dwarf_Off start, bool v4_debug_types)
 {
-  void **tree = v4_debug_types ? &dbg->tu_tree : &dbg->cu_tree;
+  search_tree *tree = v4_debug_types ? &dbg->tu_tree : &dbg->cu_tree;
   Dwarf_Off *next_offset
     = v4_debug_types ? &dbg->next_tu_offset : &dbg->next_cu_offset;
 
@@ -252,7 +253,7 @@ __libdw_findcu (Dwarf *dbg, Dwarf_Off start, bool v4_debug_types)
   if (found != NULL)
     return *found;
 
-  rwlock_wrlock(next_tucu_offset_lock);
+  rwlock_wrlock(dbg->dwarf_lock);
 
   if (start < *next_offset)
     __libdw_seterrno (DWARF_E_INVALID_DWARF);
@@ -278,7 +279,7 @@ __libdw_findcu (Dwarf *dbg, Dwarf_Off start, bool v4_debug_types)
 	}
     }
 
-  rwlock_unlock(next_tucu_offset_lock);
+  rwlock_unlock(dbg->dwarf_lock);
   return result;
 }
 
@@ -286,7 +287,7 @@ struct Dwarf_CU *
 internal_function
 __libdw_findcu_addr (Dwarf *dbg, void *addr)
 {
-  void **tree;
+  search_tree *tree;
   Dwarf_Off start;
   if (addr >= dbg->sectiondata[IDX_debug_info]->d_buf
       && addr < (dbg->sectiondata[IDX_debug_info]->d_buf

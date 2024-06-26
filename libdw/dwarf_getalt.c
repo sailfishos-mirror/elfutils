@@ -44,10 +44,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-/* find_debug_altlink() modifies "dbg->alt_dwarf".
-   dwarf_getalt() reads "main->alt_dwarf".
-   Mutual exclusion is enforced to prevent a race. */
-rwlock_define(static, alt_dwarf_lock);
 
 char *
 internal_function
@@ -156,9 +152,7 @@ find_debug_altlink (Dwarf *dbg)
       Dwarf *alt = dwarf_begin (fd, O_RDONLY);
       if (alt != NULL)
 	{
-	  rwlock_wrlock(alt_dwarf_lock);
 	  dbg->alt_dwarf = alt;
-	  rwlock_unlock(alt_dwarf_lock);
 	  dbg->alt_fd = fd;
 	}
       else
@@ -166,36 +160,39 @@ find_debug_altlink (Dwarf *dbg)
     }
 }
 
+/* find_debug_altlink() modifies "dbg->alt_dwarf".
+   dwarf_getalt() reads "main->alt_dwarf".
+   Mutual exclusion is enforced to prevent a race. */
+
 Dwarf *
 dwarf_getalt (Dwarf *main)
 {
-  rwlock_rdlock(alt_dwarf_lock);
-  Dwarf *alt_dwarf_local = main->alt_dwarf;
-  rwlock_unlock(alt_dwarf_lock);
+  rwlock_rdlock(main->dwarf_lock);
 
   /* Only try once.  */
-  if (main == NULL || alt_dwarf_local == (void *) -1)
-    return NULL;
-
-  if (alt_dwarf_local != NULL)
-    return alt_dwarf_local;
-
-  find_debug_altlink (main);
-
-  rwlock_rdlock(alt_dwarf_lock);
-  alt_dwarf_local = main->alt_dwarf;
-  rwlock_unlock(alt_dwarf_lock);
-
-  /* If we found nothing, make sure we don't try again.  */
-  if (alt_dwarf_local == NULL)
+  if (main == NULL || main->alt_dwarf == (void *) -1)
     {
-      rwlock_wrlock(alt_dwarf_lock);
-      main->alt_dwarf = (void *) -1;
-      rwlock_unlock(alt_dwarf_lock);
-
+      rwlock_unlock (main->dwarf_lock);
       return NULL;
     }
 
-  return alt_dwarf_local;
+  if (main->alt_dwarf != NULL)
+    {
+      rwlock_unlock (main->dwarf_lock);
+      return main->alt_dwarf;
+    }
+
+  find_debug_altlink (main);
+
+  /* If we found nothing, make sure we don't try again.  */
+  if (main->alt_dwarf == NULL)
+    {
+      main->alt_dwarf = (void *) -1;
+      rwlock_unlock (main->dwarf_lock);
+      return NULL;
+    }
+
+  rwlock_unlock (main->dwarf_lock);
+  return main->alt_dwarf;
 }
 INTDEF (dwarf_getalt)

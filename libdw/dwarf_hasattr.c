@@ -37,7 +37,6 @@
 /* dwarf_hasattr() calls __libdw_dieabbrev() in libdwP.h.
    __libdw_dieabbrev() reads/writes "die->abbrev".
    Mutual exclusion is enforced around the call to __libdw_dieabbrev to prevent a race. */
-rwlock_define(static, die_abbrev_lock);
 
 int
 dwarf_hasattr (Dwarf_Die *die, unsigned int search_name)
@@ -45,12 +44,12 @@ dwarf_hasattr (Dwarf_Die *die, unsigned int search_name)
   if (die == NULL)
     return 0;
 
-  rwlock_wrlock(die_abbrev_lock);
+  //rwlock_wrlock(die_abbrev_lock);
 
   /* Find the abbreviation entry.  */
   Dwarf_Abbrev *abbrevp = __libdw_dieabbrev (die, NULL);
 
-  rwlock_unlock(die_abbrev_lock);
+  //rwlock_unlock(die_abbrev_lock);
 
   if (unlikely (abbrevp == DWARF_END_ABBREV))
     {

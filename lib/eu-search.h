@@ -29,11 +29,36 @@
 #ifndef EU_SEARCH_H
 #define EU_SEARCH_H 1
 
+#include <stdlib.h>
 #include <search.h>
+#include <eu-config.h>
 
-extern void *eu_tsearch(const void *key, void **rootp,
-			int (*compar)(const void *, const void *));
-extern void *eu_tfind(const void *key, void *const *rootp,
-		      int (*compar)(const void *, const void *));
+typedef struct
+{
+  void *root;
+  rwlock_define (, lock);
+} search_tree;
+
+/* Search TREE for KEY and add KEY if not found. Synchronized using
+   TREE's lock.  */
+extern void *eu_tsearch (const void *key, search_tree *tree,
+			 int (*compare)(const void *, const void *));
+
+/* Search TREE for KEY. Synchronized with TREE's lock.  */
+extern void *eu_tfind (const void *key, search_tree *tree,
+		       int (*compare)(const void *, const void *));
+
+/* Delete key from TREE. Synchronized with TREE's lock.  */
+extern void *eu_tdelete (const void *key, search_tree *tree,
+		         int (*compare)(const void *, const void *));
+
+/* Free all nodes from TREE.  */
+void eu_tdestroy (search_tree *tree, void (*free_node)(void *));
+
+/* Initialize TREE's root and lock.  */
+void eu_search_tree_init (search_tree *tree);
+
+/* Free all nodes from TREE as well as TREE's lock.  */
+void eu_search_tree_fini (search_tree *tree, void (*free_node)(void *));
 
 #endif

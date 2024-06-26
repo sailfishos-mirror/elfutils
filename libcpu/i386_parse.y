@@ -269,12 +269,12 @@ mask:		  kMASK kBITFIELD kNUMBER
 		      struct synonym *newp = xmalloc (sizeof (*newp));
 		      newp->from = $2;
 		      newp->to = $3;
-		      if (eu_tfind (newp, &synonyms, compare_syn) != NULL)
+		      if (tfind (newp, &synonyms, compare_syn) != NULL)
 			error (0, 0,
 			       "%d: duplicate definition for synonym '%s'",
 			       i386_lineno, $2);
-		      else if (eu_tsearch ( newp, &synonyms, compare_syn) == NULL)
-			error (EXIT_FAILURE, 0, "eu_tsearch");
+		      else if (tsearch ( newp, &synonyms, compare_syn) == NULL)
+			error (EXIT_FAILURE, 0, "tsearch");
 		    }
 		|
 		;
@@ -308,12 +308,12 @@ instr:		  bytes ':' bitfieldopt kID bitfieldopt optargs
 			  newp->bytes = $1;
 			  newp->mnemonic = $4;
 			  if (newp->mnemonic != (void *) -1l
-			      && eu_tfind ($4, &mnemonics,
+			      && tfind ($4, &mnemonics,
 					(int (*)(const void *, const void *)) strcmp) == NULL)
 			    {
-			      if (eu_tsearch ($4, &mnemonics,
+			      if (tsearch ($4, &mnemonics,
 					   (int (*)(const void *, const void *)) strcmp) == NULL)
-				error (EXIT_FAILURE, errno, "eu_tsearch");
+				error (EXIT_FAILURE, errno, "tsearch");
 			      ++nmnemonics;
 			    }
 
@@ -339,15 +339,15 @@ instr:		  bytes ':' bitfieldopt kID bitfieldopt optargs
 				       infname, i386_lineno - 1, $5->name);
 
 			      struct suffix search = { .name = $5->name };
-			      if (eu_tfind (&search, &suffixes, compare_suf)
+			      if (tfind (&search, &suffixes, compare_suf)
 				  == NULL)
 				{
 				  struct suffix *ns = xmalloc (sizeof (*ns));
 				  ns->name = $5->name;
 				  ns->idx = ++nsuffixes;
-				  if (eu_tsearch (ns, &suffixes, compare_suf)
+				  if (tsearch (ns, &suffixes, compare_suf)
 				      == NULL)
-				    error (EXIT_FAILURE, errno, "eu_tsearch");
+				    error (EXIT_FAILURE, errno, "tsearch");
 				}
 			    }
 
@@ -374,7 +374,7 @@ bitfieldopt:	  kBITFIELD
 		      struct known_bitfield search;
 		      search.name = $1;
 		      struct known_bitfield **res;
-		      res = eu_tfind (&search, &bitfields, bitfield_compare);
+		      res = tfind (&search, &bitfields, bitfield_compare);
 		      if (res == NULL)
 			{
 			  error (0, 0, "%d: unknown bitfield '%s'",
@@ -437,7 +437,7 @@ bit:		  '0'
 		      struct known_bitfield search;
 		      search.name = $1;
 		      struct known_bitfield **res;
-		      res = eu_tfind (&search, &bitfields, bitfield_compare);
+		      res = tfind (&search, &bitfields, bitfield_compare);
 		      if (res == NULL)
 			{
 			  error (0, 0, "%d: unknown bitfield '%s'",
@@ -497,7 +497,7 @@ argcomp:	  kBITFIELD
 		      struct known_bitfield search;
 		      search.name = $1;
 		      struct known_bitfield **res;
-		      res = eu_tfind (&search, &bitfields, bitfield_compare);
+		      res = tfind (&search, &bitfields, bitfield_compare);
 		      if (res == NULL)
 			{
 			  if (strcmp ($1, "ax") == 0)
@@ -575,7 +575,7 @@ new_bitfield (char *name, unsigned long int num)
   newp->bits = num;
   newp->tmp = 0;
 
-  if (eu_tfind (newp, &bitfields, bitfield_compare) != NULL)
+  if (tfind (newp, &bitfields, bitfield_compare) != NULL)
     {
       error (0, 0, "%d: duplicated definition of bitfield '%s'",
 	     i386_lineno, name);
@@ -584,7 +584,7 @@ new_bitfield (char *name, unsigned long int num)
       return;
     }
 
-  if (eu_tsearch (newp, &bitfields, bitfield_compare) == NULL)
+  if (tsearch (newp, &bitfields, bitfield_compare) == NULL)
     error (EXIT_FAILURE, errno, "%d: cannot insert new bitfield '%s'",
 	   i386_lineno, name);
 }
@@ -813,7 +813,7 @@ fillin_arg (struct bitvalue *bytes, struct argname *name,
 
 	      struct synonym search = { .from = fieldname };
 
-	      struct synonym **res = eu_tfind (&search, &synonyms, compare_syn);
+	      struct synonym **res = tfind (&search, &synonyms, compare_syn);
 	      if (res != NULL)
 		fieldname = (*res)->to;
 
@@ -914,26 +914,26 @@ find_numbers (void)
 	if (runp->operands[i].fct != NULL)
 	  {
 	    struct argstring search = { .str = runp->operands[i].fct };
-	    if (eu_tfind (&search, &fct_names[i], compare_argstring) == NULL)
+	    if (tfind (&search, &fct_names[i], compare_argstring) == NULL)
 	      {
 		struct argstring *newp = xmalloc (sizeof (*newp));
 		newp->str = runp->operands[i].fct;
 		newp->idx = 0;
-		if (eu_tsearch (newp, &fct_names[i], compare_argstring) == NULL)
-		  error (EXIT_FAILURE, errno, "eu_tsearch");
+		if (tsearch (newp, &fct_names[i], compare_argstring) == NULL)
+		  error (EXIT_FAILURE, errno, "tsearch");
 		++nfct_names[i];
 	      }
 
 	    if (runp->operands[i].str != NULL)
 	      {
 		search.str = runp->operands[i].str;
-		if (eu_tfind (&search, &strs[i], compare_argstring) == NULL)
+		if (tfind (&search, &strs[i], compare_argstring) == NULL)
 		  {
 		    struct argstring *newp = xmalloc (sizeof (*newp));
 		    newp->str = runp->operands[i].str;
 		    newp->idx = 0;
-		    if (eu_tsearch (newp, &strs[i], compare_argstring) == NULL)
-		      error (EXIT_FAILURE, errno, "eu_tsearch");
+		    if (tsearch (newp, &strs[i], compare_argstring) == NULL)
+		      error (EXIT_FAILURE, errno, "tsearch");
 		    ++nstrs[i];
 		  }
 	      }
@@ -1206,7 +1206,7 @@ instrtable_out (void)
 	  if (instr->operands[i].fct != NULL)
 	    {
 	      struct argstring search = { .str = instr->operands[i].fct };
-	      struct argstring **res = eu_tfind (&search, &fct_names[i],
+	      struct argstring **res = tfind (&search, &fct_names[i],
 					      compare_argstring);
 	      assert (res != NULL);
 	      idx = (*res)->idx;
@@ -1217,7 +1217,7 @@ instrtable_out (void)
 	  if (instr->operands[i].str != NULL)
 	    {
 	      struct argstring search = { .str = instr->operands[i].str };
-	      struct argstring **res = eu_tfind (&search, &strs[i],
+	      struct argstring **res = tfind (&search, &strs[i],
 					      compare_argstring);
 	      assert (res != NULL);
 	      idx = (*res)->idx;

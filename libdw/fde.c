@@ -123,6 +123,7 @@ intern_fde (Dwarf_CFI *cache, const Dwarf_FDE *entry)
 
   /* Add the new entry to the search tree.  */
   struct dwarf_fde **tres = eu_tsearch (fde, &cache->fde_tree, &compare_fde);
+
   if (tres == NULL)
     {
       free (fde);

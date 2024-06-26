@@ -53,11 +53,9 @@ elf_cntl (Elf *elf, Elf_Cmd cmd)
   switch (cmd)
     {
     case ELF_C_FDREAD:
-     rwlock_rdlock (elf->lock);
-     int addr_isnull = elf->map_address == NULL;
-     rwlock_unlock(elf->lock);
+
       /* If not all of the file is in the memory read it now.  */
-      if (addr_isnull && __libelf_readall (elf) == NULL)
+      if (__libelf_readall (elf) == NULL)
 	{
 	  /* We were not able to read everything.  */
 	  result = -1;

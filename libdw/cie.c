@@ -160,7 +160,8 @@ internal_function
 __libdw_find_cie (Dwarf_CFI *cache, Dwarf_Off offset)
 {
   const struct dwarf_cie cie_key = { .offset = offset };
-  struct dwarf_cie **found = eu_tfind (&cie_key, &cache->cie_tree, &compare_cie);
+  struct dwarf_cie **found = eu_tfind (&cie_key, &cache->cie_tree,
+				       &compare_cie);
   if (found != NULL)
     return *found;
 
@@ -189,7 +190,8 @@ internal_function
 __libdw_intern_cie (Dwarf_CFI *cache, Dwarf_Off offset, const Dwarf_CIE *info)
 {
   const struct dwarf_cie cie_key = { .offset = offset };
-  struct dwarf_cie **found = eu_tfind (&cie_key, &cache->cie_tree, &compare_cie);
+  struct dwarf_cie **found = eu_tfind (&cie_key, &cache->cie_tree,
+				       &compare_cie);
   if (found == NULL)
     /* We have not read this CIE yet.  Enter it.  */
     (void) intern_new_cie (cache, offset, info);

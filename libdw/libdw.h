@@ -125,7 +125,8 @@ typedef struct
   /* The offset can be computed from the address.  */
   void *addr;
   struct Dwarf_CU *cu;
-  Dwarf_Abbrev *abbrev;
+  //_Atomic Dwarf_Abbrev * abbrev;
+  Dwarf_Abbrev * abbrev;
   // XXX We'll see what other information will be needed.
   long int padding__;
 } Dwarf_Die;
