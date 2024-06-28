@@ -157,7 +157,7 @@ Dwarf_CU *
 internal_function
 __libdw_find_split_unit (Dwarf_CU *cu)
 {
-  rwlock_unlock(cu_split_lock);
+  rwlock_wrlock(cu_split_lock);
 
   /* Only try once.  */
   if (cu->split != (Dwarf_CU *) -1)
@@ -214,8 +214,6 @@ __libdw_find_split_unit (Dwarf_CU *cu)
 	     someone moved a whole build tree around.  */
 	}
     }
-
-  rwlock_wrlock(cu_split_lock);
 
   /* If we found nothing, make sure we don't try again.  */
   if (cu->split == (Dwarf_CU *) -1)

@@ -44,12 +44,8 @@ dwarf_hasattr (Dwarf_Die *die, unsigned int search_name)
   if (die == NULL)
     return 0;
 
-  //rwlock_wrlock(die_abbrev_lock);
-
   /* Find the abbreviation entry.  */
   Dwarf_Abbrev *abbrevp = __libdw_dieabbrev (die, NULL);
-
-  //rwlock_unlock(die_abbrev_lock);
 
   if (unlikely (abbrevp == DWARF_END_ABBREV))
     {

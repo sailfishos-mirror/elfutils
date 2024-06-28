@@ -358,7 +358,7 @@ valid_p (Dwarf *result)
 	  result->fake_loc_cu->offset_size = 4;
 	  result->fake_loc_cu->version = 4;
 	  result->fake_loc_cu->split = NULL;
-	  result->fake_loc_cu->locs_tree.root = NULL;
+	  eu_search_tree_init (&result->fake_loc_cu->locs_tree);
 	}
     }
 
@@ -386,7 +386,7 @@ valid_p (Dwarf *result)
 	  result->fake_loclists_cu->offset_size = 4;
 	  result->fake_loclists_cu->version = 5;
 	  result->fake_loclists_cu->split = NULL;
-	  result->fake_loclists_cu->locs_tree.root = NULL;
+	  eu_search_tree_init (&result->fake_loclists_cu->locs_tree);
 	}
     }
 
@@ -419,7 +419,7 @@ valid_p (Dwarf *result)
 	  result->fake_addr_cu->offset_size = 4;
 	  result->fake_addr_cu->version = 5;
 	  result->fake_addr_cu->split = NULL;
-	  result->fake_addr_cu->locs_tree.root = NULL;
+	  eu_search_tree_init (&result->fake_addr_cu->locs_tree);
 	}
     }
 

@@ -171,8 +171,6 @@ __libdw_intern_next_unit (Dwarf *dbg, bool debug_types)
   newp->orig_abbrev_offset = newp->last_abbrev_offset = abbrev_offset;
   newp->files = NULL;
   newp->lines = NULL;
-  newp->locs_tree.root = NULL;
-  rwlock_init (newp->locs_tree.lock);
   newp->split = (Dwarf_CU *) -1;
   newp->base_address = (Dwarf_Addr) -1;
   newp->addr_base = (Dwarf_Off) -1;
@@ -182,6 +180,7 @@ __libdw_intern_next_unit (Dwarf *dbg, bool debug_types)
 
   newp->startp = data->d_buf + newp->start;
   newp->endp = data->d_buf + newp->end;
+  eu_search_tree_init (&newp->locs_tree);
 
   /* v4 debug type units have version == 4 and unit_type == DW_UT_type.  */
   if (debug_types)
