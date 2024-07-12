@@ -150,9 +150,14 @@ Dwarf_CU *
 internal_function
 __libdw_find_split_unit (Dwarf_CU *cu)
 {
+  rwlock_wrlock(cu->split_lock);
+
   /* Only try once.  */
   if (cu->split != (Dwarf_CU *) -1)
-    return cu->split;
+    {
+      rwlock_unlock(cu->split_lock);
+      return cu->split;
+    }
 
   /* We need a skeleton unit with a comp_dir and [GNU_]dwo_name attributes.
      The split unit will be the first in the dwo file and should have the
@@ -207,5 +212,6 @@ __libdw_find_split_unit (Dwarf_CU *cu)
   if (cu->split == (Dwarf_CU *) -1)
     cu->split = NULL;
 
+  rwlock_unlock(cu->split_lock);
   return cu->split;
 }
