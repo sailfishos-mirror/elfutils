@@ -160,15 +160,27 @@ find_debug_altlink (Dwarf *dbg)
     }
 }
 
+/* find_debug_altlink() modifies "dbg->alt_dwarf".
+   dwarf_getalt() reads "main->alt_dwarf".
+   Mutual exclusion is enforced to prevent a race. */
+
 Dwarf *
 dwarf_getalt (Dwarf *main)
 {
+  rwlock_wrlock(main->dwarf_lock);
+
   /* Only try once.  */
   if (main == NULL || main->alt_dwarf == (void *) -1)
-    return NULL;
+    {
+      rwlock_unlock (main->dwarf_lock);
+      return NULL;
+    }
 
   if (main->alt_dwarf != NULL)
-    return main->alt_dwarf;
+    {
+      rwlock_unlock (main->dwarf_lock);
+      return main->alt_dwarf;
+    }
 
   find_debug_altlink (main);
 
@@ -176,9 +188,11 @@ dwarf_getalt (Dwarf *main)
   if (main->alt_dwarf == NULL)
     {
       main->alt_dwarf = (void *) -1;
+      rwlock_unlock (main->dwarf_lock);
       return NULL;
     }
 
+  rwlock_unlock (main->dwarf_lock);
   return main->alt_dwarf;
 }
 INTDEF (dwarf_getalt)
