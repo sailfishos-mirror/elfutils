@@ -48,13 +48,12 @@ elf_cntl (Elf *elf, Elf_Cmd cmd)
       return -1;
     }
 
-  rwlock_wrlock (elf->lock);
 
   switch (cmd)
     {
     case ELF_C_FDREAD:
       /* If not all of the file is in the memory read it now.  */
-      if (elf->map_address == NULL && __libelf_readall (elf) == NULL)
+      if (__libelf_readall (elf) == NULL)
 	{
 	  /* We were not able to read everything.  */
 	  result = -1;
@@ -64,7 +63,9 @@ elf_cntl (Elf *elf, Elf_Cmd cmd)
 
     case ELF_C_FDDONE:
       /* Mark the file descriptor as not usable.  */
+      rwlock_wrlock (elf->lock);
       elf->fildes = -1;
+      rwlock_unlock (elf->lock);
       break;
 
     default:
@@ -72,8 +73,6 @@ elf_cntl (Elf *elf, Elf_Cmd cmd)
       result = -1;
       break;
     }
-
-  rwlock_unlock (elf->lock);
 
   return result;
 }
