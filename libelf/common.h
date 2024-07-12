@@ -92,10 +92,8 @@ allocate_elf (int fildes, void *map_address, int64_t offset, size_t maxsize,
 /* Acquire lock for the descriptor and all children.  */
 static void
 __attribute__ ((unused))
-libelf_acquire_all (Elf *elf)
+libelf_acquire_all_children (Elf *elf)
 {
-  rwlock_wrlock (elf->lock);
-
   if (elf->kind == ELF_K_AR)
     {
       Elf *child = elf->state.ar.children;
@@ -103,7 +101,9 @@ libelf_acquire_all (Elf *elf)
       while (child != NULL)
 	{
 	  if (child->ref_count != 0)
-	    libelf_acquire_all (child);
+	    libelf_acquire_all_children (child);
+
+	  rwlock_wrlock(child->lock);
 	  child = child->next;
 	}
     }
@@ -112,7 +112,7 @@ libelf_acquire_all (Elf *elf)
 /* Release own lock and those of the children.  */
 static void
 __attribute__ ((unused))
-libelf_release_all (Elf *elf)
+libelf_release_all_children (Elf *elf)
 {
   if (elf->kind == ELF_K_AR)
     {
@@ -121,12 +121,12 @@ libelf_release_all (Elf *elf)
       while (child != NULL)
 	{
 	  if (child->ref_count != 0)
-	    libelf_release_all (child);
+	    libelf_release_all_children (child);
+
+	  rwlock_unlock (child->lock);
 	  child = child->next;
 	}
     }
-
-  rwlock_unlock (elf->lock);
 }
 
 
