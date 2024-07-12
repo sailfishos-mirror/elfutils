@@ -32,6 +32,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 
+#include <eu-search.h>
 #include <libdw.h>
 #include <dwarf.h>
 
@@ -215,22 +216,22 @@ struct Dwarf
   size_t pubnames_nsets;
 
   /* Search tree for the CUs.  */
-  void *cu_tree;
+  search_tree cu_tree;
   Dwarf_Off next_cu_offset;
 
   /* Search tree and sig8 hash table for .debug_types type units.  */
-  void *tu_tree;
+  search_tree tu_tree;
   Dwarf_Off next_tu_offset;
   Dwarf_Sig8_Hash sig8_hash;
 
   /* Search tree for split Dwarf associated with CUs in this debug.  */
-  void *split_tree;
+  search_tree split_tree;
 
   /* Search tree for .debug_macro operator tables.  */
-  void *macro_ops;
+  search_tree macro_ops_tree;
 
   /* Search tree for decoded .debug_line units.  */
-  void *files_lines;
+  search_tree files_lines_tree;
 
   /* Address ranges read from .debug_aranges.  */
   Dwarf_Aranges *aranges;
@@ -262,6 +263,10 @@ struct Dwarf
      an entry in the mem_tails array are not disturbed by new threads doing
      allocations for this Dwarf.  */
   pthread_rwlock_t mem_rwl;
+
+  /* The dwarf_lock is a read-write lock designed to ensure thread-safe access
+     and modification of Dwarf objects.  */
+  rwlock_define(, dwarf_lock);
 
   /* Internal memory handling.  This is basically a simplified thread-local
      reimplementation of obstacks.  Unfortunately the standard obstack
@@ -423,7 +428,7 @@ struct Dwarf_CU
   Dwarf_Files *files;
 
   /* Known location lists.  */
-  void *locs;
+  search_tree locs_tree;
 
   /* Base address for use with ranges and locs.
      Don't access directly, call __libdw_cu_base_address.  */
@@ -445,6 +450,12 @@ struct Dwarf_CU
   /* The start of the offset table in .debug_loclists.
      Don't access directly, call __libdw_cu_locs_base.  */
   Dwarf_Off locs_base;
+
+  /* Synchronize Dwarf_Die abbrev access.  */
+  rwlock_define(, abbrev_lock);
+
+  /* Synchronize split Dwarf access.  */
+  rwlock_define(, split_lock);
 
   /* Memory boundaries of this CU.  */
   void *startp;
@@ -912,7 +923,8 @@ extern int __libdw_intern_expression (Dwarf *dbg,
 				      bool other_byte_order,
 				      unsigned int address_size,
 				      unsigned int ref_size,
-				      void **cache, const Dwarf_Block *block,
+				      search_tree *cache,
+				      const Dwarf_Block *block,
 				      bool cfap, bool valuep,
 				      Dwarf_Op **llbuf, size_t *listlen,
 				      int sec_index)
