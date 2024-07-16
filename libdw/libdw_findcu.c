@@ -177,6 +177,8 @@ __libdw_intern_next_unit (Dwarf *dbg, bool debug_types)
   newp->startp = data->d_buf + newp->start;
   newp->endp = data->d_buf + newp->end;
   eu_search_tree_init (&newp->locs_tree);
+  rwlock_init (newp->abbrev_lock);
+  rwlock_init (newp->split_lock);
 
   /* v4 debug type units have version == 4 and unit_type == DW_UT_type.  */
   if (debug_types)
@@ -243,27 +245,38 @@ __libdw_findcu (Dwarf *dbg, Dwarf_Off start, bool v4_debug_types)
   /* Maybe we already know that CU.  */
   struct Dwarf_CU fake = { .start = start, .end = 0 };
   struct Dwarf_CU **found = eu_tfind (&fake, tree, findcu_cb);
+  struct Dwarf_CU *result = NULL;
   if (found != NULL)
     return *found;
 
+  rwlock_wrlock (dbg->dwarf_lock);
+
   if (start < *next_offset)
-    {
-      __libdw_seterrno (DWARF_E_INVALID_DWARF);
-      return NULL;
-    }
+    __libdw_seterrno (DWARF_E_INVALID_DWARF);
+  else
+    {   
+      /* No.  Then read more CUs.  */
+      while (1) 
+        {   
+          struct Dwarf_CU *newp = __libdw_intern_next_unit (dbg,
+                                                            v4_debug_types);
+          if (newp == NULL)
+            {   
+              result = NULL;
+              break;
+            }
 
-  /* No.  Then read more CUs.  */
-  while (1)
-    {
-      struct Dwarf_CU *newp = __libdw_intern_next_unit (dbg, v4_debug_types);
-      if (newp == NULL)
-	return NULL;
+          /* Is this the one we are looking for?  */
+          if (start < *next_offset || start == newp->start)
+            {
+              result = newp;
+              break;
+            }
+        }
+    }   
 
-      /* Is this the one we are looking for?  */
-      if (start < *next_offset || start == newp->start)
-	return newp;
-    }
-  /* NOTREACHED */
+  rwlock_unlock (dbg->dwarf_lock);
+  return result;
 }
 
 struct Dwarf_CU *
