@@ -804,15 +804,28 @@ static inline Dwarf_Abbrev *
 __nonnull_attribute__ (1)
 __libdw_dieabbrev (Dwarf_Die *die, const unsigned char **readp)
 {
+  if (unlikely (die->cu == NULL))
+    {
+      die->abbrev = DWARF_END_ABBREV;
+      return DWARF_END_ABBREV;
+    }
+
+  rwlock_wrlock (die->cu->abbrev_lock);
+
   /* Do we need to get the abbreviation, or need to read after the code?  */
   if (die->abbrev == NULL || readp != NULL)
     {
       /* Get the abbreviation code.  */
       unsigned int code;
       const unsigned char *addr = die->addr;
-      if (unlikely (die->cu == NULL
-		    || addr >= (const unsigned char *) die->cu->endp))
-	return die->abbrev = DWARF_END_ABBREV;
+
+      if (addr >= (const unsigned char *) die->cu->endp)
+	{
+	  die->abbrev = DWARF_END_ABBREV;
+	  rwlock_unlock (die->cu->abbrev_lock);
+	  return DWARF_END_ABBREV;
+	}
+
       get_uleb128 (code, addr, die->cu->endp);
       if (readp != NULL)
 	*readp = addr;
@@ -821,7 +834,9 @@ __libdw_dieabbrev (Dwarf_Die *die, const unsigned char **readp)
       if (die->abbrev == NULL)
 	die->abbrev = __libdw_findabbrev (die->cu, code);
     }
-  return die->abbrev;
+
+  rwlock_unlock (die->cu->abbrev_lock);
+  return (Dwarf_Abbrev *) die->abbrev;
 }
 
 /* Helper functions for form handling.  */
