@@ -16,10 +16,12 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
-include $(top_srcdir)/config/eu.am
+include $(top_srcdir)/config/eu-common.am
 DEFS += $(YYDEBUG) -DDEBUGPRED=@DEBUGPRED@ \
 	-DSRCDIR=\"$(shell cd $(srcdir);pwd)\" -DOBJDIR=\"$(shell pwd)\"
-AM_CPPFLAGS += -I$(srcdir)/../libelf -I$(srcdir)/../libebl \
+DEFAULT_INCLUDES = -I$(top_builddir)
+AM_CPPFLAGS = -I$(top_srcdir)/lib -I.. \
+	    -I$(srcdir)/../libelf -I$(srcdir)/../libebl \
 	    -I$(srcdir)/../libdw -I$(srcdir)/../libdwelf \
 	    -I$(srcdir)/../libdwfl -I$(srcdir)/../libasm -I../debuginfod
 
