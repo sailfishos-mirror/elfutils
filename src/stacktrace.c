@@ -513,7 +513,7 @@ parse_opt (int key, char *arg __attribute__ ((unused)),
       break;
 
     case OPT_DEBUG:
-      show_memory_reads = true;
+      show_memory_reads = false;
       show_frames = true;
       FALLTHROUGH;
     case 'v':
