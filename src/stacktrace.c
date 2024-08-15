@@ -1230,6 +1230,7 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
     };
 
   argp_parse(&argp, argc, argv, 0, NULL, NULL);
+  fprintf(stderr, "\n=== starting eu-stacktrace ===\n");
 
   /* TODO Also handle common expansions e.g. ~/foo instead of /home/user/foo. */
   if (strcmp (input_path, "-") == 0)
@@ -1248,6 +1249,7 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
   /* TODO: Only really needed if launched from sysprof and inheriting its signals. */
   if (signal (SIGINT, sigint_handler) == SIG_ERR)
     error (EXIT_BAD, errno, N_("Cannot set signal handler for SIGINT"));
+
 #if !(HAVE_SYSPROF_HEADERS)
   /* TODO: Should hide corresponding command line options when this is the case. */
   error (EXIT_BAD, 0, N_("Sysprof support is not available in this version."));
@@ -1290,15 +1292,25 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
       if (show_summary)
 	{
 	  /* Final diagnostics. */
+#define PERCENT(x,tot) ((x+tot == 0)?0.0:((double)x)/((double)tot)*100.0)
+	  int total_samples = 0;
+	  int total_lost_samples = 0;
 	  fprintf(stderr, "\n=== final summary ===\n");
 	  for (unsigned idx = 0; idx < DWFLTAB_DEFAULT_SIZE; idx++)
 	    {
 	      dwfltab *htab = &default_table;
 	      if (!htab->table[idx].used)
 		continue;
-	      fprintf(stderr, "%d %s -- max %d frames, received %d samples, lost %d samples\n",
-		      htab->table[idx].pid, htab->table[idx].comm, htab->table[idx].max_frames, htab->table[idx].total_samples, htab->table[idx].lost_samples);
+	      fprintf(stderr, "%d %s -- max %d frames, received %d samples, lost %d samples (%.1f%%)\n",
+		      htab->table[idx].pid, htab->table[idx].comm, htab->table[idx].max_frames,
+		      htab->table[idx].total_samples, htab->table[idx].lost_samples,
+		      PERCENT(htab->table[idx].lost_samples, htab->table[idx].total_samples));
+	      total_samples += htab->table[idx].total_samples;
+	      total_lost_samples += htab->table[idx].lost_samples;
 	    }
+	  fprintf(stderr, "===\n");
+	  fprintf(stderr, "TOTAL -- received %d samples, lost %d samples\n",
+		  total_samples, total_lost_samples);
 	}
       output_pos = sui.pos;
     }
