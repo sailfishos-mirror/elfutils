@@ -79,7 +79,26 @@
 #include <signal.h>
 /* #include ELFUTILS_HEADER(dwfl) */
 #include "../libdwfl/libdwflP.h"
-/* XXX: Private header needed for sysprof_find_procfile, sysprof_init_dwfl. */
+/* XXX: Private header needed for sysprof_find_procfile, sysprof_init_dwfl, XXX LIBDWFL_TRACKS_UNWOUND_SOURCE. */
+
+#ifdef LIBDWFL_TRACKS_UNWOUND_SOURCE
+char *
+unwound_source_str (Dwfl_Unwound_Source unwound_source)
+{
+  switch (unwound_source) {
+  case DWFL_UNWOUND_NONE:
+    return "none";
+  case DWFL_UNWOUND_EH_CFI:
+    return "eh_frame";
+  case DWFL_UNWOUND_DWARF_CFI:
+    return "dwarf";
+  case DWFL_UNWOUND_EBL:
+    return "ebl";
+  default:
+    return "unknown";
+  }
+}
+#endif
 
 #include <system.h>
 
@@ -566,6 +585,9 @@ struct sysprof_unwind_info
 #ifdef DEBUG_MODULES
   Dwfl *last_dwfl; /* for diagnostic purposes */
 #endif
+#ifdef LIBDWFL_TRACKS_UNWOUND_SOURCE
+  int last_pid; /* for diagnostic purposes, to provide access to dwfltab */
+#endif
   Dwarf_Addr *addrs; /* allocate blocks of UNWIND_ADDR_INCREMENT */
   void *outbuf;
 };
@@ -803,6 +825,11 @@ typedef struct
   int max_frames; /* for diagnostic purposes */
   int total_samples; /* for diagnostic purposes */
   int lost_samples; /* for diagnostic purposes */
+  int shown_error; /* already shown an error for this pid? TODO */
+#ifdef LIBDWFL_TRACKS_UNWOUND_SOURCE
+  Dwfl_Unwound_Source last_unwound; /* track CFI source with enum above, for diagnostic purposes */
+  Dwfl_Unwound_Source worst_unwound; /* track CFI source with enum above, for diagnostic purposes */
+#endif
 } dwfltab_ent;
 
 typedef struct
@@ -1054,9 +1081,29 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
 	fprintf(stderr, "* pc=%lx -> NO EH_CFI\n", pc);
     }
 #endif
+
+#ifdef LIBDWFL_TRACKS_UNWOUND_SOURCE
+  dwfltab_ent *dwfl_ent = dwfltab_find(sui->last_pid);
+  if (dwfl_ent != NULL)
+    {
+      if (state->unwound_source > dwfl_ent->worst_unwound)
+	dwfl_ent->worst_unwound = state->unwound_source;
+      dwfl_ent->last_unwound = state->unwound_source;
+      if (show_frames)
+	fprintf(stderr, "* frame %d: pc_adjusted=%lx sp=%lx+(%lx) unwound_source=%s\n",
+		sui->n_addrs, pc_adjusted, sui->last_base, sp - sui->last_base, unwound_source_str(state->unwound_source));
+    }
+  else
+    {
+      if (show_frames)
+	fprintf(stderr, "* frame %d: pc_adjusted=%lx sp=%lx+(%lx), unwound_source not found\n",
+		sui->n_addrs, pc_adjusted, sui->last_base, sp - sui->last_base);
+    }
+#else
   if (show_frames)
     fprintf(stderr, "* frame %d: pc_adjusted=%lx sp=%lx+(%lx)\n",
 	    sui->n_addrs, pc_adjusted, sui->last_base, sp - sui->last_base);
+#endif
 
   if (sui->n_addrs > maxframes)
     {
@@ -1134,6 +1181,9 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
   sui->n_addrs = 0;
 #ifdef DEBUG_MODULES
   sui->last_dwfl = dwfl;
+#endif
+#ifdef LIBDWFL_TRACKS_UNWOUND_SOURCE
+  sui->last_pid = frame->pid;
 #endif
   int rc = dwfl_getthread_frames (dwfl, ev->tid, sysprof_unwind_frame_cb, sui);
   if (rc < 0)
@@ -1301,12 +1351,16 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
 	      dwfltab *htab = &default_table;
 	      if (!htab->table[idx].used)
 		continue;
-	      fprintf(stderr, "%d %s -- max %d frames, received %d samples, lost %d samples (%.1f%%)\n",
+	      fprintf(stderr, "%d %s -- max %d frames, received %d samples, lost %d samples (%.1f%%)",
 		      htab->table[idx].pid, htab->table[idx].comm, htab->table[idx].max_frames,
 		      htab->table[idx].total_samples, htab->table[idx].lost_samples,
 		      PERCENT(htab->table[idx].lost_samples, htab->table[idx].total_samples));
 	      total_samples += htab->table[idx].total_samples;
 	      total_lost_samples += htab->table[idx].lost_samples;
+#ifdef LIBDWFL_TRACKS_UNWOUND_SOURCE
+	      fprintf(stderr, " (last %s, worst %s)", unwound_source_str(htab->table[idx].last_unwound), unwound_source_str(htab->table[idx].worst_unwound));
+#endif
+	      fprintf(stderr, "\n");
 	    }
 	  fprintf(stderr, "===\n");
 	  fprintf(stderr, "TOTAL -- received %d samples, lost %d samples\n",

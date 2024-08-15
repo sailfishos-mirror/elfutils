@@ -1,0 +1,71 @@
+diff --git a/libdwfl/frame_unwind.c b/libdwfl/frame_unwind.c
+index 1e2f0255..384d9288 100644
+--- a/libdwfl/frame_unwind.c
++++ b/libdwfl/frame_unwind.c
+@@ -730,14 +730,20 @@ __libdwfl_frame_unwind (Dwfl_Frame *state)
+ 	{
+ 	  handle_cfi (state, pc - bias, cfi_eh, bias);
+ 	  if (state->unwound)
+-	    return;
++	    {
++	      state->unwound_source = DWFL_UNWOUND_EH_CFI;
++	      return;
++	    }
+ 	}
+       Dwarf_CFI *cfi_dwarf = INTUSE(dwfl_module_dwarf_cfi) (mod, &bias);
+       if (cfi_dwarf)
+ 	{
+ 	  handle_cfi (state, pc - bias, cfi_dwarf, bias);
+ 	  if (state->unwound)
+-	    return;
++	    {
++	      state->unwound_source = DWFL_UNWOUND_DWARF_CFI;
++	      return;
++	    }
+ 	}
+     }
+   assert (state->unwound == NULL);
+@@ -759,9 +765,11 @@ __libdwfl_frame_unwind (Dwfl_Frame *state)
+       assert (state->unwound->unwound == NULL);
+       free (state->unwound);
+       state->unwound = NULL;
++      state->unwound_source = DWFL_UNWOUND_UNKNOWN;
+       // __libdwfl_seterrno has been called above.
+       return;
+     }
++  state->unwound_source = DWFL_UNWOUND_EBL;
+   assert (state->unwound->pc_state == DWFL_FRAME_STATE_PC_SET);
+   state->unwound->signal_frame = signal_frame;
+ }
+diff --git a/libdwfl/libdwflP.h b/libdwfl/libdwflP.h
+index cdc528d0..62120b43 100644
+--- a/libdwfl/libdwflP.h
++++ b/libdwfl/libdwflP.h
+@@ -243,6 +243,18 @@ struct Dwfl_Thread
+   void *callbacks_arg;
+ };
+ 
++/* XXX Temporary, for diagnostic purposes: */
++
++#define LIBDWFL_TRACKS_UNWOUND_SOURCE
++typedef enum {
++    DWFL_UNWOUND_NONE = 0,
++    DWFL_UNWOUND_EH_CFI,
++    DWFL_UNWOUND_DWARF_CFI,
++    DWFL_UNWOUND_EBL,
++    DWFL_UNWOUND_UNKNOWN,
++    DWFL_UNWOUND_NUM,
++} Dwfl_Unwound_Source;
++
+ /* See its typedef in libdwfl.h.  */
+ 
+ struct Dwfl_Frame
+@@ -263,6 +275,8 @@ struct Dwfl_Frame
+        outermost frame.  */
+     DWFL_FRAME_STATE_PC_UNDEFINED
+   } pc_state;
++  /* XXX Temporary, for diagnostic purposes: */
++  Dwfl_Unwound_Source unwound_source;
+   /* Either initialized from appropriate REGS element or on some archs
+      initialized separately as the return address has no DWARF register.  */
+   Dwarf_Addr pc;
