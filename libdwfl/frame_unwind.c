@@ -730,14 +730,20 @@ __libdwfl_frame_unwind (Dwfl_Frame *state)
 	{
 	  handle_cfi (state, pc - bias, cfi_eh, bias);
 	  if (state->unwound)
-	    return;
+	    {
+	      state->unwound_source = DWFL_UNWOUND_EH_CFI;
+	      return;
+	    }
 	}
       Dwarf_CFI *cfi_dwarf = INTUSE(dwfl_module_dwarf_cfi) (mod, &bias);
       if (cfi_dwarf)
 	{
 	  handle_cfi (state, pc - bias, cfi_dwarf, bias);
 	  if (state->unwound)
-	    return;
+	    {
+	      state->unwound_source = DWFL_UNWOUND_DWARF_CFI;
+	      return;
+	    }
 	}
     }
   assert (state->unwound == NULL);
@@ -759,9 +765,11 @@ __libdwfl_frame_unwind (Dwfl_Frame *state)
       assert (state->unwound->unwound == NULL);
       free (state->unwound);
       state->unwound = NULL;
+      state->unwound_source = DWFL_UNWOUND_UNKNOWN;
       // __libdwfl_seterrno has been called above.
       return;
     }
+  state->unwound_source = DWFL_UNWOUND_EBL;
   assert (state->unwound->pc_state == DWFL_FRAME_STATE_PC_SET);
   state->unwound->signal_frame = signal_frame;
 }

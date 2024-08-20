@@ -246,6 +246,18 @@ struct Dwfl_Thread
   void *callbacks_arg;
 };
 
+/* XXX Temporary, for diagnostic purposes: */
+
+#define LIBDWFL_TRACKS_UNWOUND_SOURCE
+typedef enum {
+    DWFL_UNWOUND_NONE = 0,
+    DWFL_UNWOUND_EH_CFI,
+    DWFL_UNWOUND_DWARF_CFI,
+    DWFL_UNWOUND_EBL,
+    DWFL_UNWOUND_UNKNOWN,
+    DWFL_UNWOUND_NUM,
+} Dwfl_Unwound_Source;
+
 /* See its typedef in libdwfl.h.  */
 
 struct Dwfl_Frame
@@ -266,6 +278,8 @@ struct Dwfl_Frame
        outermost frame.  */
     DWFL_FRAME_STATE_PC_UNDEFINED
   } pc_state;
+  /* XXX Temporary, for diagnostic purposes: */
+  Dwfl_Unwound_Source unwound_source;
   /* Either initialized from appropriate REGS element or on some archs
      initialized separately as the return address has no DWARF register.  */
   Dwarf_Addr pc;
