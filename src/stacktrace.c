@@ -77,6 +77,13 @@
 #include <string.h>
 #include <fcntl.h>
 #include <signal.h>
+
+#include <system.h>
+
+/*************************************
+ * Includes: libdwfl data structures *
+ *************************************/
+
 /* #include ELFUTILS_HEADER(dwfl) */
 #include "../libdwfl/libdwflP.h"
 /* XXX: Private header needed for sysprof_find_procfile, sysprof_init_dwfl, XXX LIBDWFL_TRACKS_UNWOUND_SOURCE. */
@@ -100,7 +107,9 @@ unwound_source_str (Dwfl_Unwound_Source unwound_source)
 }
 #endif
 
-#include <system.h>
+/*************************************
+ * Includes: sysprof data structures *
+ *************************************/
 
 #if HAVE_SYSPROF_6_HEADERS
 #include <sysprof-6/sysprof-capture-types.h>
@@ -142,10 +151,15 @@ typedef struct
 } SysprofCaptureUserRegs
 SYSPROF_ALIGNED_END(1);
 
-static int maxframes = 256;
-
 #endif /* SYSPROF_CAPTURE_FRAME_STACK_USER */
+
 #endif /* HAVE_SYSPROF_HEADERS */
+
+/**************************
+ * Global data structures *
+ **************************/
+
+static int maxframes = 256;
 
 static char *input_path = NULL;
 static int input_fd = -1;
@@ -158,14 +172,14 @@ static int signal_count = 0;
 #define MODE_NONE 0x0
 #define MODE_PASSTHRU 0x1
 #define MODE_NAIVE 0x2
-#define MODE_CACHING 0x3
+/* TODO: #define MODE_CACHING 0x3 */
 static int processing_mode = MODE_NAIVE;
 
 #define FORMAT_OPTS "sysprof"
 #define FORMAT_PERF 0x1
 #define FORMAT_SYSPROF 0x2
 static int input_format;
-static int output_format = FORMAT_SYSPROF; /* TODO: add to cmdline args? */
+static int output_format = FORMAT_SYSPROF; /* TODO: add to cmdline args */
 
 /* non-printable argp options.  */
 #define OPT_DEBUG	0x100
@@ -194,16 +208,20 @@ static bool show_summary = true; /* TODO: disable by default in release version 
 #define EXIT_BAD    2
 #define EXIT_USAGE 64
 
-/* Sysprof format support.
-   TODO: Could split into a separate file or even a library. */
-
-#if HAVE_SYSPROF_HEADERS
+/**************************
+ * Sysprof format support *
+ **************************/
 
 /* XXX based on sysprof src/libsysprof-capture/sysprof-capture-reader.c
 
    Note: BSD license attribution at the top of the file applies to this
-   segment. If moving the code to a separate library, feel free to
-   move the notice together with it. */
+   segment. Could split into a separate file or even a library,
+   in which case the attribution notice will move along with it. */
+
+/* TODO: elfutils (internal) libraries use libNN_set_errno and _E_WHATEVER;
+   this code sets errno variable directly and uses standard EWHATEVER. */
+
+#if HAVE_SYSPROF_HEADERS
 
 /* A complete passthrough can be implemented based on the following 7 functions:
  - sysprof_reader_begin/sysprof_reader_end :: sysprof_capture_reader_new_from_fd
@@ -254,7 +272,6 @@ sysprof_reader_begin (int fd)
 
   assert (fd > -1);
 
-  /* TODO elfutils style: libraries use __lib??_seterrno and ??_E_ENOMEM. */
   reader = malloc (sizeof (SysprofReader));
   if (reader == NULL)
     {
@@ -450,147 +467,9 @@ sysprof_reader_getframes (SysprofReader *reader,
 
 #endif /* HAVE_SYSPROF_HEADERS */
 
-/* Required to match our signal handling with that of a sysprof parent process. */
-static void sigint_handler (int /* signo */)
-{
-  if (signal_count >= 2)
-    {
-      exit(1);
-    }
-
-  if (signal_count == 0)
-    {
-      fprintf (stderr, "%s\n", "Waiting for input to finish. Press twice more ^C to force exit.");
-    }
-
-  signal_count ++;
-}
-
-/* Main program. */
-
-static error_t
-parse_opt (int key, char *arg __attribute__ ((unused)),
-	   struct argp_state *state)
-{
-  switch (key)
-    {
-    case 'i':
-      input_path = arg;
-      break;
-
-    case 'o':
-      output_path = arg;
-      break;
-
-    case 'm':
-      if (strcmp (arg, "none") == 0)
-	{
-	  processing_mode = MODE_NONE;
-	}
-      else if (strcmp (arg, "passthru") == 0)
-	{
-	  processing_mode = MODE_PASSTHRU;
-	}
-      else if (strcmp (arg, "naive") == 0)
-	{
-	  processing_mode = MODE_NAIVE;
-	}
-      else
-	{
-	  argp_error (state, N_("Unsupported -m '%s', should be " MODE_OPTS "."), arg);
-	}
-      break;
-
-    case 'f':
-      if (strcmp (arg, "sysprof") == 0)
-	{
-	  input_format = FORMAT_SYSPROF;
-	}
-      else
-	{
-	  argp_error (state, N_("Unsupported -f '%s', should be " FORMAT_OPTS "."), arg);
-	}
-      break;
-
-    case OPT_DEBUG:
-      show_memory_reads = false;
-      show_frames = true;
-      FALLTHROUGH;
-    case 'v':
-      show_samples = true;
-      show_failures = true;
-      show_summary = true;
-      break;
-
-    case ARGP_KEY_END:
-      if (input_path == NULL)
-	input_path = "-"; /* default to stdin */
-
-      if (output_path == NULL)
-	output_path = "-"; /* default to stdout */
-
-      if (processing_mode == 0)
-	processing_mode = MODE_PASSTHRU;
-      /* TODO: Change the default to MODE_NAIVE once unwinding works reliably. */
-
-      if (input_format == 0)
-	input_format = FORMAT_SYSPROF;
-      break;
-
-    default:
-      return ARGP_ERR_UNKNOWN;
-    }
-  return 0;
-}
-
-#if HAVE_SYSPROF_HEADERS
-
-int
-sysprof_none_cb (SysprofCaptureFrame *frame __attribute__ ((unused)),
-		 void *arg __attribute__ ((unused)))
-{
-  return SYSPROF_CB_OK;
-}
-
-struct sysprof_passthru_info
-{
-  int output_fd;
-  SysprofReader *reader;
-  int pos; /* for diagnostic purposes */
-};
-
-int
-sysprof_passthru_cb (SysprofCaptureFrame *frame, void *arg)
-{
-  struct sysprof_passthru_info *spi = (struct sysprof_passthru_info *)arg;
-  sysprof_reader_bswap_frame (spi->reader, frame); /* reverse the earlier bswap */
-  ssize_t n_write = write (spi->output_fd, frame, frame->len);
-  spi->pos += frame->len;
-  assert ((spi->pos % SYSPROF_CAPTURE_ALIGN) == 0);
-  if (n_write < 0)
-    error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
-  return SYSPROF_CB_OK;
-}
-
-#define UNWIND_ADDR_INCREMENT 512
-struct sysprof_unwind_info
-{
-  int output_fd;
-  SysprofReader *reader;
-  int pos; /* for diagnostic purposes */
-  int n_addrs;
-  int max_addrs; /* for diagnostic purposes */
-  Dwarf_Addr last_base; /* for diagnostic purposes */
-  Dwarf_Addr last_sp; /* for diagnostic purposes */
-#ifdef DEBUG_MODULES
-  Dwfl *last_dwfl; /* for diagnostic purposes */
-#endif
-#ifdef LIBDWFL_TRACKS_UNWOUND_SOURCE
-  int last_pid; /* for diagnostic purposes, to provide access to dwfltab */
-#endif
-  Dwarf_Addr *addrs; /* allocate blocks of UNWIND_ADDR_INCREMENT */
-  void *outbuf;
-};
+/*******************************************
+ * Memory read interface for stack samples *
+ *******************************************/
 
 struct __sample_arg
 {
@@ -603,10 +482,10 @@ struct __sample_arg
   Dwarf_Addr *regs;
 };
 
-/* The next few functions Imitate the corefile interface for a single
+/* The next few functions imitate the corefile interface for a single
    stack sample, with very restricted access to registers and memory. */
 
-/* Just yields the single thread id matching the sample. */
+/* Just yield the single thread id matching the sample. */
 static pid_t
 sample_next_thread (Dwfl *dwfl __attribute__ ((unused)), void *dwfl_arg,
 		    void **thread_argp)
@@ -621,7 +500,7 @@ sample_next_thread (Dwfl *dwfl __attribute__ ((unused)), void *dwfl_arg,
     return 0;
 }
 
-/* Just checks that the thread id matches the sample. */
+/* Just check that the thread id matches the sample. */
 static bool
 sample_getthread (Dwfl *dwfl __attribute__ ((unused)), pid_t tid,
 		  void *dwfl_arg, void **thread_argp)
@@ -645,7 +524,7 @@ sample_memory_read (Dwfl *dwfl __attribute__ ((unused)), Dwarf_Addr addr, Dwarf_
 	    sample_arg->base_addr, addr - sample_arg->base_addr, sample_arg->size);
   /* Imitate read_cached_memory() with the stack sample data as the cache. */
   if (addr < sample_arg->base_addr || addr - sample_arg->base_addr >= sample_arg->size)
-    return false;
+    return false; /* TODO: also read from Elf files we happen to be aware of */
   uint8_t *d = &sample_arg->data[addr - sample_arg->base_addr];
   if ((((uintptr_t) d) & (sizeof (unsigned long) - 1)) == 0)
     *result = *(unsigned long *)d;
@@ -689,131 +568,9 @@ static const Dwfl_Thread_Callbacks sample_thread_callbacks =
   NULL, /* sample_thread_detach */
 };
 
-#ifdef FIND_DEBUGINFO
-
-static char *debuginfo_path = NULL;
-
-static const Dwfl_Callbacks sample_callbacks =
-  {
-    .find_elf = dwfl_linux_proc_find_elf,
-    .find_debuginfo = dwfl_standard_find_debuginfo,
-    .debuginfo_path = &debuginfo_path,
-  };
-
-#else
-
-int
-nop_find_debuginfo (Dwfl_Module *mod __attribute__((unused)),
-		    void **userdata __attribute__((unused)),
-		    const char *modname __attribute__((unused)),
-		    GElf_Addr base __attribute__((unused)),
-		    const char *file_name __attribute__((unused)),
-		    const char *debuglink_file __attribute__((unused)),
-		    GElf_Word debuglink_crc __attribute__((unused)),
-		    char **debuginfo_file_name __attribute__((unused)))
-{
-#ifdef DEBUG_MODULES
-  fprintf(stderr, "nop_find_debuginfo: modname=%s file_name=%s debuglink_file=%s\n",
-	  modname, file_name, debuglink_file);
-#endif
-  return -1;
-}
-
-static const Dwfl_Callbacks sample_callbacks =
-{
-  .find_elf = dwfl_linux_proc_find_elf,
-  .find_debuginfo = nop_find_debuginfo, /* work with CFI only */
-};
-
-#endif /* FIND_DEBUGINFO */
-
-/* TODO: Code mirrors dwfl_linux_proc_attach();
-   should probably move this function to libdwfl/linux-pid-attach.c
-   and switch to including the public dwfl interface? */
-int
-sysprof_find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
-{
-  char buffer[36];
-  FILE *procfile;
-  int err = 0; /* The errno to return and set for dwfl->attcherr.  */
-
-  /* Make sure to report the actual PID (thread group leader) to
-     dwfl_attach_state.  */
-  snprintf (buffer, sizeof (buffer), "/proc/%ld/status", (long) *pid);
-  procfile = fopen (buffer, "r");
-  if (procfile == NULL)
-    {
-      err = errno;
-    fail:
-      if (dwfl->process == NULL && dwfl->attacherr == DWFL_E_NOERROR) /* XXX requires libdwflP.h */
-	{
-	  errno = err;
-	  /* TODO: __libdwfl_canon_error not exported from libdwfl */
-	  /* dwfl->attacherr = __libdwfl_canon_error (DWFL_E_ERRNO); */
-	}
-      return err;
-    }
-
-  char *line = NULL;
-  size_t linelen = 0;
-  while (getline (&line, &linelen, procfile) >= 0)
-    if (startswith (line, "Tgid:"))
-      {
-	errno = 0;
-	char *endptr;
-	long val = strtol (&line[5], &endptr, 10);
-	if ((errno == ERANGE && val == LONG_MAX)
-	    || *endptr != '\n' || val < 0 || val != (pid_t) val)
-	  *pid = 0;
-	else
-	  *pid = (pid_t) val;
-	break;
-      }
-  free (line);
-  fclose (procfile);
-
-  if (*pid == 0)
-    {
-      err = ESRCH;
-      goto fail;
-    }
-
-  char name[64];
-  int i = snprintf (name, sizeof (name), "/proc/%ld/task", (long) *pid);
-  if (i <= 0 || i >= (ssize_t) sizeof (name) - 1)
-    {
-      errno = -ENOMEM;
-      goto fail;
-    }
-  DIR *dir = opendir (name);
-  if (dir == NULL)
-    {
-      err = errno;
-      goto fail;
-    }
-
-  i = snprintf (name, sizeof (name), "/proc/%ld/exe", (long) *pid);
-  assert (i > 0 && i < (ssize_t) sizeof (name) - 1);
-  *elf_fd = open (name, O_RDONLY);
-  if (*elf_fd >= 0)
-    {
-      *elf = elf_begin (*elf_fd, ELF_C_READ_MMAP, NULL);
-      if (*elf == NULL)
-	{
-	  /* Just ignore, dwfl_attach_state will fall back to trying
-	     to associate the Dwfl with one of the existing Dwfl_Module
-	     ELF images (to know the machine/class backend to use).  */
-	  if (show_failures)
-	    fprintf(stderr, "sysprof_find_procfile pid %lld: elf not found",
-		    (long long)*pid);
-	  close (*elf_fd);
-	  *elf_fd = -1;
-	}
-    }
-  else
-    *elf = NULL;
-  return 0;
-}
+/****************************************************
+ * Dwfl and statistics table for multiple processes *
+ ****************************************************/
 
 /* TODO: This echoes lib/dynamicsizehash.* with some modifications. */
 typedef struct
@@ -944,6 +701,193 @@ pid_store_dwfl (pid_t pid, Dwfl *dwfl)
   entry->dwfl = dwfl;
   pid_find_comm(pid);
   return;
+}
+
+/*****************************************************
+ * Sysprof backend: basic none/passthrough callbacks *
+ *****************************************************/
+
+#if HAVE_SYSPROF_HEADERS
+
+int
+sysprof_none_cb (SysprofCaptureFrame *frame __attribute__ ((unused)),
+		 void *arg __attribute__ ((unused)))
+{
+  return SYSPROF_CB_OK;
+}
+
+struct sysprof_passthru_info
+{
+  int output_fd;
+  SysprofReader *reader;
+  int pos; /* for diagnostic purposes */
+};
+
+int
+sysprof_passthru_cb (SysprofCaptureFrame *frame, void *arg)
+{
+  struct sysprof_passthru_info *spi = (struct sysprof_passthru_info *)arg;
+  sysprof_reader_bswap_frame (spi->reader, frame); /* reverse the earlier bswap */
+  ssize_t n_write = write (spi->output_fd, frame, frame->len);
+  spi->pos += frame->len;
+  assert ((spi->pos % SYSPROF_CAPTURE_ALIGN) == 0);
+  if (n_write < 0)
+    error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
+  return SYSPROF_CB_OK;
+}
+
+#endif /* HAVE_SYSPROF_HEADERS */
+
+/****************************************
+ * Sysprof backend: unwinding callbacks *
+ ****************************************/
+
+#if HAVE_SYSPROF_HEADERS
+
+#define UNWIND_ADDR_INCREMENT 512
+struct sysprof_unwind_info
+{
+  int output_fd;
+  SysprofReader *reader;
+  int pos; /* for diagnostic purposes */
+  int n_addrs;
+  int max_addrs; /* for diagnostic purposes */
+  Dwarf_Addr last_base; /* for diagnostic purposes */
+  Dwarf_Addr last_sp; /* for diagnostic purposes */
+#ifdef DEBUG_MODULES
+  Dwfl *last_dwfl; /* for diagnostic purposes */
+#endif
+#ifdef LIBDWFL_TRACKS_UNWOUND_SOURCE
+  int last_pid; /* for diagnostic purposes, to provide access to dwfltab */
+#endif
+  Dwarf_Addr *addrs; /* allocate blocks of UNWIND_ADDR_INCREMENT */
+  void *outbuf;
+};
+
+#ifdef FIND_DEBUGINFO
+
+static char *debuginfo_path = NULL;
+
+static const Dwfl_Callbacks sample_callbacks =
+  {
+    .find_elf = dwfl_linux_proc_find_elf,
+    .find_debuginfo = dwfl_standard_find_debuginfo,
+    .debuginfo_path = &debuginfo_path,
+  };
+
+#else
+
+int
+nop_find_debuginfo (Dwfl_Module *mod __attribute__((unused)),
+		    void **userdata __attribute__((unused)),
+		    const char *modname __attribute__((unused)),
+		    GElf_Addr base __attribute__((unused)),
+		    const char *file_name __attribute__((unused)),
+		    const char *debuglink_file __attribute__((unused)),
+		    GElf_Word debuglink_crc __attribute__((unused)),
+		    char **debuginfo_file_name __attribute__((unused)))
+{
+#ifdef DEBUG_MODULES
+  fprintf(stderr, "nop_find_debuginfo: modname=%s file_name=%s debuglink_file=%s\n",
+	  modname, file_name, debuglink_file);
+#endif
+  return -1;
+}
+
+static const Dwfl_Callbacks sample_callbacks =
+{
+  .find_elf = dwfl_linux_proc_find_elf,
+  .find_debuginfo = nop_find_debuginfo, /* work with CFI only */
+};
+
+#endif /* FIND_DEBUGINFO */
+
+/* TODO: Code mirrors dwfl_linux_proc_attach();
+   should probably move this function to libdwfl/linux-pid-attach.c
+   and switch to including the public dwfl interface? */
+int
+sysprof_find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
+{
+  char buffer[36];
+  FILE *procfile;
+  int err = 0; /* The errno to return and set for dwfl->attcherr.  */
+
+  /* Make sure to report the actual PID (thread group leader) to
+     dwfl_attach_state.  */
+  snprintf (buffer, sizeof (buffer), "/proc/%ld/status", (long) *pid);
+  procfile = fopen (buffer, "r");
+  if (procfile == NULL)
+    {
+      err = errno;
+    fail:
+      if (dwfl->process == NULL && dwfl->attacherr == DWFL_E_NOERROR) /* XXX requires libdwflP.h */
+	{
+	  errno = err;
+	  /* TODO: __libdwfl_canon_error not exported from libdwfl */
+	  /* dwfl->attacherr = __libdwfl_canon_error (DWFL_E_ERRNO); */
+	}
+      return err;
+    }
+
+  char *line = NULL;
+  size_t linelen = 0;
+  while (getline (&line, &linelen, procfile) >= 0)
+    if (startswith (line, "Tgid:"))
+      {
+	errno = 0;
+	char *endptr;
+	long val = strtol (&line[5], &endptr, 10);
+	if ((errno == ERANGE && val == LONG_MAX)
+	    || *endptr != '\n' || val < 0 || val != (pid_t) val)
+	  *pid = 0;
+	else
+	  *pid = (pid_t) val;
+	break;
+      }
+  free (line);
+  fclose (procfile);
+
+  if (*pid == 0)
+    {
+      err = ESRCH;
+      goto fail;
+    }
+
+  char name[64];
+  int i = snprintf (name, sizeof (name), "/proc/%ld/task", (long) *pid);
+  if (i <= 0 || i >= (ssize_t) sizeof (name) - 1)
+    {
+      errno = -ENOMEM;
+      goto fail;
+    }
+  DIR *dir = opendir (name);
+  if (dir == NULL)
+    {
+      err = errno;
+      goto fail;
+    }
+
+  i = snprintf (name, sizeof (name), "/proc/%ld/exe", (long) *pid);
+  assert (i > 0 && i < (ssize_t) sizeof (name) - 1);
+  *elf_fd = open (name, O_RDONLY);
+  if (*elf_fd >= 0)
+    {
+      *elf = elf_begin (*elf_fd, ELF_C_READ_MMAP, NULL);
+      if (*elf == NULL)
+	{
+	  /* Just ignore, dwfl_attach_state will fall back to trying
+	     to associate the Dwfl with one of the existing Dwfl_Module
+	     ELF images (to know the machine/class backend to use).  */
+	  if (show_failures)
+	    fprintf(stderr, "sysprof_find_procfile pid %lld: elf not found",
+		    (long long)*pid);
+	  close (*elf_fd);
+	  *elf_fd = -1;
+	}
+    }
+  else
+    *elf = NULL;
+  return 0;
 }
 
 Dwfl *
@@ -1236,7 +1180,102 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
     error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
   return SYSPROF_CB_OK;
 }
+
 #endif /* HAVE_SYSPROF_HEADERS */
+
+/****************
+ * Main program *
+ ****************/
+
+/* Required to match our signal handling with that of a sysprof parent process. */
+static void sigint_handler (int /* signo */)
+{
+  if (signal_count >= 2)
+    {
+      exit(1);
+    }
+
+  if (signal_count == 0)
+    {
+      fprintf (stderr, "%s\n", "Waiting for input to finish. Press twice more ^C to force exit.");
+    }
+
+  signal_count ++;
+}
+
+static error_t
+parse_opt (int key, char *arg __attribute__ ((unused)),
+	   struct argp_state *state)
+{
+  switch (key)
+    {
+    case 'i':
+      input_path = arg;
+      break;
+
+    case 'o':
+      output_path = arg;
+      break;
+
+    case 'm':
+      if (strcmp (arg, "none") == 0)
+	{
+	  processing_mode = MODE_NONE;
+	}
+      else if (strcmp (arg, "passthru") == 0)
+	{
+	  processing_mode = MODE_PASSTHRU;
+	}
+      else if (strcmp (arg, "naive") == 0)
+	{
+	  processing_mode = MODE_NAIVE;
+	}
+      else
+	{
+	  argp_error (state, N_("Unsupported -m '%s', should be " MODE_OPTS "."), arg);
+	}
+      break;
+
+    case 'f':
+      if (strcmp (arg, "sysprof") == 0)
+	{
+	  input_format = FORMAT_SYSPROF;
+	}
+      else
+	{
+	  argp_error (state, N_("Unsupported -f '%s', should be " FORMAT_OPTS "."), arg);
+	}
+      break;
+
+    case OPT_DEBUG:
+      show_memory_reads = false;
+      show_frames = true;
+      FALLTHROUGH;
+    case 'v':
+      show_samples = true;
+      show_failures = true;
+      show_summary = true;
+      break;
+
+    case ARGP_KEY_END:
+      if (input_path == NULL)
+	input_path = "-"; /* default to stdin */
+
+      if (output_path == NULL)
+	output_path = "-"; /* default to stdout */
+
+      if (processing_mode == 0)
+	processing_mode = MODE_NAIVE;
+
+      if (input_format == 0)
+	input_format = FORMAT_SYSPROF;
+      break;
+
+    default:
+      return ARGP_ERR_UNKNOWN;
+    }
+  return 0;
+}
 
 int
 main (int argc, char **argv)
@@ -1301,8 +1340,14 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
     error (EXIT_BAD, errno, N_("Cannot set signal handler for SIGINT"));
 
 #if !(HAVE_SYSPROF_HEADERS)
-  /* TODO: Should hide corresponding command line options when this is the case. */
+  /* TODO: Should hide corresponding command line options when this is the case? */
   error (EXIT_BAD, 0, N_("Sysprof support is not available in this version."));
+
+  /* XXX: The following are not specific to the Sysprof backend;
+     avoid unused-variable warnings while it is the only backend. */
+  (void)sample_thread_callbacks;
+  (void)output_format;
+  (void)maxframes;
 #else
   /* TODO: For now, code the processing loop for sysprof only; generalize later. */
   assert (input_format == FORMAT_SYSPROF);
