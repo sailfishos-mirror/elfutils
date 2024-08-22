@@ -80,6 +80,8 @@
 
 #include <system.h>
 
+#include <linux/perf_event.h>
+
 /*************************************
  * Includes: libdwfl data structures *
  *************************************/
@@ -146,7 +148,7 @@ SYSPROF_ALIGNED_BEGIN(1)
 typedef struct
 {
   uint32_t              n_regs;
-  uint32_t              padding;
+  uint32_t              abi;
   uint64_t              regs[0];
 } SysprofCaptureUserRegs
 SYSPROF_ALIGNED_END(1);
@@ -477,6 +479,7 @@ struct __sample_arg
   Dwarf_Addr base_addr;
   uint64_t size;
   uint8_t *data;
+  uint64_t abi; /* PERF_SAMPLE_REGS_ABI_{32,64} */
   Dwarf_Addr pc;
   Dwarf_Addr sp;
   Dwarf_Addr *regs;
@@ -539,15 +542,18 @@ sample_set_initial_registers (Dwfl_Thread *thread, void *thread_arg)
 {
   struct __sample_arg *sample_arg = (struct __sample_arg *)thread_arg;
   dwfl_thread_state_register_pc (thread, sample_arg->pc);
-  /* TODO for comparison, i386 user_regs sp is 3, pc is 8 */
+  /* TODO the following should be valid for i686, x86_64 */
+  bool is_abi32 = (sample_arg->abi == PERF_SAMPLE_REGS_ABI_32);
+  int user_regs_sp = is_abi32 ? 3 : 7;
+  int user_regs_pc = is_abi32 ? 8 : 16;
   dwfl_thread_state_registers (thread, 0, 1, &sample_arg->regs[0]);
   dwfl_thread_state_registers (thread, 6, 1, &sample_arg->regs[6]);
-  dwfl_thread_state_registers (thread, 7 /* x86_64 user_regs sp */, 1, &sample_arg->sp);
+  dwfl_thread_state_registers (thread, user_regs_sp, 1, &sample_arg->sp);
   dwfl_thread_state_registers (thread, 12, 1, &sample_arg->regs[12]);
   dwfl_thread_state_registers (thread, 13, 1, &sample_arg->regs[13]);
   dwfl_thread_state_registers (thread, 14, 1, &sample_arg->regs[14]);
   dwfl_thread_state_registers (thread, 15, 1, &sample_arg->regs[15]);
-  dwfl_thread_state_registers (thread, 16 /* x86_64 user_regs pc */, 1, &sample_arg->pc);
+  dwfl_thread_state_registers (thread, user_regs_pc, 1, &sample_arg->pc);
   return true;
 }
 
@@ -752,6 +758,7 @@ struct sysprof_unwind_info
   int pos; /* for diagnostic purposes */
   int n_addrs;
   int max_addrs; /* for diagnostic purposes */
+  uint64_t last_abi;
   Dwarf_Addr last_base; /* for diagnostic purposes */
   Dwarf_Addr last_sp; /* for diagnostic purposes */
 #ifdef DEBUG_MODULES
@@ -951,20 +958,30 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
     }
 
  reuse:
+  /* TODO Factor out into init_sample_arg. */
   sample_arg->tid = ev->tid;
   sample_arg->size = ev->size;
   sample_arg->data = (uint8_t *)&ev->data;
+  sample_arg->abi = (uint64_t)regs->abi;
   /* TODO: make portable across architectures */
-  sample_arg->sp = regs->regs[7];
-  sample_arg->pc = regs->regs[16];
+  /* TODO: the following should be valid for i686, x86_64 */
+  bool is_abi32 = (sample_arg->abi == PERF_SAMPLE_REGS_ABI_32);
+  int user_regs_sp = is_abi32 ? 3 : 7;
+  int user_regs_pc = is_abi32 ? 8 : 16;
+  sample_arg->sp = regs->regs[user_regs_sp];
+  sample_arg->pc = regs->regs[user_regs_pc]; /* TODO perfparser s_dwarfIp[X86_64][1] -- NOPE */
   sample_arg->regs = regs->regs;
   sample_arg->base_addr = sample_arg->sp;
   sui->last_sp = sample_arg->base_addr;
   sui->last_base = sample_arg->base_addr;
 
-  if (show_frames)
-    fprintf(stderr, "sysprof_init_dwfl pid %lld%s: size=%ld pc=%lx sp=%lx+(%lx)\n",
-	    (long long) pid, cached ? " (cached)" : "", sample_arg->size, sample_arg->pc, sample_arg->base_addr, sample_arg->sp - sample_arg->base_addr);
+  if (show_frames) {
+    fprintf(stderr, "sysprof_init_dwfl pid %lld%s: size=%ld%s pc=%lx sp=%lx+(%lx)\n",
+	    (long long) pid, cached ? " (cached)" : "",
+	    sample_arg->size, is_abi32 ? " (32-bit)" : "",
+	    sample_arg->pc, sample_arg->base_addr,
+	    sample_arg->sp - sample_arg->base_addr);
+  }
 
   if (!cached && ! dwfl_attach_state (dwfl, elf, pid, &sample_thread_callbacks, sample_arg))
     {
@@ -996,7 +1013,12 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
 
   Dwarf_Addr pc_adjusted = pc - (isactivation ? 0 : 1);
   Dwarf_Addr sp;
-  int rc = dwfl_frame_reg (state, 7 /* TODO make arch-independent */, &sp);
+  /* TODO: Need to generalize this code across architectures. */
+  /* TODO the following should be valid for i686, x86_64 */
+  struct sysprof_unwind_info *sui = (struct sysprof_unwind_info *)arg;
+  int is_abi32 = (sui->last_abi == PERF_SAMPLE_REGS_ABI_32);
+  int user_regs_sp = is_abi32 ? 3 : 7;
+  int rc = dwfl_frame_reg (state, user_regs_sp, &sp);
   if (rc < 0)
     {
       if (show_failures)
@@ -1123,6 +1145,7 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
       return SYSPROF_CB_OK;
     }
   sui->n_addrs = 0;
+  sui->last_abi = regs->abi;
 #ifdef DEBUG_MODULES
   sui->last_dwfl = dwfl;
 #endif
@@ -1138,8 +1161,9 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
     }
   if (show_samples)
     {
-      fprintf(stderr, "sysprof_unwind_cb pid %lld (%s): unwound %d frames\n",
-	      (long long)frame->pid, comm, sui->n_addrs);
+      bool is_abi32 = (regs->abi == PERF_SAMPLE_REGS_ABI_32);
+      fprintf(stderr, "sysprof_unwind_cb pid %lld (%s)%s: unwound %d frames\n",
+	      (long long)frame->pid, comm, is_abi32 ? " (32-bit)" : "", sui->n_addrs);
     }
   if (show_summary)
     {
@@ -1380,6 +1404,7 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
       sui.n_addrs = 0;
       sui.last_base = 0;
       sui.last_sp = 0;
+      sui.last_abi = PERF_SAMPLE_REGS_ABI_NONE;
       sui.max_addrs = UNWIND_ADDR_INCREMENT;
       sui.addrs = (Dwarf_Addr *)malloc (sui.max_addrs * sizeof(Dwarf_Addr));
       sui.outbuf = (void *)malloc (USHRT_MAX * sizeof(uint8_t));
