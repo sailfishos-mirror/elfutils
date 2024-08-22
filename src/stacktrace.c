@@ -1348,7 +1348,6 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
     };
 
   argp_parse(&argp, argc, argv, 0, NULL, NULL);
-  fprintf(stderr, "\n=== starting eu-stacktrace ===\n");
 
   /* TODO Also handle common expansions e.g. ~/foo instead of /home/user/foo. */
   if (strcmp (input_path, "-") == 0)
@@ -1378,6 +1377,8 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
   (void)output_format;
   (void)maxframes;
 #else
+  fprintf(stderr, "\n=== starting eu-stacktrace ===\n");
+
   /* TODO: For now, code the processing loop for sysprof only; generalize later. */
   assert (input_format == FORMAT_SYSPROF);
   assert (output_format == FORMAT_SYSPROF);
