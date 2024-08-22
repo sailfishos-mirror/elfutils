@@ -1138,6 +1138,12 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
   Dwfl *dwfl = sysprof_init_dwfl (sui, ev, regs);
   if (dwfl == NULL)
     {
+      if (show_summary)
+	{
+	  dwfltab_ent *dwfl_ent = dwfltab_find(frame->pid);
+	  dwfl_ent->total_samples++;
+	  dwfl_ent->lost_samples++;
+	}
       if (show_failures)
 	fprintf(stderr, "sysprof_init_dwfl pid %lld (%s) (failed)\n",
 		(long long)frame->pid, comm);
