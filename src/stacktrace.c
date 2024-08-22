@@ -1027,7 +1027,6 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
       return DWARF_CB_ABORT;
     }
 
-  struct sysprof_unwind_info *sui = (struct sysprof_unwind_info *)arg;
 #ifdef DEBUG_MODULES
   Dwfl_Module *mod = dwfl_addrmodule(sui->last_dwfl, pc);
   if (mod == NULL)
