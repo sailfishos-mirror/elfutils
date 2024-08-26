@@ -479,6 +479,7 @@ struct __sample_arg
   Dwarf_Addr base_addr;
   uint64_t size;
   uint8_t *data;
+  uint64_t n_regs;
   uint64_t abi; /* PERF_SAMPLE_REGS_ABI_{32,64} */
   Dwarf_Addr pc;
   Dwarf_Addr sp;
@@ -518,8 +519,48 @@ sample_getthread (Dwfl *dwfl __attribute__ ((unused)), pid_t tid,
   return true;
 }
 
+#define copy_word_64(result, d) \
+  if ((((uintptr_t) (d)) & (sizeof (uint64_t) - 1)) == 0) \
+    *(result) = *(uint64_t *)(d); \
+  else \
+    memcpy ((result), (d), sizeof (uint64_t));
+
+#define copy_word_32(result, d) \
+  if ((((uintptr_t) (d)) & (sizeof (uint32_t) - 1)) == 0) \
+    *(result) = *(uint32_t *)(d); \
+  else \
+    memcpy ((result), (d), sizeof (uint32_t));
+
+#define copy_word(result, d, abi) \
+  if ((abi) == PERF_SAMPLE_REGS_ABI_64)	\
+    { copy_word_64((result), (d)); } \
+  else if ((abi) == PERF_SAMPLE_REGS_ABI_32) \
+    { copy_word_32((result), (d)); } \
+  else \
+    *(result) = 0;
+
 static bool
-sample_memory_read (Dwfl *dwfl __attribute__ ((unused)), Dwarf_Addr addr, Dwarf_Word *result, void *arg)
+elf_memory_read (Dwfl *dwfl, Dwarf_Addr addr, Dwarf_Word *result, void *arg)
+{
+  struct __sample_arg *sample_arg = (struct __sample_arg *)arg;
+  Dwfl_Module *mod = dwfl_addrmodule(dwfl, addr);
+  Dwarf_Addr bias;
+  Elf_Scn *section = dwfl_module_address_section(mod, &addr, &bias);
+
+  if (!section)
+    return false;
+
+  Elf_Data *data = elf_getdata(section, NULL);
+  if (data && data->d_buf && data->d_size > addr) {
+    uint8_t *d = ((uint8_t *)data->d_buf) + addr;
+    copy_word(result, d, sample_arg->abi);
+    return true;
+  }
+  return false;
+}
+
+static bool
+sample_memory_read (Dwfl *dwfl, Dwarf_Addr addr, Dwarf_Word *result, void *arg)
 {
   struct __sample_arg *sample_arg = (struct __sample_arg *)arg;
   if (show_memory_reads)
@@ -527,32 +568,25 @@ sample_memory_read (Dwfl *dwfl __attribute__ ((unused)), Dwarf_Addr addr, Dwarf_
 	    sample_arg->base_addr, addr - sample_arg->base_addr, sample_arg->size);
   /* Imitate read_cached_memory() with the stack sample data as the cache. */
   if (addr < sample_arg->base_addr || addr - sample_arg->base_addr >= sample_arg->size)
-    return false; /* TODO: also read from Elf files we happen to be aware of */
+    return elf_memory_read(dwfl, addr, result, arg);
   uint8_t *d = &sample_arg->data[addr - sample_arg->base_addr];
-  if ((((uintptr_t) d) & (sizeof (unsigned long) - 1)) == 0)
-    *result = *(unsigned long *)d;
-  else
-    memcpy (result, d, sizeof (unsigned long));
+  copy_word(result, d, sample_arg->abi);
   return true;
 }
 
-/* TODO: Need to generalize this code across architectures. */
+/* TODO: Need to generalize this code beyond x86 architectures. */
 static bool
 sample_set_initial_registers (Dwfl_Thread *thread, void *thread_arg)
 {
   struct __sample_arg *sample_arg = (struct __sample_arg *)thread_arg;
   dwfl_thread_state_register_pc (thread, sample_arg->pc);
-  /* TODO the following should be valid for i686, x86_64 */
   bool is_abi32 = (sample_arg->abi == PERF_SAMPLE_REGS_ABI_32);
+  /* TODO: Need to narrow down how many regs are really needed for each abi. */
+  for (uint64_t i = 0; i < sample_arg->n_regs; i++)
+    dwfl_thread_state_registers (thread, i, 1, &sample_arg->regs[i]);
   int user_regs_sp = is_abi32 ? 3 : 7;
   int user_regs_pc = is_abi32 ? 8 : 16;
-  dwfl_thread_state_registers (thread, 0, 1, &sample_arg->regs[0]);
-  dwfl_thread_state_registers (thread, 6, 1, &sample_arg->regs[6]);
   dwfl_thread_state_registers (thread, user_regs_sp, 1, &sample_arg->sp);
-  dwfl_thread_state_registers (thread, 12, 1, &sample_arg->regs[12]);
-  dwfl_thread_state_registers (thread, 13, 1, &sample_arg->regs[13]);
-  dwfl_thread_state_registers (thread, 14, 1, &sample_arg->regs[14]);
-  dwfl_thread_state_registers (thread, 15, 1, &sample_arg->regs[15]);
   dwfl_thread_state_registers (thread, user_regs_pc, 1, &sample_arg->pc);
   return true;
 }
@@ -962,6 +996,7 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
   sample_arg->tid = ev->tid;
   sample_arg->size = ev->size;
   sample_arg->data = (uint8_t *)&ev->data;
+  sample_arg->n_regs = (uint64_t)regs->n_regs;
   sample_arg->abi = (uint64_t)regs->abi;
   /* TODO: make portable across architectures */
   /* TODO: the following should be valid for i686, x86_64 */
