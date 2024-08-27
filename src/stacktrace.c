@@ -578,16 +578,37 @@ sample_memory_read (Dwfl *dwfl, Dwarf_Addr addr, Dwarf_Word *result, void *arg)
 static bool
 sample_set_initial_registers (Dwfl_Thread *thread, void *thread_arg)
 {
+  /* TODO: The following facts are needed to translate x86 registers correctly:
+     - perf register order seen in linux arch/x86/include/uapi/asm/perf_regs.h
+       The registers array is built in the same order as the enum!
+       (See the code in tools/perf/util/intel-pt.c intel_pt_add_gp_regs().)
+     - sysprof libsysprof/perf-event-stream-private.h records all except segment regs
+       - TODO: Should include the perf regs mask in sysprof data and
+         translate registers in fully-general fashion, removing this assumption.
+       - TODO: Should drop PERF_REG_X86_FLAGS from the sysprof requested data?
+         It's not used by the existing backend/{x86_64,i386}_initreg.c implementations.
+     - dwarf register order seen in elfutils backends/{x86_64,i386}_initreg.c;
+       and it's a fairly different register order!
+
+     For comparison, you can study codereview.qt-project.org/gitweb?p=qt-creator/perfparser.git;a=blob;f=app/perfregisterinfo.cpp;hb=HEAD
+     and follow the code which uses those tables of magic numbers.
+     But it's better to follow original sources of truth for this. */
   struct __sample_arg *sample_arg = (struct __sample_arg *)thread_arg;
-  dwfl_thread_state_register_pc (thread, sample_arg->pc);
   bool is_abi32 = (sample_arg->abi == PERF_SAMPLE_REGS_ABI_32);
-  /* TODO: Need to narrow down how many regs are really needed for each abi. */
-  for (uint64_t i = 0; i < sample_arg->n_regs; i++)
-    dwfl_thread_state_registers (thread, i, 1, &sample_arg->regs[i]);
-  int user_regs_sp = is_abi32 ? 3 : 7;
-  int user_regs_pc = is_abi32 ? 8 : 16;
-  dwfl_thread_state_registers (thread, user_regs_sp, 1, &sample_arg->sp);
-  dwfl_thread_state_registers (thread, user_regs_pc, 1, &sample_arg->pc);
+  static const int regs_i386[] = {0, 2, 3, 1, 7/*sp*/, 6, 4, 5, 8/*ip*/};
+  static const int regs_x86_64[] = {0, 3, 2, 1, 4, 5, 6, 7/*sp*/, 10, 11, 12, 13, 14, 15, 16, 17, 8/*ip*/};
+  const int *reg_xlat = is_abi32 ? regs_i386 : regs_x86_64;
+  int n_regs = is_abi32 ? 9 : 17;
+  dwfl_thread_state_register_pc (thread, sample_arg->pc);
+  if (sample_arg->n_regs < (uint64_t)n_regs)
+    {} /* TODO: report warning */
+  for (int i = 0; i < n_regs; i++)
+    {
+      int j = reg_xlat[i];
+      if (j < 0) continue;
+      if (sample_arg->n_regs <= (uint64_t)j) continue;
+      dwfl_thread_state_registers (thread, i, 1, &sample_arg->regs[j]);
+    }
   return true;
 }
 
@@ -996,21 +1017,19 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
   sample_arg->tid = ev->tid;
   sample_arg->size = ev->size;
   sample_arg->data = (uint8_t *)&ev->data;
+  sample_arg->regs = regs->regs;
   sample_arg->n_regs = (uint64_t)regs->n_regs;
   sample_arg->abi = (uint64_t)regs->abi;
-  /* TODO: make portable across architectures */
-  /* TODO: the following should be valid for i686, x86_64 */
-  bool is_abi32 = (sample_arg->abi == PERF_SAMPLE_REGS_ABI_32);
-  int user_regs_sp = is_abi32 ? 3 : 7;
-  int user_regs_pc = is_abi32 ? 8 : 16;
-  sample_arg->sp = regs->regs[user_regs_sp];
-  sample_arg->pc = regs->regs[user_regs_pc]; /* TODO perfparser s_dwarfIp[X86_64][1] -- NOPE */
-  sample_arg->regs = regs->regs;
+  /* TODO: Need to generalize this code beyond x86 architectures. */
+  /* Register ordering cf. linux arch/x86/include/uapi/asm/perf_regs.h enum perf_event_x86_regs: */
+  sample_arg->sp = regs->regs[7];
+  sample_arg->pc = regs->regs[8];
   sample_arg->base_addr = sample_arg->sp;
   sui->last_sp = sample_arg->base_addr;
   sui->last_base = sample_arg->base_addr;
 
   if (show_frames) {
+    bool is_abi32 = (sample_arg->abi == PERF_SAMPLE_REGS_ABI_32);
     fprintf(stderr, "sysprof_init_dwfl pid %lld%s: size=%ld%s pc=%lx sp=%lx+(%lx)\n",
 	    (long long) pid, cached ? " (cached)" : "",
 	    sample_arg->size, is_abi32 ? " (32-bit)" : "",
@@ -1048,11 +1067,11 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
 
   Dwarf_Addr pc_adjusted = pc - (isactivation ? 0 : 1);
   Dwarf_Addr sp;
-  /* TODO: Need to generalize this code across architectures. */
-  /* TODO the following should be valid for i686, x86_64 */
+  /* TODO: Need to generalize this code beyond x86 architectures. */
   struct sysprof_unwind_info *sui = (struct sysprof_unwind_info *)arg;
   int is_abi32 = (sui->last_abi == PERF_SAMPLE_REGS_ABI_32);
-  int user_regs_sp = is_abi32 ? 3 : 7;
+  /* DWARF register order cf. elfutils backends/{x86_64,i386}_initreg.c: */
+  int user_regs_sp = is_abi32 ? 4 : 7;
   int rc = dwfl_frame_reg (state, user_regs_sp, &sp);
   if (rc < 0)
     {
