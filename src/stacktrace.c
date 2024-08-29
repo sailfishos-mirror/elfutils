@@ -678,7 +678,9 @@ bool dwfltab_init(void)
 /* XXX based on lib/dynamicsizehash.* insert_entry_2 */
 bool dwfltab_resize(void)
 {
-  /* TODO: Also consider LRU eviction? */
+  /* TODO: Also implement LRU eviction, especially
+     given the number of extremely-short-lived
+     processes seen on GNOME desktop. */
   dwfltab *htab = &default_table;
   ssize_t old_size = htab->size;
   dwfltab_ent *old_table = htab->table;
@@ -1536,8 +1538,9 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
 	      fprintf(stderr, "\n");
 	    }
 	  fprintf(stderr, "===\n");
-	  fprintf(stderr, "TOTAL -- received %d samples, lost %d samples\n",
-		  total_samples, total_lost_samples);
+	  fprintf(stderr, "TOTAL -- received %d samples, lost %d samples, loaded %ld processes\n",
+		  total_samples, total_lost_samples,
+		  default_table.filled /* TODO: after implementing LRU eviction, need to maintain a separate count, e.g. htab->filled + htab->evicted */);
 	}
       output_pos = sui.pos;
     }
