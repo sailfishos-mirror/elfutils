@@ -1523,17 +1523,17 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
 	  fprintf(stderr, "\n=== final summary ===\n");
 	  for (unsigned idx = 1; idx < default_table.size; idx++)
 	    {
-	      dwfltab *htab = &default_table;
-	      if (!htab->table[idx].used)
+	      dwfltab_ent *t = default_table.table;
+	      if (!t[idx].used)
 		continue;
 	      fprintf(stderr, "%d %s -- max %d frames, received %d samples, lost %d samples (%.1f%%)",
-		      htab->table[idx].pid, htab->table[idx].comm, htab->table[idx].max_frames,
-		      htab->table[idx].total_samples, htab->table[idx].lost_samples,
-		      PERCENT(htab->table[idx].lost_samples, htab->table[idx].total_samples));
-	      total_samples += htab->table[idx].total_samples;
-	      total_lost_samples += htab->table[idx].lost_samples;
+		      t[idx].pid, t[idx].comm, t[idx].max_frames,
+		      t[idx].total_samples, t[idx].lost_samples,
+		      PERCENT(t[idx].lost_samples, t[idx].total_samples));
+	      total_samples += t[idx].total_samples;
+	      total_lost_samples += t[idx].lost_samples;
 #ifdef LIBDWFL_TRACKS_UNWOUND_SOURCE
-	      fprintf(stderr, " (last %s, worst %s)", unwound_source_str(htab->table[idx].last_unwound), unwound_source_str(htab->table[idx].worst_unwound));
+	      fprintf(stderr, " (last %s, worst %s)", unwound_source_str(t[idx].last_unwound), unwound_source_str(t[idx].worst_unwound));
 #endif
 	      fprintf(stderr, "\n");
 	    }
