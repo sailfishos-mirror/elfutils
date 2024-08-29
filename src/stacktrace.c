@@ -1166,11 +1166,17 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
 	{
 	  /* For final diagnostics. */
 	  dwfltab_ent *dwfl_ent = dwfltab_find(frame->pid);
-	  if (dwfl_ent != NULL && ev_sample->n_addrs > dwfl_ent->max_frames)
-	    dwfl_ent->max_frames = ev_sample->n_addrs;
-	  dwfl_ent->total_samples ++;
-	  if (ev_sample->n_addrs <= 2)
-	    dwfl_ent->lost_samples ++;
+	  if (dwfl_ent == NULL && show_failures)
+	    fprintf(stderr, "sysprof_unwind_cb pid %lld (%s): could not create Dwfl table entry\n",
+		    (long long)frame->pid, comm);
+	  else if (dwfl_ent != NULL)
+	    {
+	      if (ev_sample->n_addrs > dwfl_ent->max_frames)
+		dwfl_ent->max_frames = ev_sample->n_addrs;
+	      dwfl_ent->total_samples ++;
+	      if (ev_sample->n_addrs <= 2)
+		dwfl_ent->lost_samples ++;
+	    }
 	}
     }
   if (frame->type != SYSPROF_CAPTURE_FRAME_STACK_USER)
