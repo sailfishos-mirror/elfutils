@@ -39,7 +39,7 @@ Example build sequence:
     make
     sudo make install
     
-    git clone https://git.sr.ht/~serhei/sysprof-experiments
+    git clone https://git.sr.ht/~serhei/sysprof-experiments sysprof
     cd sysprof
     meson setup --prefix=/opt/elfutils build
     cd build
