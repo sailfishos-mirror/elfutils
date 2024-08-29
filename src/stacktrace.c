@@ -658,17 +658,53 @@ typedef struct
 } dwfltab;
 
 /* TODO: Store in sui, update below functions. */
-/* XXX initial size must be a prime */
+/* XXX table size must be a prime */
 #define DWFLTAB_DEFAULT_SIZE 1021
+extern size_t next_prime (size_t); /* XXX from libeu.a lib/next_prime.c */
+dwfltab_ent *dwfltab_find(pid_t pid); /* forward decl */
+
 dwfltab default_table;
 
 /* XXX based on lib/dynamicsizehash.* *_init */
-void dwfltab_init(void)
+bool dwfltab_init(void)
 {
   dwfltab *htab = &default_table;
   htab->size = DWFLTAB_DEFAULT_SIZE;
   htab->filled = 0;
   htab->table = calloc ((htab->size + 1), sizeof(htab->table[0]));
+  return (htab->table != NULL);
+}
+
+/* XXX based on lib/dynamicsizehash.* insert_entry_2 */
+bool dwfltab_resize(void)
+{
+  /* TODO: Also consider LRU eviction? */
+  dwfltab *htab = &default_table;
+  ssize_t old_size = htab->size;
+  dwfltab_ent *old_table = htab->table;
+  htab->size = next_prime (htab->size * 2);
+  htab->table = calloc ((htab->size + 1), sizeof(htab->table[0]));
+  if (htab->table == NULL)
+    {
+      htab->size = old_size;
+      htab->table = old_table;
+      return false;
+    }
+  htab->filled = 0;
+  /* Transfer the old entries to the new table. */
+  for (ssize_t idx = 1; idx <= old_size; ++idx)
+    if (old_table[idx].used)
+      {
+	dwfltab_ent *ent0 = &old_table[idx];
+	dwfltab_ent *ent1 = dwfltab_find(ent0->pid);
+	assert (ent1 != NULL);
+	memcpy (ent1, ent0, sizeof(dwfltab_ent));
+      }
+  free (old_table);
+  /* TODO: Control log level for this message: */
+  fprintf(stderr, "Resized Dwfl table from %ld to %ld, copied %ld entries\n",
+	  old_size, htab->size, htab->filled);
+  return true;
 }
 
 /* XXX based on lib/dynamicsizehash.* *_find */
@@ -700,9 +736,9 @@ dwfltab_ent *dwfltab_find(pid_t pid)
  found:
   if (htab->table[idx].pid == 0)
     {
-      /* TODO: Implement resizing or LRU eviction? */
       if (100 * htab->filled > 90 * htab->size)
-	return NULL;
+	if (!dwfltab_resize())
+	  return NULL;
       htab->table[idx].used = true;
       htab->table[idx].pid = pid;
       htab->filled += 1;
@@ -1462,7 +1498,8 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
     }
   else /* processing_mode == MODE_NAIVE */
     {
-      dwfltab_init();
+      if (!dwfltab_init())
+	error (EXIT_BAD, errno, N_("Could not initialize Dwfl table"));
       struct sysprof_unwind_info sui;
       sui.output_fd = output_fd;
       sui.reader = reader;
@@ -1482,7 +1519,7 @@ Utility is a work-in-progress, see README.eu-stacktrace in the source branch.")
 	  int total_samples = 0;
 	  int total_lost_samples = 0;
 	  fprintf(stderr, "\n=== final summary ===\n");
-	  for (unsigned idx = 0; idx < DWFLTAB_DEFAULT_SIZE; idx++)
+	  for (unsigned idx = 1; idx < default_table.size; idx++)
 	    {
 	      dwfltab *htab = &default_table;
 	      if (!htab->table[idx].used)
