@@ -578,15 +578,14 @@ sample_memory_read (Dwfl *dwfl, Dwarf_Addr addr, Dwarf_Word *result, void *arg)
 static bool
 sample_set_initial_registers (Dwfl_Thread *thread, void *thread_arg)
 {
-  /* TODO: The following facts are needed to translate x86 registers correctly:
+  /* The following facts are needed to translate x86 registers correctly:
      - perf register order seen in linux arch/x86/include/uapi/asm/perf_regs.h
        The registers array is built in the same order as the enum!
        (See the code in tools/perf/util/intel-pt.c intel_pt_add_gp_regs().)
-     - sysprof libsysprof/perf-event-stream-private.h records all except segment regs
+     - sysprof libsysprof/perf-event-stream-private.h records all registers
+       except segment and flags.
        - TODO: Should include the perf regs mask in sysprof data and
          translate registers in fully-general fashion, removing this assumption.
-       - TODO: Should drop PERF_REG_X86_FLAGS from the sysprof requested data?
-         It's not used by the existing backend/{x86_64,i386}_initreg.c implementations.
      - dwarf register order seen in elfutils backends/{x86_64,i386}_initreg.c;
        and it's a fairly different register order!
 
@@ -596,7 +595,7 @@ sample_set_initial_registers (Dwfl_Thread *thread, void *thread_arg)
   struct __sample_arg *sample_arg = (struct __sample_arg *)thread_arg;
   bool is_abi32 = (sample_arg->abi == PERF_SAMPLE_REGS_ABI_32);
   static const int regs_i386[] = {0, 2, 3, 1, 7/*sp*/, 6, 4, 5, 8/*ip*/};
-  static const int regs_x86_64[] = {0, 3, 2, 1, 4, 5, 6, 7/*sp*/, 10, 11, 12, 13, 14, 15, 16, 17, 8/*ip*/};
+  static const int regs_x86_64[] = {0, 3, 2, 1, 4, 5, 6, 7/*sp*/, 9, 10, 11, 12, 13, 14, 15, 16, 8/*ip*/};
   const int *reg_xlat = is_abi32 ? regs_i386 : regs_x86_64;
   int n_regs = is_abi32 ? 9 : 17;
   dwfl_thread_state_register_pc (thread, sample_arg->pc);
@@ -996,7 +995,8 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
 		   SysprofCaptureUserRegs *regs)
 {
   pid_t pid = ev->frame.pid;
-  if (regs->n_regs < 18) /* XXX now expecting a full-ish register sample */
+#define EXPECTED_REGS 17
+  if (regs->n_regs < EXPECTED_REGS) /* XXX now expecting a full-ish register sample */
     return NULL;
 
   Dwfl *dwfl = pid_find_dwfl(pid);
