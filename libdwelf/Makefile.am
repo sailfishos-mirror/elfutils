@@ -42,13 +42,14 @@ noinst_HEADERS = libdwelfP.h
 libdwelf_a_SOURCES = dwelf_elf_gnu_debuglink.c dwelf_dwarf_gnu_debugaltlink.c \
 		     dwelf_elf_gnu_build_id.c dwelf_scn_gnu_compressed_size.c \
 		     dwelf_strtab.c dwelf_elf_begin.c \
-		     dwelf_elf_e_machine_string.c
+		     dwelf_elf_e_machine_string.c \
+		     dwelf_elf_remove_debug_relocations.c
 
 libdwelf = $(libdw)
 
 libdw = ../libdw/libdw.so
 libelf = ../libelf/libelf.so
-libebl = ../libebl/libebl.a
+libebl = ../libebl/libebl.a ../backends/libebl_backends.a
 libeu = ../lib/libeu.a
 
 libdwelf_pic_a_SOURCES =

@@ -59,7 +59,7 @@ check_PROGRAMS = arextract arsymtest newfile saridx scnnames sectiondump \
 		  get-units-invalid get-units-split attr-integrate-skel \
 		  all-dwarf-ranges unit-info next_cfi \
 		  elfcopy addsections xlate_notes elfrdwrnop \
-		  dwelf_elf_e_machine_string \
+		  dwelf_elf_e_machine_string remove-relocs \
 		  getphdrnum leb128 read_unaligned \
 		  msg_tst system-elf-libelf-test system-elf-gelf-test \
 		  nvidia_extended_linemap_libdw elf-print-reloc-syms \
@@ -204,6 +204,7 @@ TESTS = run-arextract.sh run-arsymtest.sh run-ar.sh newfile test-nlist \
 	run-strip-version.sh run-xlate-note.sh \
 	run-readelf-discr.sh \
 	run-dwelf_elf_e_machine_string.sh \
+	run-remove-relocs.sh \
 	run-elfclassify.sh run-elfclassify-self.sh \
 	run-disasm-riscv64.sh \
 	run-pt_gnu_prop-tests.sh \
@@ -576,6 +577,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     run-readelf-discr.sh \
 	     testfile-rng.debug.bz2 testfile-urng.debug.bz2 \
 	     run-dwelf_elf_e_machine_string.sh \
+	     run-remove-relocs.sh testfile-remove-relocs.bz2 \
 	     run-elfclassify.sh run-elfclassify-self.sh \
 	     run-disasm-riscv64.sh \
 	     testfile-riscv64-dis1.o.bz2 testfile-riscv64-dis1.expect.bz2 \
@@ -856,6 +858,7 @@ debuginfod_build_id_find_LDADD = $(libelf) $(libdw)
 xlate_notes_LDADD = $(libelf)
 elfrdwrnop_LDADD = $(libelf)
 dwelf_elf_e_machine_string_LDADD = $(libelf) $(libdw)
+remove_relocs_LDADD = $(libelf) $(libdw)
 getphdrnum_LDADD = $(libelf) $(libdw)
 leb128_LDADD = $(libelf) $(libdw)
 read_unaligned_LDADD = $(libelf) $(libdw)
