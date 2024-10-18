@@ -47,8 +47,11 @@ Example build sequence:
 Invoke eu-stacktrace manually with a fifo:
 
     mkfifo /tmp/test.fifo
-    sudo /opt/elfutils/bin/eu-stacktrace </tmp/test.fifo >test.syscap &
+    sudo env LD_LIBRARY_PATH=/opt/elfutils/lib:$LD_LIBRARY_PATH /opt/elfutils/bin/eu-stacktrace </tmp/test.fifo >test.syscap &
     /opt/elfutils/bin/sysprof-cli --sample-method=stack --use-fifo=/tmp/test.fifo test.syscap
+
+(Note 'env LD_LIBRARY_PATH=...' is not needed if elfutils 0.192+ has
+been installed systemwide.)
 
 Then invoke sysprof with eu-stacktrace:
 
