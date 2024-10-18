@@ -1,0 +1,67 @@
+# eu-stacktrace development branch
+
+eu-stacktrace is a utility to process a stream of raw stack
+samples (such as those obtained from the Linux kernel's
+PERF_SAMPLE_STACK facility) into a stream of stack traces (such as
+those obtained from PERF_SAMPLE_CALLCHAIN), freeing other profiling
+utilities from having to implement their own backtracing logic.
+
+eu-stacktrace accepts data from a profiling tool via a pipe or
+fifo. The initial version of the tool works on x86 architectures and
+accepts data from Sysprof [1]. For future work, it will make sense
+to expand support to other profilers, in particular perf tool.
+
+For more background, see Serhei Makarov's GNU Cauldron talk:
+
+- https://gcc.gnu.org/wiki/cauldron2024#cauldron2024talks.profiling_framepointerless_code_with_elfutils_stacktrace
+- slides: https://gcc.gnu.org/wiki/cauldron2024talks?action=AttachFile&do=view&target=profiling-stacktrace.pdf
+- video: https://www.youtube.com/watch?v=IjHWbo_ZF-E
+
+## build & run (for now)
+
+Requirements:
+- /usr/include/sysprof-6 headers (e.g. `sysprof-devel` package on Fedora)
+- `sysprof` polkit actions installed systemwide (e.g. `sysprof` package on Fedora)
+- sysprof with the serhei/samples-via-fifo patchset [1]
+
+[1]: https://git.sr.ht/~serhei/sysprof-experiments/log/serhei/samples-via-fifo
+
+Example build sequence:
+
+    sudo mkdir -p /opt/elfutils
+    
+    git clone https://sourceware.org/git/elfutils.git
+    cd elfutils
+    autoreconf -i -f
+    ./configure --prefix=/opt/elfutils --enable-stacktrace --enable-maintainer-mode
+    make
+    sudo make install
+    
+    git clone https://git.sr.ht/~serhei/sysprof-experiments sysprof
+    cd sysprof
+    meson setup --prefix=/opt/elfutils build
+    cd build
+    ninja
+    sudo ninja install
+
+Invoke eu-stacktrace manually with a fifo:
+
+    mkfifo /tmp/test.fifo
+    sudo /opt/elfutils/bin/eu-stacktrace </tmp/test.fifo >test.syscap &
+    /opt/elfutils/bin/sysprof-cli --sample-method=stack --use-fifo=/tmp/test.fifo test.syscap
+
+Then invoke sysprof with eu-stacktrace:
+
+    sudo /opt/elfutils/bin/sysprof-cli --use-stacktrace --stacktrace-path=/opt/elfutils/bin/eu-stacktrace
+
+## current issues
+
+- eu-stacktrace must be run with sudo for full access to executable files
+- portability (the current prototype works with x86_64 only)
+
+## TODO
+
+- bugfixes as described in 'current issues' above
+- testsuite (needs a way to provide cfi matching PIDs in canned data)
+- implement --format=perf; make sysprof headers optional in configury
+- https://sourceware.org/bugzilla/show_bug.cgi?id=32062
