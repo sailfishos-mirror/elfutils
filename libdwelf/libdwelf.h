@@ -140,6 +140,10 @@ extern Elf *dwelf_elf_begin (int fd);
    value, or NULL if the given number isn't currently known.  */
 extern const char *dwelf_elf_e_machine_string (int machine);
 
+/* Remove relocations for debug sections.  Returns 0 on success.
+   Returns -1 on failure and sets elf_errno.  */
+extern int dwelf_elf_remove_debug_relocations (Elf *elf);
+
 #ifdef __cplusplus
 }
 #endif

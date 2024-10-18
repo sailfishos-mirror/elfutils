@@ -384,4 +384,5 @@ ELFUTILS_0.192 {
     dwfl_set_sysroot;
     dwfl_frame_unwound_source;
     dwfl_unwound_source_str;
+    dwelf_elf_remove_debug_relocations;
 } ELFUTILS_0.191;
