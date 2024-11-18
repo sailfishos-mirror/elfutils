@@ -888,7 +888,7 @@ system_elf_gelf_test_LDADD = $(libelf)
 
 # A lock file used to make sure only one test dumps core at a time
 MOSTLYCLEANFILES = core-dump-backtrace.lock
-CLEANFILES = $(BUILT_SOURCES)
+CLEANFILES += $(BUILT_SOURCES)
 
 if GCOV
 check: check-am coverage

@@ -44,7 +44,7 @@ bin_SCRIPTS = make-debug-archive
 EXTRA_DIST = arlib.h debugpred.h make-debug-archive.in
 
 MOSTLYCLEANFILES = *.gconv
-CLEANFILES = $(bin_SCRIPTS)
+CLEANFILES += $(bin_SCRIPTS)
 
 if BUILD_STATIC
 libasm = ../libasm/libasm.a

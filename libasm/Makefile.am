@@ -88,4 +88,4 @@ noinst_HEADERS = libasmP.h symbolhash.h
 EXTRA_DIST = libasm.map
 
 MOSTLYCLEANFILES = $(am_libasm_a_OBJECTS) $(am_libasm_pic_a_OBJECTS) libasm.so.$(VERSION)
-CLEANFILES = libasm.so
+CLEANFILES += libasm.so
