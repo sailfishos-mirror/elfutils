@@ -340,6 +340,22 @@ extern bool ebl_set_initial_registers_tid (Ebl *ebl,
 extern size_t ebl_frame_nregs (Ebl *ebl)
   __nonnull_attribute__ (1);
 
+/* Callback to set process data from a linux perf_events sample.
+   EBL architecture has to have EBL_PERF_FRAME_REGS_MASK > 0, otherwise the
+   backend doesn't support unwinding from perf_events sample data.  */
+extern bool ebl_set_initial_registers_sample (Ebl *ebl,
+					      const Dwarf_Word *regs, uint32_t n_regs,
+					      uint64_t regs_mask, uint32_t abi,
+					      ebl_tid_registers_t *setfunc,
+					      void *arg)
+  __nonnull_attribute__ (1, 2, 6);
+
+/* Preferred sample_regs_user mask to request from linux perf_events
+   to allow unwinding on EBL architecture.  Omitting some of these
+   registers may result in failed or inaccurate unwinding. */
+extern uint64_t ebl_perf_frame_regs_mask (Ebl *ebl)
+  __nonnull_attribute__ (1);
+
 /* Offset to apply to the value of the return_address_register, as
    fetched from a Dwarf CFI.  This is used by some backends, where the
    return_address_register actually contains the call address.  */

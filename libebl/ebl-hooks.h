@@ -158,6 +158,14 @@ bool EBLHOOK(set_initial_registers_tid) (pid_t tid,
 					 ebl_tid_registers_t *setfunc,
 					 void *arg);
 
+/* Set process data from a perf_events sample and call SETFUNC one or more times.
+   Method should be present only when EBL_PERF_FRAME_REGS_MASK > 0, otherwise the
+   backend doesn't support unwinding from perf_events data.  */
+bool EBLHOOK(set_initial_registers_sample) (const Dwarf_Word *regs, uint32_t n_regs,
+					    uint64_t regs_mask, uint32_t abi,
+					    ebl_tid_registers_t *setfunc,
+					    void *arg);
+
 /* Convert *REGNO as is in DWARF to a lower range suitable for
    Dwarf_Frame->REGS indexing.  */
 bool EBLHOOK(dwarf_to_regno) (Ebl *ebl, unsigned *regno);

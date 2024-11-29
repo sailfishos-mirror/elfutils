@@ -60,6 +60,11 @@ struct ebl
      Ebl architecture can unwind iff FRAME_NREGS > 0.  */
   size_t frame_nregs;
 
+  /* Preferred sample_regs_user mask to request from linux perf_events
+     to allow unwinding.  Ebl architecture supports unwinding from
+     perf_events sample data iff PERF_FRAME_REGS_MASK > 0 */
+  uint32_t perf_frame_regs_mask;
+
   /* Offset to apply to the value of the return_address_register, as
      fetched from a Dwarf CFI.  This is used by some backends, where
      the return_address_register actually contains the call
