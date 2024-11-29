@@ -1,6 +1,6 @@
 ## Process this file with automake to create Makefile.in
 ##
-## Copyright (C) 2000-2010, 2013, 2014 Red Hat, Inc.
+## Copyright (C) 2000-2010, 2013, 2014, 2025 Red Hat, Inc.
 ## Copyright (C) 2012 Tilera Corporation
 ## This file is part of elfutils.
 ##
@@ -47,7 +47,7 @@ sh_SRCS = sh_init.c sh_symbol.c sh_corenote.c sh_regs.c sh_retval.c
 
 x86_64_SRCS = x86_64_init.c x86_64_symbol.c x86_64_corenote.c x86_64_cfi.c \
 	      x86_64_retval.c x86_64_regs.c x86_64_initreg.c \
-	      x86_64_unwind.c x32_corenote.c
+	      x86_64_initreg_sample.c x86_64_unwind.c x32_corenote.c
 
 
 ia64_SRCS = ia64_init.c ia64_symbol.c ia64_regs.c ia64_retval.c
