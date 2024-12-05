@@ -92,9 +92,11 @@
  * Includes: libdwfl data structures *
  *************************************/
 
+#include ELFUTILS_HEADER(ebl)
 /* #include ELFUTILS_HEADER(dwfl) */
 #include "../libdwfl/libdwflP.h"
-/* XXX: Private header needed for find_procfile, sysprof_init_dwfl */
+/* XXX: Private header needed for find_procfile, sysprof_init_dwfl,
+   sample_set_initial_registers. */
 
 /*************************************
  * Includes: sysprof data structures *
@@ -573,42 +575,41 @@ sample_memory_read (Dwfl *dwfl, Dwarf_Addr addr, Dwarf_Word *result, void *arg)
   return true;
 }
 
-/* TODO: Need to generalize this code beyond x86 architectures. */
+/* Implement the ebl_set_initial_registers_sample setfunc callback.  */
 static bool
-sample_set_initial_registers (Dwfl_Thread *thread, void *thread_arg)
+sample_registers_cb (int firstreg, unsigned nregs,
+                     const Dwarf_Word *regs, void *arg)
 {
-  /* The following facts are needed to translate x86 registers correctly:
-     - perf register order seen in linux arch/x86/include/uapi/asm/perf_regs.h
-       The registers array is built in the same order as the enum!
-       (See the code in tools/perf/util/intel-pt.c intel_pt_add_gp_regs().)
-     - sysprof libsysprof/perf-event-stream-private.h records all registers
-       except segment and flags.
-       - TODO: Should include the perf regs mask in sysprof data and
-         translate registers in fully-general fashion, removing this assumption.
-     - dwarf register order seen in elfutils backends/{x86_64,i386}_initreg.c;
-       and it's a fairly different register order!
-
-     For comparison, you can study codereview.qt-project.org/gitweb?p=qt-creator/perfparser.git;a=blob;f=app/perfregisterinfo.cpp;hb=HEAD
-     and follow the code which uses those tables of magic numbers.
-     But it's better to follow original sources of truth for this. */
-  struct __sample_arg *sample_arg = (struct __sample_arg *)thread_arg;
-  bool is_abi32 = (sample_arg->abi == PERF_SAMPLE_REGS_ABI_32);
-  static const int regs_i386[] = {0, 2, 3, 1, 7/*sp*/, 6, 4, 5, 8/*ip*/};
-  static const int regs_x86_64[] = {0, 3, 2, 1, 4, 5, 6, 7/*sp*/, 9, 10, 11, 12, 13, 14, 15, 16, 8/*ip*/};
-  const int *reg_xlat = is_abi32 ? regs_i386 : regs_x86_64;
-  int n_regs = is_abi32 ? 9 : 17;
-  dwfl_thread_state_register_pc (thread, sample_arg->pc);
-  if (sample_arg->n_regs < (uint64_t)n_regs && show_failures)
-    fprintf(stderr, N_("sample_set_initial_regs: n_regs=%ld, expected %d\n"),
-	    sample_arg->n_regs, n_regs);
-  for (int i = 0; i < n_regs; i++)
+  /* TODO Identical to pid_thread_state_registers_cb in linux-pid-attach.c. */
+  Dwfl_Thread *thread = (Dwfl_Thread *)arg;
+  if (firstreg == -1)
     {
-      int j = reg_xlat[i];
-      if (j < 0) continue;
-      if (sample_arg->n_regs <= (uint64_t)j) continue;
-      dwfl_thread_state_registers (thread, i, 1, &sample_arg->regs[j]);
+      assert (nregs == 1);
+      dwfl_thread_state_register_pc (thread, *regs);
+      return true;
     }
-  return true;
+  else if (firstreg == -2)
+    {
+      assert (nregs == 1);
+      dwfl_thread_state_registers (thread, firstreg, nregs, regs);
+      return true;
+    }
+  assert (nregs > 0);
+  return dwfl_thread_state_registers (thread, firstreg, nregs, regs);
+}
+
+static bool
+sample_set_initial_registers (Dwfl_Thread *thread, void *arg)
+{
+  struct __sample_arg *sample_arg = (struct __sample_arg *)arg;
+  dwfl_thread_state_register_pc (thread, sample_arg->pc);
+  Dwfl_Process *process = thread->process;
+  Ebl *ebl = process->ebl;
+  /* XXX Sysprof provides exactly the required registers for unwinding: */
+  uint64_t regs_mask = ebl_perf_frame_regs_mask (ebl);
+  return ebl_set_initial_registers_sample
+    (ebl, sample_arg->regs, sample_arg->n_regs, regs_mask, sample_arg->abi,
+     sample_registers_cb, thread);
 }
 
 static void
