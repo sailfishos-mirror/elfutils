@@ -17,6 +17,11 @@ For more background, see Serhei Makarov's GNU Cauldron talk:
 - slides: https://gcc.gnu.org/wiki/cauldron2024talks?action=AttachFile&do=view&target=profiling-stacktrace.pdf
 - video: https://www.youtube.com/watch?v=IjHWbo_ZF-E
 
+Note that Sysprof now includes a built-in `sysprof-live-unwinder`
+component derived from this code, see:
+
+- https://blogs.gnome.org/chergert/2024/11/03/profiling-w-o-frame-pointers/
+
 ## build & run (for now)
 
 Requirements:
