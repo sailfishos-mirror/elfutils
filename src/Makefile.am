@@ -1,6 +1,6 @@
 ## Process this file with automake to create Makefile.in
 ##
-## Copyright (C) 1996-2014, 2016, 2024 Red Hat, Inc.
+## Copyright (C) 1996-2014, 2016, 2024-2025 Red Hat, Inc.
 ## This file is part of elfutils.
 ##
 ## This file is free software; you can redistribute it and/or modify
@@ -105,7 +105,7 @@ ar_LDADD = libar.a $(libelf) $(libeu) $(argp_LDADD) $(obstack_LIBS)
 unstrip_LDADD = $(libebl) $(libelf) $(libdw) $(libeu) $(argp_LDADD)
 stack_LDADD = $(libebl) $(libelf) $(libdw) $(libeu) $(argp_LDADD) $(demanglelib)
 if ENABLE_STACKTRACE
-stacktrace_LDADD = $(libelf) $(libdw) $(libeu) $(argp_LDADD)
+stacktrace_LDADD = $(libebl) $(libelf) $(libdw) $(libeu) $(argp_LDADD)
 endif
 elfcompress_LDADD = $(libebl) $(libelf) $(libdw) $(libeu) $(argp_LDADD)
 elfclassify_LDADD = $(libelf) $(libdw) $(libeu) $(argp_LDADD)
