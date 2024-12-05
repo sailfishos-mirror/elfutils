@@ -1,5 +1,5 @@
 /* Process a stream of stack samples into stack traces.
-   Copyright (C) 2023-2024 Red Hat, Inc.
+   Copyright (C) 2023-2025 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -93,9 +93,11 @@
  * Includes: libdwfl data structures *
  *************************************/
 
+#include ELFUTILS_HEADER(ebl)
 /* #include ELFUTILS_HEADER(dwfl) */
 #include "../libdwfl/libdwflP.h"
-/* XXX: Private header needed for find_procfile, sysprof_init_dwfl */
+/* XXX: Private header needed for find_procfile, sysprof_init_dwfl,
+   sample_set_initial_registers. */
 
 /*************************************
  * Includes: sysprof data structures *
@@ -574,10 +576,31 @@ sample_memory_read (Dwfl *dwfl, Dwarf_Addr addr, Dwarf_Word *result, void *arg)
   return true;
 }
 
-/* TODO: Need to generalize this code beyond x86 architectures. */
 static bool
-sample_set_initial_registers (Dwfl_Thread *thread, void *thread_arg)
+sample_set_initial_registers (Dwfl_Thread *thread, void *arg)
 {
+#if 0
+  /* TODO: __libdwfl_set_initial_registers_thread not exported from libdwfl,
+     after it was decided to be unsuitable for a public API.
+
+     A subsequent patch in the series removes sample_set_initial_registers,
+     replacing it with code in libdwfl_stacktrace/dwflst_perf_frame.c.
+     Keeping this code commented-out for the record, cf how we would
+     implement if the set_initial_registers utility func was public.
+
+     To *actually* make this work, would need to copy the set_initial_registers
+     implementation into stacktrace.c; not worth doing since the later patch
+     overrides this code.  */
+  struct __sample_arg *sample_arg = (struct __sample_arg *)arg;
+  dwfl_thread_state_register_pc (thread, sample_arg->pc);
+  Dwfl_Process *process = thread->process;
+  Ebl *ebl = process->ebl;
+  /* XXX Sysprof provides exactly the required registers for unwinding: */
+  uint64_t regs_mask = ebl_perf_frame_regs_mask (ebl);
+  return ebl_set_initial_registers_sample
+    (ebl, sample_arg->regs, sample_arg->n_regs, regs_mask, sample_arg->abi,
+     __libdwfl_set_initial_registers_thread, thread);
+#else
   /* The following facts are needed to translate x86 registers correctly:
      - perf register order seen in linux arch/x86/include/uapi/asm/perf_regs.h
        The registers array is built in the same order as the enum!
@@ -592,7 +615,7 @@ sample_set_initial_registers (Dwfl_Thread *thread, void *thread_arg)
      For comparison, you can study codereview.qt-project.org/gitweb?p=qt-creator/perfparser.git;a=blob;f=app/perfregisterinfo.cpp;hb=HEAD
      and follow the code which uses those tables of magic numbers.
      But it's better to follow original sources of truth for this. */
-  struct __sample_arg *sample_arg = (struct __sample_arg *)thread_arg;
+  struct __sample_arg *sample_arg = (struct __sample_arg *)arg;
   bool is_abi32 = (sample_arg->abi == PERF_SAMPLE_REGS_ABI_32);
   static const int regs_i386[] = {0, 2, 3, 1, 7/*sp*/, 6, 4, 5, 8/*ip*/};
   static const int regs_x86_64[] = {0, 3, 2, 1, 4, 5, 6, 7/*sp*/, 9, 10, 11, 12, 13, 14, 15, 16, 8/*ip*/};
@@ -610,6 +633,7 @@ sample_set_initial_registers (Dwfl_Thread *thread, void *thread_arg)
       dwfl_thread_state_registers (thread, i, 1, &sample_arg->regs[j]);
     }
   return true;
+#endif
 }
 
 static void
