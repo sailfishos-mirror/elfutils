@@ -390,4 +390,7 @@ ELFUTILS_0.193 {
   global:
     dwfl_set_initial_registers_thread;
     dwfl_perf_sample_preferred_regs_mask;
+    dwfl_process_tracker_begin;
+    dwfl_begin_with_tracker;
+    dwfl_process_tracker_end;
 } ELFUTILS_0.192;
