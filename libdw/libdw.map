@@ -385,3 +385,10 @@ ELFUTILS_0.192 {
     dwfl_frame_unwound_source;
     dwfl_unwound_source_str;
 } ELFUTILS_0.191;
+
+ELFUTILS_0.193 {
+  global:
+    dwfl_process_tracker_begin;
+    dwfl_begin_with_tracker;
+    dwfl_process_tracker_end;
+} ELFUTILS_0.192;

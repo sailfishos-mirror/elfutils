@@ -101,6 +101,12 @@ typedef enum { DWFL_ERRORS DWFL_E_NUM } Dwfl_Error;
 extern int __libdwfl_canon_error (Dwfl_Error) internal_function;
 extern void __libdwfl_seterrno (Dwfl_Error) internal_function;
 
+struct Dwfl_Process_Tracker
+{
+  const Dwfl_Callbacks *callbacks;
+  /* ... */
+};
+
 /* Resources we might keep for the user about the core file that the
    Dwfl might have been created from.  Can currently only be set
    through std-argp.  */
@@ -114,6 +120,7 @@ struct Dwfl_User_Core
 struct Dwfl
 {
   const Dwfl_Callbacks *callbacks;
+  Dwfl_Process_Tracker *tracker;
 #ifdef ENABLE_LIBDEBUGINFOD
   debuginfod_client *debuginfod;
 #endif

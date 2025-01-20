@@ -32,8 +32,11 @@
 #include "libdw.h"
 #include <stdio.h>
 
-/* Handle for a session using the library.  */
+/* Handle for a session using the library to attach to a single target process.  */
 typedef struct Dwfl Dwfl;
+
+/* Handle for a session using the library to attach to more than one process.  */
+typedef struct Dwfl_Process_Tracker Dwfl_Process_Tracker;
 
 /* Handle for a module.  */
 typedef struct Dwfl_Module Dwfl_Module;
@@ -120,6 +123,18 @@ extern int dwfl_errno (void);
    behaviour is similar to the last case except that not NULL but a legal
    string is returned.  */
 extern const char *dwfl_errmsg (int err);
+
+
+/* Start a new multi-process session with the library.  */
+extern Dwfl_Process_Tracker *dwfl_process_tracker_begin (const Dwfl_Callbacks *callbacks)
+  __nonnull_attribute__ (1);
+
+/* Create a new Dwfl within a multi-process session.  */
+extern Dwfl *dwfl_begin_with_tracker (Dwfl_Process_Tracker *tracker)
+  __nonnull_attribute__ (1);
+
+/* End a multi-process session.  */
+extern void dwfl_process_tracker_end (Dwfl_Process_Tracker *tracker);
 
 
 /* Start reporting the current set of segments and modules to the library.
