@@ -396,4 +396,8 @@ ELFUTILS_0.193 {
 ELFUTILS_0.193_EXPERIMENTAL {
   global:
     dwflst_perf_sample_preferred_regs_mask;
+    dwflst_perf_sample_preferred_regs_mask;
+    dwflst_tracker_begin;
+    dwflst_tracker_dwfl_begin;
+    dwflst_tracker_end;
 };

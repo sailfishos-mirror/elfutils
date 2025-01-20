@@ -41,6 +41,26 @@
 extern "C" {
 #endif
 
+/* Keeps track of and caches Elf structs across multiple libdwfl
+   sessions corresponding to different processes.  */
+typedef struct Dwflst_Process_Tracker Dwflst_Process_Tracker;
+
+
+/* Initialize a new tracker for multiple libdwfl sessions.  Since Elf
+   data will shared between the libdwfl sessions, each Dwfl must use
+   the same Dwfl_Callbacks CALLBACKS provided when the tracker is
+   created.  */
+extern Dwflst_Process_Tracker *dwflst_tracker_begin (const Dwfl_Callbacks *callbacks)
+  __nonnull_attribute__ (1);
+
+/* Create a new Dwfl linked to this tracker.  */
+extern Dwfl *dwflst_tracker_dwfl_begin (Dwflst_Process_Tracker *tracker)
+  __nonnull_attribute__ (1);
+
+/* End all sessions with this tracker.  */
+extern void dwflst_tracker_end (Dwflst_Process_Tracker *tracker);
+
+
 /* XXX dwflst_perf_sample_getframes to be added in subsequent patch */
 
 /* Returns the linux perf_events register mask describing a set of

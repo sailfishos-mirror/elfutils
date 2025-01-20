@@ -111,9 +111,13 @@ struct Dwfl_User_Core
   int fd;                       /* close if >= 0.  */
 };
 
+/* forward decl from ../libdwfl_stacktrace/ */
+typedef struct Dwflst_Process_Tracker Dwflst_Process_Tracker;
+
 struct Dwfl
 {
   const Dwfl_Callbacks *callbacks;
+  Dwflst_Process_Tracker *tracker;
 #ifdef ENABLE_LIBDEBUGINFOD
   debuginfod_client *debuginfod;
 #endif

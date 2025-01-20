@@ -40,7 +40,8 @@ noinst_LIBRARIES += libdwfl_stacktrace_pic.a
 pkginclude_HEADERS = libdwfl_stacktrace.h
 
 
-libdwfl_stacktrace_a_SOURCES = dwflst_perf_frame.c
+libdwfl_stacktrace_a_SOURCES = dwflst_process_tracker.c \
+			       dwflst_perf_frame.c
 
 libdwfl_stacktrace = $(libdw)
 libdw = ../libdw/libdw.so
