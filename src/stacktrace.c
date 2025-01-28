@@ -633,6 +633,8 @@ static const Dwfl_Thread_Callbacks sample_thread_callbacks =
  * Dwfl and statistics table for multiple processes *
  ****************************************************/
 
+Dwfl_Process_Tracker *tracker = NULL;
+
 /* This echoes lib/dynamicsizehash.* with some necessary modifications. */
 typedef struct
 {
@@ -865,7 +867,7 @@ static char *debuginfo_path = NULL;
 
 static const Dwfl_Callbacks sample_callbacks =
   {
-    .find_elf = dwfl_linux_proc_find_elf,
+    .find_elf = dwfl_process_tracker_find_elf,
     .find_debuginfo = dwfl_standard_find_debuginfo,
     .debuginfo_path = &debuginfo_path,
   };
@@ -891,7 +893,7 @@ nop_find_debuginfo (Dwfl_Module *mod __attribute__((unused)),
 
 static const Dwfl_Callbacks sample_callbacks =
 {
-  .find_elf = dwfl_linux_proc_find_elf,
+  .find_elf = dwfl_process_tracker_find_elf,
   .find_debuginfo = nop_find_debuginfo, /* work with CFI only */
 };
 
@@ -1014,7 +1016,7 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
       cached = true;
       goto reuse;
     }
-  dwfl = dwfl_begin (&sample_callbacks);
+  dwfl = dwfl_begin_with_tracker (tracker);
 
   int err = dwfl_linux_proc_report (dwfl, pid);
   if (err < 0)
@@ -1508,6 +1510,7 @@ https://sourceware.org/cgit/elfutils/tree/README.eu-stacktrace?h=users/serhei/eu
   (void)maxframes;
 #else
   fprintf(stderr, "\n=== starting eu-stacktrace ===\n");
+  tracker = dwfl_process_tracker_begin (&sample_callbacks);
 
   /* TODO: For now, code the processing loop for sysprof only; generalize later. */
   assert (input_format == FORMAT_SYSPROF);
@@ -1590,6 +1593,8 @@ https://sourceware.org/cgit/elfutils/tree/README.eu-stacktrace?h=users/serhei/eu
     close (input_fd);
   if (output_fd != -1)
     close (output_fd);
+
+  dwfl_process_tracker_end (tracker);
 
   return EXIT_OK;
 }
