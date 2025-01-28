@@ -409,6 +409,13 @@ extern int dwfl_linux_proc_find_elf (Dwfl_Module *mod, void **userdata,
 				     const char *module_name, Dwarf_Addr base,
 				     char **file_name, Elf **);
 
+/* The same callback, except this first attempts to look up a cached
+   Elf* and fd from the Dwfl_Module's Dwfl_Process_Tracker (if any).
+   If a new Elf* has to be created, this saves it to the cache.  */
+extern int dwfl_process_tracker_find_elf (Dwfl_Module *mod, void **userdata,
+				     const char *module_name, Dwarf_Addr base,
+				     char **file_name, Elf **);
+
 /* Standard argument parsing for using a standard callback set.  */
 struct argp;
 extern const struct argp *dwfl_standard_argp (void) __const_attribute__;

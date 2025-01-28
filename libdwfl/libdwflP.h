@@ -101,11 +101,26 @@ typedef enum { DWFL_ERRORS DWFL_E_NUM } Dwfl_Error;
 extern int __libdwfl_canon_error (Dwfl_Error) internal_function;
 extern void __libdwfl_seterrno (Dwfl_Error) internal_function;
 
+/* Hash table for Elf *. */
+typedef struct
+{
+  char *module_name; /* dwfltracker_elftab_ent is used iff non-NULL.  */
+  int fd;
+  Elf *elf;
+  dev_t dev;
+  ino_t ino;
+  time_t last_mtime;
+} dwfltracker_elf_info;
+#include "dwfl_process_tracker_elftab.h"
+
 struct Dwfl_Process_Tracker
 {
   const Dwfl_Callbacks *callbacks;
-  /* ... */
+
+  /* Table of cached Elf * including fd, path, fstat info.  */
+  dwfltracker_elftab elftab;
 };
+
 
 /* Resources we might keep for the user about the core file that the
    Dwfl might have been created from.  Can currently only be set
