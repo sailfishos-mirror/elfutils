@@ -23,7 +23,8 @@ DEFS += $(YYDEBUG) -DDEBUGPRED=@DEBUGPRED@ \
 DEFAULT_INCLUDES =
 AM_CPPFLAGS += -I$(srcdir)/../libelf -I$(srcdir)/../libebl \
 	    -I$(srcdir)/../libdw -I$(srcdir)/../libdwelf \
-	    -I$(srcdir)/../libdwfl -I$(srcdir)/../libasm -I../debuginfod
+	    -I$(srcdir)/../libdwfl -I$(srcdir)/../libdwfl_stacktrace \
+	    -I$(srcdir)/../libasm -I../debuginfod
 
 AM_LDFLAGS = -Wl,-rpath-link,../libelf:../libdw $(STACK_USAGE_NO_ERROR)
 
