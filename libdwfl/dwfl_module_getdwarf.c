@@ -1,5 +1,5 @@
 /* Find debugging and symbol information for a module in libdwfl.
-   Copyright (C) 2005-2012, 2014, 2015 Red Hat, Inc.
+   Copyright (C) 2005-2012, 2014, 2015, 2025 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -78,6 +78,29 @@ open_elf (Dwfl_Module *mod, struct dwfl_file *file)
   Dwfl_Error error = open_elf_file (&file->elf, &file->fd, &file->name);
   if (error != DWFL_E_NOERROR)
     return error;
+
+  /* Cache file->elf in Dwfl_Process_Tracker if available: */
+  if (mod->dwfl->tracker != NULL && file->name != NULL)
+    {
+      rwlock_wrlock (&mod->dwfl->tracker->elftab_lock);
+      dwfltracker_elf_info *ent = dwfltracker_elftab_find (&mod->dwfl->tracker->elftab, elf_hash(file->name));
+      if (ent != NULL)
+	{
+	  /* TODO(REVIEW): The following assertions are still
+	     triggered on certain code paths that acquire fds or
+	     create Elf structs without checking the caching mechanism
+	     first.  This is not a serious problem, and can be fixed
+	     gradually. */
+
+	  /* assert(ent->elf == NULL || ent->elf == file->elf); */ /* Guard against redundant/leaked Elf *. */
+	  /* assert(ent->fd == file->fd); */ /* Guard against redundant open. */
+
+	  ent->elf = file->elf;
+	  /* XXX Dwfl_Process_Tracker also holds the Elf * jointly with the caller: */
+	  ent->elf->ref_count++;
+	}
+      rwlock_unlock (&mod->dwfl->tracker->elftab_lock);
+    }
 
   GElf_Ehdr ehdr_mem, *ehdr = gelf_getehdr (file->elf, &ehdr_mem);
   if (ehdr == NULL)

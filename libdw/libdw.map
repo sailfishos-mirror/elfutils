@@ -394,4 +394,8 @@ ELFUTILS_0.193 {
     dwfl_process_tracker_begin;
     dwfl_begin_with_tracker;
     dwfl_process_tracker_end;
+    dwfl_process_tracker_find_cached_elf;
+    dwfl_process_tracker_cache_elf;
+    dwfl_module_gettracker;
+    dwfl_process_tracker_find_elf;
 } ELFUTILS_0.192;

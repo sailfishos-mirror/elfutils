@@ -133,6 +133,40 @@ extern Dwfl_Process_Tracker *dwfl_process_tracker_begin (const Dwfl_Callbacks *c
 extern Dwfl *dwfl_begin_with_tracker (Dwfl_Process_Tracker *tracker)
   __nonnull_attribute__ (1);
 
+/* Find the Dwfl corresponding to PID.  If CALLBACK is non-NULL
+   and the Dwfl has not been created, invoke CALLBACK to create
+   the Dwfl and then store it in the tracker.  */
+extern Dwfl *dwfl_process_tracker_find_pid (Dwfl_Process_Tracker *tracker,
+                                            pid_t pid,
+                                            Dwfl *(*callback) (Dwfl_Process_Tracker *tracker,
+                                                               pid_t pid,
+                                                               void *arg),
+                                            void *arg)
+  __nonnull_attribute__ (1);
+
+/* Try to find a cached Elf corresponding to MODULE_NAME.  Verifies
+   that the cached Elf has dev/ino/mtime matching the file on disk.
+   If MODULE_PATH is non-NULL, it gives an alternate location for the
+   module e.g. /proc/PID/root/MODULE_NAME.  Stores FILE_NAME and ELFP
+   values.  Returns fd similar to the find_elf callbacks, or -1 if
+   cached Elf was not found.  */
+extern int dwfl_process_tracker_find_cached_elf (Dwfl_Process_Tracker *tracker,
+						 const char *module_name,
+						 const char *module_path,
+						 char **file_name, Elf **elfp);
+
+/* Record a cached Elf corresponding to MODULE_NAME.  FILE_NAME and FD
+   values must be provided, similar to the output of a find_elf callback.
+   Returns TRUE iff the Elf was successfully stored in the cache.  */
+extern bool dwfl_process_tracker_cache_elf (Dwfl_Process_Tracker *tracker,
+					    const char *module_name,
+					    const char *file_name,
+					    Elf *elf, int fd);
+
+/* For implementing a find_elf callback based on the prior two functions.
+   Returns the Dwfl_Process_Tracker corresponding to MOD.  */
+extern Dwfl_Process_Tracker *dwfl_module_gettracker (Dwfl_Module *mod);
+
 /* End a multi-process session.  */
 extern void dwfl_process_tracker_end (Dwfl_Process_Tracker *tracker);
 
@@ -406,6 +440,13 @@ extern int dwfl_linux_proc_maps_report (Dwfl *dwfl, FILE *);
    This uses the module name as a file name directly and tries to open it
    if it begin with a slash, or handles the magic string "[vdso]".  */
 extern int dwfl_linux_proc_find_elf (Dwfl_Module *mod, void **userdata,
+				     const char *module_name, Dwarf_Addr base,
+				     char **file_name, Elf **);
+
+/* The same callback, except this first attempts to look up a cached
+   Elf* and fd from the Dwfl_Module's Dwfl_Process_Tracker (if any).
+   If a new Elf* has to be created, this saves it to the cache.  */
+extern int dwfl_process_tracker_find_elf (Dwfl_Module *mod, void **userdata,
 				     const char *module_name, Dwarf_Addr base,
 				     char **file_name, Elf **);
 

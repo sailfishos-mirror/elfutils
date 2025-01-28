@@ -71,8 +71,9 @@ libdwfl_a_SOURCES = dwfl_begin.c dwfl_end.c dwfl_error.c dwfl_version.c \
 		    link_map.c core-file.c open.c image-header.c \
 		    dwfl_frame.c frame_unwind.c dwfl_frame_pc.c \
 		    linux-pid-attach.c linux-core-attach.c dwfl_frame_regs.c \
-		    dwfl_process_tracker.c \
-            dwfl_perf_frame.c \
+		    dwfl_process_tracker.c dwfl_process_tracker_find_elf.c \
+		    dwfl_process_tracker_elftab.c libdwfl_next_prime.c \
+		    dwfl_perf_frame.c \
 		    gzip.c debuginfod-client.c
 
 if BZLIB
@@ -94,7 +95,7 @@ libeu = ../lib/libeu.a
 libdwfl_pic_a_SOURCES =
 am_libdwfl_pic_a_OBJECTS = $(libdwfl_a_SOURCES:.c=.os)
 
-noinst_HEADERS = libdwflP.h
+noinst_HEADERS = libdwflP.h dwfl_process_tracker_elftab.h
 
 EXTRA_libdwfl_a_DEPENDENCIES = libdwfl.manifest
 
