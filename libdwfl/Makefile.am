@@ -71,7 +71,7 @@ libdwfl_a_SOURCES = dwfl_begin.c dwfl_end.c dwfl_error.c dwfl_version.c \
 		    link_map.c core-file.c open.c image-header.c \
 		    dwfl_frame.c frame_unwind.c dwfl_frame_pc.c \
 		    linux-pid-attach.c linux-core-attach.c dwfl_frame_regs.c \
-		    dwfl_process_tracker.c \
+		    dwfl_process_tracker.c dwfl_process_tracker_find_elf.c \
 		    gzip.c debuginfod-client.c
 
 if BZLIB

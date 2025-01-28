@@ -101,11 +101,42 @@ typedef enum { DWFL_ERRORS DWFL_E_NUM } Dwfl_Error;
 extern int __libdwfl_canon_error (Dwfl_Error) internal_function;
 extern void __libdwfl_seterrno (Dwfl_Error) internal_function;
 
+#define DWFL_ELFTAB_ENT_USED(e) ((e)->module_name != NULL)
+typedef struct
+{
+  char *module_name; /* dwfltracker_elftab_ent is used iff non-NULL.  */
+  int fd;
+  Elf *elf;
+  dev_t dev;
+  ino_t ino;
+  time_t last_mtime;
+} dwfltracker_elftab_ent;
+
 struct Dwfl_Process_Tracker
 {
   const Dwfl_Callbacks *callbacks;
-  /* ... */
+
+  /* Table of cached Elf * including fd, path, fstat info.  */
+  ssize_t elftab_size;
+  ssize_t elftab_filled;
+  dwfltracker_elftab_ent *elftab;
 };
+
+/* Find the location for an existing or new MODULE_NAME and return a
+   dwfl_tracker_elftab_ent * for it.  If MODULE_NAME is not found
+   and SHOULD_RESIZE is set, expand the table as necessary to make
+   room for the new entry. Otherwise, return NULL if MODULE_NAME is
+   not found.  */
+dwfltracker_elftab_ent *
+__libdwfl_process_tracker_elftab_find (Dwfl_Process_Tracker *tracker,
+				       const char *module_name,
+				       bool should_resize);
+
+/* After populating a dwfltracker_elftab_ent with data, update the
+   elftab_filled stats to properly mark the entry as used.  */
+void
+__libdwfl_process_tracker_elftab_mark_used (Dwfl_Process_Tracker *tracker,
+					    const dwfltracker_elftab_ent *ent);
 
 /* Resources we might keep for the user about the core file that the
    Dwfl might have been created from.  Can currently only be set
