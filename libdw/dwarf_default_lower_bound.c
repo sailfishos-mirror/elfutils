@@ -88,6 +88,7 @@ dwarf_default_lower_bound (int lang, Dwarf_Sword *result)
     case DW_LANG_Ruby:
     case DW_LANG_Move:
     case DW_LANG_Hylo:
+    case DW_LANG_V:
       *result = 0;
       return 0;
 
@@ -109,6 +110,7 @@ dwarf_default_lower_bound (int lang, Dwarf_Sword *result)
     case DW_LANG_Ada2005:
     case DW_LANG_Ada2012:
     case DW_LANG_Fortran23:
+    case DW_LANG_Algol68:
       *result = 1;
       return 0;
 
