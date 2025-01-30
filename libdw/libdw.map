@@ -385,3 +385,9 @@ ELFUTILS_0.192 {
     dwfl_frame_unwound_source;
     dwfl_unwound_source_str;
 } ELFUTILS_0.191;
+
+ELFUTILS_0.193 {
+  global:
+    dwarf_language;
+    dwarf_language_lower_bound;
+} ELFUTILS_0.192;

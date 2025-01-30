@@ -2,6 +2,8 @@ Version 0.193 (one after 0.192)
 
 debuginfod: Add CORS (webapp access) support to webapi.
 
+libdw: Add dwarf_language and dwarf_language_lower_bound functions.
+
 Version 0.192 "New rules, faster tools"
 
 CONDUCT: A new code of conduct has been adopted.  See the
