@@ -82,7 +82,6 @@ dwfl_process_tracker_find_elf (Dwfl_Module *mod,
   /* XXX fd < 0 implies elf_from_remote_memory, uses base, not cacheable */
   if (tracker != NULL && ent != NULL && fd >= 0 && *file_name != NULL)
     {
-      /* TODO(WIP): *elfp may be NULL here, need to be populated later. */
       ent->elf = *elfp;
       ent->fd = fd;
       rc = fstat(fd, &sb);

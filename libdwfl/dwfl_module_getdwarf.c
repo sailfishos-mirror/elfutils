@@ -79,6 +79,18 @@ open_elf (Dwfl_Module *mod, struct dwfl_file *file)
   if (error != DWFL_E_NOERROR)
     return error;
 
+  /* Cache file->elf in Dwfl_Process_Tracker if available: */
+  if (mod->dwfl->tracker != NULL && file->name != NULL)
+    {
+      dwfltracker_elftab_ent *ent = __libdwfl_process_tracker_elftab_find (mod->dwfl->tracker, file->name, false/* should_resize */);
+      if (ent != NULL)
+	{
+	  /* assert(ent->elf == NULL || ent->elf == file->elf); */ /* TODO(PRERELEASE): Guard against redundant/leaked Elf *. */
+	  assert(ent->fd == file->fd); /* TODO(PRERELEASE): Guard against redundant open. */
+	  ent->elf = file->elf;
+	}
+    }
+
   GElf_Ehdr ehdr_mem, *ehdr = gelf_getehdr (file->elf, &ehdr_mem);
   if (ehdr == NULL)
     {
