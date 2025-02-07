@@ -33,7 +33,6 @@
 #include "libdwflP.h"
 
 #define HTAB_DEFAULT_SIZE 1021
-extern size_t next_prime (size_t); /* XXX from libeu.a lib/next_prime.c */
 
 Dwfl_Process_Tracker *dwfl_process_tracker_begin (const Dwfl_Callbacks *callbacks)
 {
@@ -44,10 +43,7 @@ Dwfl_Process_Tracker *dwfl_process_tracker_begin (const Dwfl_Callbacks *callback
       return tracker;
     }
 
-  /* XXX based on lib/dynamicsizehash.* *_init */
-  tracker->elftab_size = HTAB_DEFAULT_SIZE;
-  tracker->elftab_filled = 0;
-  tracker->elftab = calloc ((tracker->elftab_size + 1), sizeof(tracker->elftab[0]));
+  dwfltracker_elftab_init (&tracker->elftab, HTAB_DEFAULT_SIZE);
 
   tracker->callbacks = callbacks;
   return tracker;
@@ -69,114 +65,26 @@ void dwfl_process_tracker_end (Dwfl_Process_Tracker *tracker)
   if (tracker == NULL)
     return;
 
-  for (unsigned idx = 1; idx < tracker->elftab_size; idx++)
+  /* HACK to allow iteration of dynamicsizehash_concurrent. */
+  /* XXX Based on lib/dynamicsizehash_concurrent.c free().  */
+  pthread_rwlock_destroy(&tracker->elftab.resize_rwl);
+  for (size_t idx = 1; idx <= tracker->elftab.size; idx++)
     {
-      dwfltracker_elftab_ent *t = &tracker->elftab[idx];
-      if (!DWFL_ELFTAB_ENT_USED(t))
+      dwfltracker_elftab_ent *ent = &tracker->elftab.table[idx];
+      if (ent->hashval == 0)
 	continue;
+      dwfltracker_elf_info *t = (dwfltracker_elf_info *) atomic_load_explicit (&ent->val_ptr,
+									       memory_order_relaxed);
+      free(t->module_name);
       if (t->fd >= 0)
 	close(t->fd);
-      free(t->module_name);
-      elf_end(t->elf);
+      if (t->elf != NULL)
+	elf_end(t->elf);
+      free(t); /* TODO: Check necessity. */
     }
-  free(tracker->elftab);
+  free (tracker->elftab.table);
 
   /* TODO: Call dwfl_end for each Dwfl connected to this tracker. */
   free (tracker);
 }
 
-/* XXX based on lib/dynamicsizehash.* insert_entry_2 */
-bool
-__libdwfl_process_tracker_elftab_resize (Dwfl_Process_Tracker *tracker)
-{
-  ssize_t old_size = tracker->elftab_size;
-  dwfltracker_elftab_ent *oldtab = tracker->elftab;
-  tracker->elftab_size = next_prime (tracker->elftab_size * 2);
-  tracker->elftab = calloc ((tracker->elftab_size + 1), sizeof(tracker->elftab[0]));
-  if (tracker->elftab == NULL)
-    {
-      tracker->elftab_size = old_size;
-      tracker->elftab = oldtab;
-      return false;
-    }
-  tracker->elftab_filled = 0;
-  /* Transfer the old entries to the new table. */
-  for (ssize_t idx = 1; idx <= old_size; ++idx)
-    if (DWFL_ELFTAB_ENT_USED(&oldtab[idx]))
-      {
-	dwfltracker_elftab_ent *ent0 = &oldtab[idx];
-	dwfltracker_elftab_ent *ent1 = __libdwfl_process_tracker_elftab_find(tracker, ent0->module_name, false/* should_resize */);
-	assert (ent1 != NULL);
-	memcpy (ent1, ent0, sizeof(dwfltracker_elftab_ent));
-      }
-  free(oldtab);
-  return true;
-}
-
-/* TODO: Hashing is tentative, consider direct use of lib/dynamicsizehash_concurrent.c for this. */
-ssize_t
-djb2_hash (const char *str)
-{
-  unsigned long hash = 5381;
-  int c;
-
-  while ((c = *str++))
-    hash = ((hash << 5) + hash) ^ c; /* hash * 33 XOR c */
-
-  ssize_t shash = (ssize_t)hash;
-  if (shash < 0) shash = -shash;
-  return shash;
-}
-
-/* XXX based on lib/dynamicsizehash.* *_find */
-dwfltracker_elftab_ent *
-__libdwfl_process_tracker_elftab_find (Dwfl_Process_Tracker *tracker,
-				       const char *module_name,
-				       bool should_resize)
-{
-  dwfltracker_elftab_ent *htab = tracker->elftab;
-  ssize_t hval = djb2_hash(module_name);
-  ssize_t idx = 1 + (hval < tracker->elftab_size ? hval : hval % tracker->elftab_size);
-
-  if (!DWFL_ELFTAB_ENT_USED(&htab[idx]))
-    goto found;
-  if (strcmp(htab[idx].module_name, module_name) == 0)
-    goto found;
-
-  int64_t hash = 1 + hval % (tracker->elftab_size - 2);
-  do
-    {
-      if (idx <= hash)
-	idx = tracker->elftab_size + idx - hash;
-      else
-	idx -= hash;
-
-      if (!DWFL_ELFTAB_ENT_USED(&htab[idx]))
-	goto found;
-      if (strcmp(htab[idx].module_name, module_name) == 0)
-	goto found;
-    }
-  while (true);
-
- found:
-  if (!DWFL_ELFTAB_ENT_USED(&htab[idx]))
-    {
-      if (100 * tracker->elftab_filled > 90 * tracker->elftab_size)
-	{
-	  if (!should_resize || !__libdwfl_process_tracker_elftab_resize (tracker))
-	    return NULL;
-	}
-      /* XXX Caller is responsible for setting module_name,
-	 calling __libdwfl_process_tracker_elftab_mark_used;
-         not guaranteed that caller will want to do this. */
-    }
-  return &htab[idx];
-}
-
-void
-__libdwfl_process_tracker_elftab_mark_used (Dwfl_Process_Tracker *tracker,
-					    const dwfltracker_elftab_ent *ent)
-{
-  assert(DWFL_ELFTAB_ENT_USED(ent));
-  tracker->elftab_filled ++;
-}

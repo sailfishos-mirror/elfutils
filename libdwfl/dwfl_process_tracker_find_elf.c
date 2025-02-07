@@ -44,35 +44,38 @@ dwfl_process_tracker_find_elf (Dwfl_Module *mod,
   /* TODO(WIP): Do we need to handle if elfp is already set?? */
   assert (*elfp == NULL);
   Dwfl_Process_Tracker *tracker = mod->dwfl->tracker;
-  dwfltracker_elftab_ent *ent = NULL;
+  dwfltracker_elf_info *ent = NULL;
   int rc;
   struct stat sb;
 
   if (tracker != NULL)
     {
-      ent = __libdwfl_process_tracker_elftab_find(tracker, module_name,
-						  true/*should_resize*/);
-      /* TODO: Also reopen the file when module_name set but fd not set? */
-      if (DWFL_ELFTAB_ENT_USED(ent))
+      unsigned long int hval = elf_hash(module_name);
+      ent = dwfltracker_elftab_find(&tracker->elftab, hval);
+      if (ent != NULL)
 	{
+	  /* TODO: Also reopen the file when module_name set but fd not set? */
 	  rc = fstat(ent->fd, &sb);
 	  if (rc < 0 || ent->dev != sb.st_dev || ent->ino != sb.st_ino
 	      || ent->last_mtime != sb.st_mtime)
-	      ent = NULL; /* file modified, fall back to uncached behaviour */
+	    ent = NULL; /* file modified, fall back to uncached behaviour */
 	  else
 	    {
 	      *elfp = ent->elf;
 	      *file_name = strdup(ent->module_name);
-	      return ent->fd;
 	    }
 	}
-      else if (ent->module_name == NULL)
+      else
 	{
-	  /* TODO: For multithreaded access, we mark used here rather
-	     than after the dwfl_linux_proc_find_elf() call.  Need to
-	     add appropriate locking.  */
+	  ent = calloc (1, sizeof (dwfltracker_elf_info));
 	  ent->module_name = strdup(module_name);
-	  __libdwfl_process_tracker_elftab_mark_used(tracker, ent);
+	  if (dwfltracker_elftab_insert(&tracker->elftab, hval, ent) != 0)
+	    {
+	      free(ent->module_name);
+	      free(ent);
+	      ent = NULL; /* fall back to uncached behaviour */
+	      /* TODO(WIP): Could goto and repeat the find operation? */
+	    }
 	}
     }
 
@@ -82,6 +85,7 @@ dwfl_process_tracker_find_elf (Dwfl_Module *mod,
   /* XXX fd < 0 implies elf_from_remote_memory, uses base, not cacheable */
   if (tracker != NULL && ent != NULL && fd >= 0 && *file_name != NULL)
     {
+      /* TODO(WIP): *elfp may be NULL here, need to be populated later. */
       ent->elf = *elfp;
       ent->fd = fd;
       rc = fstat(fd, &sb);
