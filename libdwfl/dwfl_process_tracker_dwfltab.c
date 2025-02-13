@@ -2,18 +2,18 @@
 #  include <config.h>
 #endif
 
-#include <string.h>
-
 #include <libdwflP.h>
 
-/* Definitions for the Elf table. */
-#define TYPE dwfltracker_elf_info *
-#define NAME dwfltracker_elftab
+/* Definitions for the Dwfl table. */
+#define TYPE dwfltracker_dwfl_info *
+#define NAME dwfltracker_dwfltab
 #define ITERATE 1
 /* TODO: Need REVERSE? */
 #define REVERSE 1
 #define COMPARE(a, b) \
-  strcmp ((a)->module_name, (b)->module_name)
+  ((a->invalid && b->invalid) || \
+   (!a->invalid && !b->invalid && \
+    (a)->dwfl->process->pid == (b)->dwfl->process->pid))
 
 /* TODO needed? */
 /* #define next_prime __libdwfl_next_prime */

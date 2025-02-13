@@ -44,6 +44,7 @@ Dwfl_Process_Tracker *dwfl_process_tracker_begin (const Dwfl_Callbacks *callback
     }
 
   dwfltracker_elftab_init (&tracker->elftab, HTAB_DEFAULT_SIZE);
+  dwfltracker_dwfltab_init (&tracker->dwfltab, HTAB_DEFAULT_SIZE);
 
   tracker->callbacks = callbacks;
   return tracker;
@@ -55,9 +56,55 @@ Dwfl *dwfl_begin_with_tracker (Dwfl_Process_Tracker *tracker)
   if (dwfl == NULL)
     return dwfl;
 
-  /* TODO: Could also share dwfl->debuginfod, but thead-safely? */
+  /* TODO: Could also share dwfl->debuginfod, but thread-safely? */
   dwfl->tracker = tracker;
+
+  /* XXX: dwfl added to dwfltab when dwfl->process set in dwfl_attach_state. */
+  /* XXX: dwfl removed from dwfltab in dwfl_end() */
+
   return dwfl;
+}
+
+void __libdwfl_add_dwfl_to_tracker (Dwfl *dwfl) {
+  Dwfl_Process_Tracker *tracker = dwfl->tracker;
+  assert (tracker != NULL);
+
+  /* First try to find an existing entry to replace: */
+  dwfltracker_dwfl_info *ent = NULL;
+  unsigned long int hval = dwfl->process->pid;
+  ent = dwfltracker_dwfltab_find(&tracker->dwfltab, hval);
+  if (ent != NULL)
+    {
+      ent->dwfl = dwfl;
+      ent->invalid = false;
+      return;
+    }
+
+  /* Only otherwise try to insert an entry: */
+  ent = calloc (1, sizeof(dwfltracker_dwfl_info));
+  ent->dwfl = dwfl;
+  ent->invalid = false;
+  if (dwfltracker_dwfltab_insert(&tracker->dwfltab, hval, ent) != 0)
+    {
+      /* assert(false); */ /* TODO: Need additional locking to guard against this case. */
+      free(ent);
+      return;
+    }
+}
+
+void __libdwfl_remove_dwfl_from_tracker (Dwfl *dwfl) {
+  if (dwfl->tracker == NULL)
+    return;
+  Dwfl_Process_Tracker *tracker = dwfl->tracker;
+
+  dwfltracker_dwfl_info *ent = NULL;
+  unsigned long int hval = dwfl->process->pid;
+  ent = dwfltracker_dwfltab_find(&tracker->dwfltab, hval);
+  if (ent != NULL && ent->dwfl == dwfl)
+    {
+      ent->dwfl = NULL;
+      ent->invalid = true;
+    }
 }
 
 void dwfl_process_tracker_end (Dwfl_Process_Tracker *tracker)
@@ -65,10 +112,12 @@ void dwfl_process_tracker_end (Dwfl_Process_Tracker *tracker)
   if (tracker == NULL)
     return;
 
-  /* HACK to allow iteration of dynamicsizehash_concurrent. */
+  size_t idx;
+
+  /* HACK to allow iteration of dynamicsizehash_concurrent.  */
   /* XXX Based on lib/dynamicsizehash_concurrent.c free().  */
   pthread_rwlock_destroy(&tracker->elftab.resize_rwl);
-  for (size_t idx = 1; idx <= tracker->elftab.size; idx++)
+  for (idx = 1; idx <= tracker->elftab.size; idx++)
     {
       dwfltracker_elftab_ent *ent = &tracker->elftab.table[idx];
       if (ent->hashval == 0)
@@ -84,7 +133,20 @@ void dwfl_process_tracker_end (Dwfl_Process_Tracker *tracker)
     }
   free (tracker->elftab.table);
 
-  /* TODO: Call dwfl_end for each Dwfl connected to this tracker. */
+  /* XXX Based on lib/dynamicsizehash_concurrent.c free().  */
+  pthread_rwlock_destroy(&tracker->dwfltab.resize_rwl);
+  for (idx = 1; idx <= tracker->dwfltab.size; idx++)
+    {
+      dwfltracker_dwfltab_ent *ent = &tracker->dwfltab.table[idx];
+      if (ent->hashval == 0)
+	continue;
+      dwfltracker_dwfl_info *t = (dwfltracker_dwfl_info *) atomic_load_explicit (&ent->val_ptr,
+										 memory_order_relaxed);
+      if (t->dwfl != NULL)
+	dwfl_end(t->dwfl);
+      free(t);
+    }
+  free (tracker->dwfltab.table);
+
   free (tracker);
 }
-

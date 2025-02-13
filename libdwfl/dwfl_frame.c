@@ -206,6 +206,10 @@ dwfl_attach_state (Dwfl *dwfl, Elf *elf, pid_t pid,
   process->pid = pid;
   process->callbacks = thread_callbacks;
   process->callbacks_arg = arg;
+
+  if (dwfl->tracker != NULL)
+      __libdwfl_add_dwfl_to_tracker (dwfl);
+
   return true;
 }
 INTDEF(dwfl_attach_state)
