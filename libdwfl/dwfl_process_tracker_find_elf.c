@@ -63,6 +63,7 @@ dwfl_process_tracker_find_elf (Dwfl_Module *mod,
 	    {
 	      *elfp = ent->elf;
 	      *file_name = strdup(ent->module_name);
+	      return ent->fd;
 	    }
 	}
       else
