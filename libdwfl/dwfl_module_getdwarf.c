@@ -88,6 +88,8 @@ open_elf (Dwfl_Module *mod, struct dwfl_file *file)
 	  /* assert(ent->elf == NULL || ent->elf == file->elf); */ /* TODO(PRERELEASE): Guard against redundant/leaked Elf *. */
 	  /* assert(ent->fd == file->fd); */ /* TODO(PRERELEASE): Guard against redundant open. */
 	  ent->elf = file->elf;
+	  /* XXX Dwfl_Process_Tracker also holds the Elf * jointly with the caller: */
+	  ent->elf->ref_count++;
 	}
     }
 

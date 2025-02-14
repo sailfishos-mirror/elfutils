@@ -32,6 +32,9 @@
 #endif
 
 #include <sys/stat.h>
+#include "../libelf/libelfP.h"
+/* XXX: Private header needed for Elf * ref_count field. */
+/* TODO: Consider dup_elf() rather than direct ref_count access. */
 
 #include "libdwflP.h"
 
@@ -61,6 +64,9 @@ dwfl_process_tracker_find_elf (Dwfl_Module *mod,
 	    ent = NULL; /* file modified, fall back to uncached behaviour */
 	  else
 	    {
+	      /* XXX Caller also holds the Elf * jointly with prior owners: */
+	      if (ent->elf != NULL)
+		ent->elf->ref_count++;
 	      *elfp = ent->elf;
 	      *file_name = strdup(ent->module_name);
 	      return ent->fd;
@@ -87,6 +93,9 @@ dwfl_process_tracker_find_elf (Dwfl_Module *mod,
   if (tracker != NULL && ent != NULL && fd >= 0 && *file_name != NULL)
     {
       /* TODO(WIP): *elfp may be NULL here, need to be populated later. */
+      /* XXX Dwfl_Process_Tracker also holds the Elf * jointly with the caller: */
+      if (*elfp != NULL)
+	(*elfp)->ref_count++;
       ent->elf = *elfp;
       ent->fd = fd;
       rc = fstat(fd, &sb);
