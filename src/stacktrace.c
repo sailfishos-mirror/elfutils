@@ -95,7 +95,7 @@
 #include ELFUTILS_HEADER(ebl)
 /* #include ELFUTILS_HEADER(dwfl) */
 #include "../libdwfl/libdwflP.h"
-/* XXX: Private header needed for find_procfile, sysprof_init_dwfl,
+/* XXX: Private header needed for find_procfile, sysprof_find_dwfl,
    sample_set_initial_registers. */
 
 /*************************************
@@ -989,34 +989,11 @@ find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
 }
 
 Dwfl *
-sysprof_init_dwfl (struct sysprof_unwind_info *sui,
-		   SysprofCaptureStackUser *ev,
-		   SysprofCaptureUserRegs *regs)
+sysprof_init_dwfl (Dwfl_Process_Tracker *cb_tracker,
+                   pid_t pid,
+                   void *arg __attribute__ ((unused)))
 {
-  pid_t pid = ev->frame.pid;
-  /* TODO: Need to generalize this code beyond x86 architectures. */
-  /* XXX: Note that sysprof requesting the x86_64 register file from
-     perf_events will result in an array of 17 regs even for 32-bit
-     applications. */
-#define EXPECTED_REGS 17
-  if (regs->n_regs < EXPECTED_REGS) /* XXX expecting everything except FLAGS */
-    {
-      if (show_failures)
-	fprintf(stderr, N_("sysprof_init_dwfl: n_regs=%d, expected %d\n"),
-		regs->n_regs, EXPECTED_REGS);
-      return NULL;
-    }
-
-  Dwfl *dwfl = pid_find_dwfl(pid);
-  struct __sample_arg *sample_arg;
-  bool cached = false;
-  if (dwfl != NULL)
-    {
-      sample_arg = dwfl->process->callbacks_arg; /* XXX requires libdwflP.h */
-      cached = true;
-      goto reuse;
-    }
-  dwfl = dwfl_begin_with_tracker (tracker);
+  Dwfl *dwfl = dwfl_begin_with_tracker (cb_tracker);
 
   int err = dwfl_linux_proc_report (dwfl, pid);
   if (err < 0)
@@ -1035,9 +1012,41 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
       return NULL;
     }
 
+  return dwfl;
+}
+
+Dwfl *
+sysprof_find_dwfl (struct sysprof_unwind_info *sui,
+		   SysprofCaptureStackUser *ev,
+		   SysprofCaptureUserRegs *regs)
+{
+  pid_t pid = ev->frame.pid;
+  /* TODO: Need to generalize this code beyond x86 architectures. */
+  /* XXX: Note that sysprof requesting the x86_64 register file from
+     perf_events will result in an array of 17 regs even for 32-bit
+     applications. */
+#define EXPECTED_REGS 17
+  if (regs->n_regs < EXPECTED_REGS) /* XXX expecting everything except FLAGS */
+    {
+      if (show_failures)
+	fprintf(stderr, N_("sysprof_init_dwfl: n_regs=%d, expected %d\n"),
+		regs->n_regs, EXPECTED_REGS);
+      return NULL;
+    }
+
+  Dwfl *dwfl = dwfl_process_tracker_find_pid (tracker, pid, sysprof_init_dwfl, NULL);
+  struct __sample_arg *sample_arg;
+  bool cached = false;
+  if (dwfl != NULL && dwfl->process != NULL)
+    {
+      sample_arg = dwfl->process->callbacks_arg; /* XXX requires libdwflP.h */
+      cached = true;
+      goto reuse;
+    }
+
   Elf *elf = NULL;
   int elf_fd;
-  err = find_procfile (dwfl, &pid, &elf, &elf_fd);
+  int err = find_procfile (dwfl, &pid, &elf, &elf_fd);
   if (err < 0)
     {
       if (show_failures)
@@ -1074,7 +1083,7 @@ sysprof_init_dwfl (struct sysprof_unwind_info *sui,
 
   if (show_frames) {
     bool is_abi32 = (sample_arg->abi == PERF_SAMPLE_REGS_ABI_32);
-    fprintf(stderr, "sysprof_init_dwfl pid %lld%s: size=%ld%s pc=%lx sp=%lx+(%lx)\n",
+    fprintf(stderr, "sysprof_find_dwfl pid %lld%s: size=%ld%s pc=%lx sp=%lx+(%lx)\n",
 	    (long long) pid, cached ? " (cached)" : "",
 	    sample_arg->size, is_abi32 ? " (32-bit)" : "",
 	    sample_arg->pc, sample_arg->base_addr,
@@ -1235,7 +1244,7 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
   SysprofCaptureUserRegs *regs = (SysprofCaptureUserRegs *)tail_ptr;
   if (show_frames)
     fprintf(stderr, "\n"); /* extra newline for padding */
-  Dwfl *dwfl = sysprof_init_dwfl (sui, ev, regs);
+  Dwfl *dwfl = sysprof_find_dwfl (sui, ev, regs);
   if (dwfl == NULL)
     {
       if (show_summary)
@@ -1245,7 +1254,7 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
 	  dwfl_ent->lost_samples++;
 	}
       if (show_failures)
-	fprintf(stderr, "sysprof_init_dwfl pid %lld (%s) (failed)\n",
+	fprintf(stderr, "sysprof_find_dwfl pid %lld (%s) (failed)\n",
 		(long long)frame->pid, comm);
       return SYSPROF_CB_OK;
     }
