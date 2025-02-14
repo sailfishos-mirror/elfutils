@@ -65,6 +65,27 @@ Dwfl *dwfl_begin_with_tracker (Dwfl_Process_Tracker *tracker)
   return dwfl;
 }
 
+Dwfl *dwfl_process_tracker_find_pid (Dwfl_Process_Tracker *tracker,
+				     pid_t pid,
+				     Dwfl *(*callback) (Dwfl_Process_Tracker *,
+							pid_t, void *),
+				     void *arg)
+{
+  Dwfl *dwfl = NULL;
+  dwfltracker_dwfl_info *ent = dwfltracker_dwfltab_find(&tracker->dwfltab, pid);
+  if (ent != NULL && !ent->invalid)
+    dwfl = ent->dwfl;
+  if (dwfl == NULL && callback != NULL)
+    dwfl = callback(tracker, pid, arg);
+  if (dwfl != NULL)
+    {
+      assert (dwfl->tracker == tracker);
+      /* XXX: dwfl added to dwfltab when dwfl->process set in dwfl_attach_state. */
+    }
+
+  return dwfl;
+}
+
 void __libdwfl_add_dwfl_to_tracker (Dwfl *dwfl) {
   Dwfl_Process_Tracker *tracker = dwfl->tracker;
   assert (tracker != NULL);
