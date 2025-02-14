@@ -133,6 +133,17 @@ extern Dwfl_Process_Tracker *dwfl_process_tracker_begin (const Dwfl_Callbacks *c
 extern Dwfl *dwfl_begin_with_tracker (Dwfl_Process_Tracker *tracker)
   __nonnull_attribute__ (1);
 
+/* Find the Dwfl corresponding to PID.  If CALLBACK is non-NULL
+   and the Dwfl has not been created, invoke CALLBACK to create
+   the Dwfl and then store it in the tracker.  */
+extern Dwfl *dwfl_process_tracker_find_pid (Dwfl_Process_Tracker *tracker,
+                                            pid_t pid,
+                                            Dwfl *(*callback) (Dwfl_Process_Tracker *tracker,
+                                                               pid_t pid,
+                                                               void *arg),
+                                            void *arg)
+  __nonnull_attribute__ (1);
+
 /* End a multi-process session.  */
 extern void dwfl_process_tracker_end (Dwfl_Process_Tracker *tracker);
 
