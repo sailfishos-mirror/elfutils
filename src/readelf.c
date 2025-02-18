@@ -2113,7 +2113,7 @@ handle_relocs_rel (Ebl *ebl, GElf_Ehdr *ehdr, Elf_Scn *scn, GElf_Shdr *shdr)
 
   /* Search for the optional extended section index table.  */
   Elf_Data *xndxdata = NULL;
-  int xndxscnidx = elf_scnshndx (scn);
+  int xndxscnidx = elf_scnshndx (symscn);
   if (unlikely (xndxscnidx > 0))
     xndxdata = elf_getdata (elf_getscn (ebl->elf, xndxscnidx), NULL);
 
@@ -2302,7 +2302,7 @@ handle_relocs_rela (Ebl *ebl, GElf_Ehdr *ehdr, Elf_Scn *scn, GElf_Shdr *shdr)
 
   /* Search for the optional extended section index table.  */
   Elf_Data *xndxdata = NULL;
-  int xndxscnidx = elf_scnshndx (scn);
+  int xndxscnidx = elf_scnshndx (symscn);
   if (unlikely (xndxscnidx > 0))
     xndxdata = elf_getdata (elf_getscn (ebl->elf, xndxscnidx), NULL);
 
