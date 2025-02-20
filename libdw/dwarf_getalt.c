@@ -170,12 +170,12 @@ dwarf_getalt (Dwarf *main)
   if (main == NULL)
     return NULL;
 
-  rwlock_wrlock(main->dwarf_lock);
+  mutex_lock (main->dwarf_lock);
 
   /* Only try once.  */
   if (main->alt_dwarf == (void *) -1)
     {
-      rwlock_unlock (main->dwarf_lock);
+      mutex_unlock (main->dwarf_lock);
       return NULL;
     }
 
@@ -185,7 +185,7 @@ dwarf_getalt (Dwarf *main)
   if (main->alt_dwarf != NULL)
     {
       result = main->alt_dwarf;
-      rwlock_unlock (main->dwarf_lock);
+      mutex_unlock (main->dwarf_lock);
       return result;
     }
 
@@ -195,12 +195,12 @@ dwarf_getalt (Dwarf *main)
   if (main->alt_dwarf == NULL)
     {
       main->alt_dwarf = (void *) -1;
-      rwlock_unlock (main->dwarf_lock);
+      mutex_unlock (main->dwarf_lock);
       return NULL;
     }
 
   result = main->alt_dwarf;
-  rwlock_unlock (main->dwarf_lock);
+  mutex_unlock (main->dwarf_lock);
 
   return result;
 }

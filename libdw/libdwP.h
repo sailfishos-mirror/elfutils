@@ -264,9 +264,11 @@ struct Dwarf
      allocations for this Dwarf.  */
   pthread_rwlock_t mem_rwl;
 
-  /* The dwarf_lock is a read-write lock designed to ensure thread-safe access
-     and modification of an entire Dwarf object.  */
-  rwlock_define(, dwarf_lock);
+  /* Recursive mutex intended for setting/getting alt_dwarf, next_tu_offset,
+     and next_cu_offset.  Covers dwarf_getsrclines, dwarf_getsrcfiles and
+     dwarf_macro_getsrcfiles.  Should also be held when calling
+     __libdw_intern_next_unit.  */
+  mutex_define(, dwarf_lock);
 
   /* Internal memory handling.  This is basically a simplified thread-local
      reimplementation of obstacks.  Unfortunately the standard obstack
@@ -452,10 +454,11 @@ struct Dwarf_CU
   Dwarf_Off locs_base;
 
   /* Synchronize access to the abbrev member of a Dwarf_Die that
-     refers to this Dwarf_CU.  */
+     refers to this Dwarf_CU.  Covers __libdw_die_abbrev. */
   rwlock_define(, abbrev_lock);
 
-  /* Synchronize access to the split member of this Dwarf_CU.  */
+  /* Synchronize access to the split member of this Dwarf_CU.
+     Covers __libdw_find_split_unit.  */
   rwlock_define(, split_lock);
 
   /* Memory boundaries of this CU.  */

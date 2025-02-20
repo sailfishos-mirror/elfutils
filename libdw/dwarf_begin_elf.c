@@ -579,7 +579,7 @@ dwarf_begin_elf (Elf *elf, Dwarf_Cmd cmd, Elf_Scn *scngrp)
       __libdw_seterrno (DWARF_E_NOMEM); /* no memory.  */
       return NULL;
     }
-  rwlock_init (result->dwarf_lock);
+  mutex_init (result->dwarf_lock);
   eu_search_tree_init (&result->cu_tree);
   eu_search_tree_init (&result->tu_tree);
   eu_search_tree_init (&result->split_tree);

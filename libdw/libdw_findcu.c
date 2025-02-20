@@ -249,7 +249,7 @@ __libdw_findcu (Dwarf *dbg, Dwarf_Off start, bool v4_debug_types)
   if (found != NULL)
     return *found;
 
-  rwlock_wrlock (dbg->dwarf_lock);
+  mutex_lock (dbg->dwarf_lock);
 
   if (start < *next_offset)
     __libdw_seterrno (DWARF_E_INVALID_DWARF);
@@ -276,7 +276,7 @@ __libdw_findcu (Dwarf *dbg, Dwarf_Off start, bool v4_debug_types)
 	}
     }
 
-  rwlock_unlock (dbg->dwarf_lock);
+  mutex_unlock (dbg->dwarf_lock);
   return result;
 }
 

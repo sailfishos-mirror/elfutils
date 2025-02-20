@@ -35,7 +35,7 @@
 void
 dwarf_setalt (Dwarf *main, Dwarf *alt)
 {
-  rwlock_wrlock (main->dwarf_lock);
+  mutex_lock (main->dwarf_lock);
 
   if (main->alt_fd != -1)
     {
@@ -45,6 +45,6 @@ dwarf_setalt (Dwarf *main, Dwarf *alt)
     }
 
   main->alt_dwarf = alt;
-  rwlock_unlock (main->dwarf_lock);
+  mutex_unlock (main->dwarf_lock);
 }
 INTDEF (dwarf_setalt)
