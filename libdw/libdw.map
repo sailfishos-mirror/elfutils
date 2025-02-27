@@ -389,4 +389,5 @@ ELFUTILS_0.192 {
 ELFUTILS_0.193 {
   global:
     dwfl_set_initial_registers_thread;
+    dwfl_thread_ebl;
 } ELFUTILS_0.192;
