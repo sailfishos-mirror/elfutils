@@ -825,6 +825,16 @@ int dwfl_getthread_frames (Dwfl *dwfl, pid_t tid,
 			   void *arg)
   __nonnull_attribute__ (1, 3);
 
+/* XXX dwfl_perf_sample_getframes to be added in subsequent patch */
+
+/* Returns the linux perf_events register mask describing a set of
+   registers sufficient for unwinding on MACHINE, or 0 if libdwfl does
+   not handle perf_events samples for MACHINE.  Does not take a Dwfl*
+   or Elf* since this is meant to allow a profiling tool to configure
+   perf_events to produce meaningful data for a libdwfl session to be
+   opened later.  */
+uint64_t dwfl_perf_sample_preferred_regs_mask (GElf_Half machine);
+
 /* Return *PC (program counter) for thread-specific frame STATE.
    Set *ISACTIVATION according to DWARF frame "activation" definition.
    Typically you need to subtract 1 from *PC if *ACTIVATION is false to safely
