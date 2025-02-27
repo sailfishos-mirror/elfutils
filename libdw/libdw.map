@@ -393,4 +393,5 @@ ELFUTILS_0.193 {
     dwfl_process_tracker_end;
     dwfl_process_tracker_find_elf;
     dwfl_process_tracker_find_pid;
+    dwfl_thread_ebl;
 } ELFUTILS_0.192;

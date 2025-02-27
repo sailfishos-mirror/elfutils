@@ -239,6 +239,12 @@ dwfl_thread_dwfl (Dwfl_Thread *thread)
 }
 INTDEF(dwfl_thread_dwfl)
 
+Ebl *
+dwfl_thread_ebl (Dwfl_Thread *thread)
+{
+  return thread->process->ebl;
+}
+
 pid_t
 dwfl_thread_tid (Dwfl_Thread *thread)
 {

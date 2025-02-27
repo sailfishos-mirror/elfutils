@@ -30,6 +30,7 @@
 #define _LIBDWFL_H	1
 
 #include "libdw.h"
+#include "libebl.h"
 #include <stdio.h>
 
 /* Handle for a session using the library to attach to a single target process.  */
@@ -784,6 +785,10 @@ pid_t dwfl_pid (Dwfl *dwfl)
 
 /* Return DWFL from which THREAD was created using dwfl_getthreads.  */
 Dwfl *dwfl_thread_dwfl (Dwfl_Thread *thread)
+  __nonnull_attribute__ (1);
+
+/* Return EBL associated with THREAD.  This function never fails.  */
+Ebl *dwfl_thread_ebl (Dwfl_Thread *thread)
   __nonnull_attribute__ (1);
 
 /* Return positive TID (thread ID) for THREAD.  This function never fails.  */
