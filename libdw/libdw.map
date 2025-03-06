@@ -385,3 +385,8 @@ ELFUTILS_0.192 {
     dwfl_frame_unwound_source;
     dwfl_unwound_source_str;
 } ELFUTILS_0.191;
+
+ELFUTILS_0.193 {
+  global:
+    dwfl_set_initial_registers_thread;
+} ELFUTILS_0.192;
