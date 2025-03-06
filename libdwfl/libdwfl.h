@@ -1,5 +1,5 @@
 /* Interfaces for libdwfl.
-   Copyright (C) 2005-2010, 2013, 2024 Red Hat, Inc.
+   Copyright (C) 2005-2010, 2013, 2024-2025 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -782,6 +782,14 @@ bool dwfl_thread_state_registers (Dwfl_Thread *thread, int firstreg,
    here.  */
 void dwfl_thread_state_register_pc (Dwfl_Thread *thread, Dwarf_Word pc)
   __nonnull_attribute__ (1);
+
+/* Basic implementation of Dwfl_Thread_Callbacks.set_initial_registers.
+   ARG must be a Dwfl_Thread *.  Calls dwfl_thread_state_register_pc
+   if firstreg is -1 (indicating arch PC), dwfl_thread_state_registers
+   otherwise.  */
+bool dwfl_set_initial_registers_thread (int firstreg, unsigned nregs,
+                                        const Dwarf_Word *regs, void *arg)
+  __nonnull_attribute__ (3, 4);
 
 /* Iterate through the threads for a process.  Returns zero if all threads have
    been processed by the callback, returns -1 on error, or the value of the

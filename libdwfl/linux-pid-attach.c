@@ -1,5 +1,5 @@
 /* Get Dwarf Frame state for target live PID process.
-   Copyright (C) 2013, 2014, 2015, 2018 Red Hat, Inc.
+   Copyright (C) 2013, 2014, 2015, 2018, 2025 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -304,9 +304,9 @@ pid_getthread (Dwfl *dwfl __attribute__ ((unused)), pid_t tid,
 
 /* Implement the ebl_set_initial_registers_tid setfunc callback.  */
 
-static bool
-pid_thread_state_registers_cb (int firstreg, unsigned nregs,
-			       const Dwarf_Word *regs, void *arg)
+bool
+dwfl_set_initial_registers_thread (int firstreg, unsigned nregs,
+				   const Dwarf_Word *regs, void *arg)
 {
   Dwfl_Thread *thread = (Dwfl_Thread *) arg;
   if (firstreg == -1)
@@ -338,7 +338,7 @@ pid_set_initial_registers (Dwfl_Thread *thread, void *thread_arg)
   Dwfl_Process *process = thread->process;
   Ebl *ebl = process->ebl;
   return ebl_set_initial_registers_tid (ebl, tid,
-					pid_thread_state_registers_cb, thread);
+					dwfl_set_initial_registers_thread, thread);
 }
 
 static void
