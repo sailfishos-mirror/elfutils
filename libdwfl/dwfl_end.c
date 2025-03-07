@@ -42,6 +42,9 @@ dwfl_end (Dwfl *dwfl)
   __libdwfl_debuginfod_end (dwfl->debuginfod);
 #endif
 
+  if (dwfl->tracker != NULL)
+    __libdwfl_remove_dwfl_from_tracker (dwfl);
+
   if (dwfl->process)
     __libdwfl_process_free (dwfl->process);
 
