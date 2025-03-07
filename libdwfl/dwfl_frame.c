@@ -1,5 +1,5 @@
 /* Get Dwarf Frame state for target PID or core file.
-   Copyright (C) 2013, 2014, 2024 Red Hat, Inc.
+   Copyright (C) 2013, 2014, 2024-2025 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -206,6 +206,10 @@ dwfl_attach_state (Dwfl *dwfl, Elf *elf, pid_t pid,
   process->pid = pid;
   process->callbacks = thread_callbacks;
   process->callbacks_arg = arg;
+
+  if (dwfl->tracker != NULL)
+      __libdwfl_add_dwfl_to_tracker (dwfl);
+
   return true;
 }
 INTDEF(dwfl_attach_state)

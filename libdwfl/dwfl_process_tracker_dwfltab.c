@@ -1,5 +1,5 @@
-/* Finish a session using libdwfl.
-   Copyright (C) 2005, 2008, 2012-2013, 2015, 2025 Red Hat, Inc.
+/* Dwfl_Process_Tracker Dwfl table implementation.
+   Copyright (C) 2025 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -27,47 +27,20 @@
    not, see <http://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+#  include <config.h>
 #endif
 
-#include "libdwflP.h"
+#include <libdwflP.h>
 
-void
-dwfl_end (Dwfl *dwfl)
-{
-  if (dwfl == NULL)
-    return;
+/* Definitions for the Dwfl table. */
+#define TYPE dwfltracker_dwfl_info *
+#define NAME dwfltracker_dwfltab
+#define ITERATE 1
+/* TODO(REVIEW): Omit reverse? */
+#define REVERSE 1
+#define COMPARE(a, b) \
+  ((a->invalid && b->invalid) || \
+   (!a->invalid && !b->invalid && \
+    (a)->dwfl->process->pid == (b)->dwfl->process->pid))
 
-#ifdef ENABLE_LIBDEBUGINFOD
-  __libdwfl_debuginfod_end (dwfl->debuginfod);
-#endif
-
-  if (dwfl->tracker != NULL)
-    __libdwfl_remove_dwfl_from_tracker (dwfl);
-
-  if (dwfl->process)
-    __libdwfl_process_free (dwfl->process);
-
-  free (dwfl->lookup_addr);
-  free (dwfl->lookup_module);
-  free (dwfl->lookup_segndx);
-  free (dwfl->sysroot);
-
-  Dwfl_Module *next = dwfl->modulelist;
-  while (next != NULL)
-    {
-      Dwfl_Module *dead = next;
-      next = dead->next;
-      __libdwfl_module_free (dead);
-    }
-
-  if (dwfl->user_core != NULL)
-    {
-      free (dwfl->user_core->executable_for_core);
-      elf_end (dwfl->user_core->core);
-      if (dwfl->user_core->fd != -1)
-	close (dwfl->user_core->fd);
-      free (dwfl->user_core);
-    }
-  free (dwfl);
-}
+#include "../lib/dynamicsizehash_concurrent.c"
