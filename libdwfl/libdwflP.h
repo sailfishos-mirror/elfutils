@@ -757,6 +757,7 @@ extern int dwfl_link_map_report (Dwfl *dwfl, const void *auxv, size_t auxv_size,
 
 /* Avoid PLT entries.  */
 INTDECL (dwfl_begin)
+INTDECL (dwfl_end)
 INTDECL (dwfl_errmsg)
 INTDECL (dwfl_errno)
 INTDECL (dwfl_addrmodule)

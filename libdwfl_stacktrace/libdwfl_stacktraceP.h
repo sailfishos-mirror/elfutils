@@ -45,6 +45,14 @@ typedef struct
 } dwflst_tracker_elf_info;
 #include "dwflst_tracker_elftab.h"
 
+/* Hash table for Dwfl *. */
+typedef struct
+{
+  Dwfl *dwfl;
+  bool invalid; /* Mark when the dwfl has been removed.  */
+} dwflst_tracker_dwfl_info;
+#include "dwflst_tracker_dwfltab.h"
+
 struct Dwflst_Process_Tracker
 {
   const Dwfl_Callbacks *callbacks;
@@ -52,7 +60,22 @@ struct Dwflst_Process_Tracker
   /* Table of cached Elf * including fd, path, fstat info.  */
   dwflst_tracker_elftab elftab;
   rwlock_define(, elftab_lock);
+
+  /* Table of cached Dwfl * including pid.  */
+  dwflst_tracker_dwfltab dwfltab;
+  rwlock_define(, dwfltab_lock);
 };
+
+
+/* Called when dwfl->process->pid becomes known to add the dwfl to its
+   Dwflst_Process_Tracker's dwfltab:  */
+extern void __libdwfl_stacktrace_add_dwfl_to_tracker (Dwfl *dwfl)
+  internal_function;
+
+/* Called from dwfl_end() to remove the dwfl from its
+   Dwfl_Process_Tracker's dwfltab:  */
+extern void __libdwfl_stacktrace_remove_dwfl_from_tracker (Dwfl *dwfl)
+  internal_function;
 
 
 /* Avoid PLT entries.  */
