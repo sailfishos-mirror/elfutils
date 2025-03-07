@@ -113,6 +113,14 @@ typedef struct
 } dwfltracker_elf_info;
 #include "dwfl_process_tracker_elftab.h"
 
+/* Hash table for Dwfl *. */
+typedef struct
+{
+  Dwfl *dwfl;
+  bool invalid; /* Mark when the dwfl has been removed.  */
+} dwfltracker_dwfl_info;
+#include "dwfl_process_tracker_dwfltab.h"
+
 struct Dwfl_Process_Tracker
 {
   const Dwfl_Callbacks *callbacks;
@@ -120,8 +128,19 @@ struct Dwfl_Process_Tracker
   /* Table of cached Elf * including fd, path, fstat info.  */
   dwfltracker_elftab elftab;
   rwlock_define(, elftab_lock);
+
+  /* Table of cached Dwfl * including pid.  */
+  dwfltracker_dwfltab dwfltab;
+  rwlock_define(, dwfltab_lock);
 };
 
+/* Call when dwfl->process->pid becomes known to add the dwfl to its
+   Dwfl_Process_Tracker's dwfltab:  */
+void __libdwfl_add_dwfl_to_tracker (Dwfl *dwfl);
+
+/* Call from dwfl_end() to remove the dwfl from its
+   Dwfl_Process_Tracker's dwfltab:  */
+void __libdwfl_remove_dwfl_from_tracker (Dwfl *dwfl);
 
 /* Resources we might keep for the user about the core file that the
    Dwfl might have been created from.  Can currently only be set
