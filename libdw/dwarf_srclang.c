@@ -305,6 +305,201 @@ static int srclang_to_language (Dwarf_Word srclang,
     }
 }
 
+static int
+language_to_srclang (Dwarf_Word lname, Dwarf_Word lversion, Dwarf_Word *value)
+{
+  switch (lname)
+    {
+    case DW_LNAME_Ada:
+      if (lversion <= 1983)
+	*value = DW_LANG_Ada83;
+      else if (lversion <= 1995)
+	*value = DW_LANG_Ada95;
+      else if (lversion <= 2005)
+	*value = DW_LANG_Ada2005;
+      else
+	*value = DW_LANG_Ada2012;
+      return 0;
+    case DW_LNAME_BLISS:
+      *value = DW_LANG_BLISS;
+      return 0;
+    case DW_LNAME_C:
+      if (lversion == 0)
+	*value = DW_LANG_C;
+      else if (lversion <= 198912)
+	*value = DW_LANG_C89;
+      else if (lversion <= 199901)
+	*value = DW_LANG_C99;
+      else if (lversion <= 201112)
+	*value = DW_LANG_C11;
+      else if (lversion <= 201710)
+	*value = DW_LANG_C17;
+      else
+	*value = DW_LANG_C23;
+      return 0;
+    case DW_LNAME_C_plus_plus:
+      if (lversion <= 199711)
+	*value = DW_LANG_C_plus_plus;
+      else if (lversion <= 201103)
+	*value = DW_LANG_C_plus_plus_11;
+      else if (lversion <= 201402)
+	*value = DW_LANG_C_plus_plus_14;
+      else if (lversion <= 201703)
+	*value = DW_LANG_C_plus_plus_17;
+      else if (lversion <= 202002)
+	*value = DW_LANG_C_plus_plus_20;
+      else
+	*value = DW_LANG_C_plus_plus_23;
+      return 0;
+    case DW_LNAME_Cobol:
+      if (lversion <= 1974)
+	*value = DW_LANG_Cobol74;
+      else
+	*value = DW_LANG_Cobol85;
+      return 0;
+    case DW_LNAME_Crystal:
+      *value = DW_LANG_Crystal;
+      return 0;
+    case DW_LNAME_D:
+      *value = DW_LANG_D;
+      return 0;
+    case DW_LNAME_Dylan:
+      *value = DW_LANG_Dylan;
+      return 0;
+    case DW_LNAME_Fortran:
+      if (lversion <= 1977)
+	*value = DW_LANG_Fortran77;
+      else if (lversion <= 1990)
+	*value = DW_LANG_Fortran90;
+      else if (lversion <= 1995)
+	*value = DW_LANG_Fortran95;
+      else if (lversion <= 2003)
+	*value = DW_LANG_Fortran03;
+      else if (lversion <= 2008)
+	*value = DW_LANG_Fortran08;
+      else if (lversion <= 2018)
+	*value = DW_LANG_Fortran18;
+      else
+	*value = DW_LANG_Fortran23;
+      return 0;
+    case DW_LNAME_Go:
+      *value = DW_LANG_Go;
+      return 0;
+    case DW_LNAME_Haskell:
+      *value = DW_LANG_Haskell;
+      return 0;
+    case DW_LNAME_Java:
+      *value = DW_LANG_Java;
+      return 0;
+    case DW_LNAME_Julia:
+      *value = DW_LANG_Julia;
+      return 0;
+    case DW_LNAME_Kotlin:
+      *value = DW_LANG_Kotlin;
+      return 0;
+    case DW_LNAME_Modula2:
+      *value = DW_LANG_Modula2;
+      return 0;
+    case DW_LNAME_Modula3:
+      *value = DW_LANG_Modula3;
+      return 0;
+    case DW_LNAME_ObjC:
+      *value = DW_LANG_ObjC;
+      return 0;
+    case DW_LNAME_ObjC_plus_plus:
+      *value = DW_LANG_ObjC_plus_plus;
+      return 0;
+    case DW_LNAME_OCaml:
+      *value = DW_LANG_OCaml;
+      return 0;
+    case DW_LNAME_OpenCL_C:
+      *value = DW_LANG_OpenCL;
+      return 0;
+    case DW_LNAME_Pascal:
+      *value = DW_LANG_Pascal83;
+      return 0;
+    case DW_LNAME_PLI:
+      *value = DW_LANG_PLI;
+      return 0;
+    case DW_LNAME_Python:
+      *value = DW_LANG_Python;
+      return 0;
+    case DW_LNAME_RenderScript:
+      *value = DW_LANG_RenderScript;
+      return 0;
+    case DW_LNAME_Rust:
+      *value = DW_LANG_Rust;
+      return 0;
+    case DW_LNAME_Swift:
+      *value = DW_LANG_Swift;
+      return 0;
+    case DW_LNAME_UPC:
+      *value = DW_LANG_UPC;
+      return 0;
+    case DW_LNAME_Zig:
+      *value = DW_LANG_Zig;
+      return 0;
+    case DW_LNAME_Assembly:
+      /* DW_LANG_Assembler is not as good for compatibility.  */
+      *value = DW_LANG_Mips_Assembler;
+      return 0;
+    case DW_LNAME_C_sharp:
+      *value = DW_LANG_C_sharp;
+      return 0;
+    case DW_LNAME_Mojo:
+      *value = DW_LANG_Move;
+      return 0;
+    case DW_LNAME_GLSL:
+      *value = DW_LANG_GLSL;
+      return 0;
+    case DW_LNAME_GLSL_ES:
+      *value = DW_LANG_GLSL_ES;
+      return 0;
+    case DW_LNAME_HLSL:
+      *value = DW_LANG_HLSL;
+      return 0;
+    case DW_LNAME_OpenCL_CPP:
+      *value = DW_LANG_OpenCL_CPP;
+      return 0;
+    case DW_LNAME_CPP_for_OpenCL:
+      *value = DW_LANG_CPP_for_OpenCL;
+      return 0;
+    case DW_LNAME_SYCL:
+      *value = DW_LANG_SYCL;
+      return 0;
+    case DW_LNAME_Ruby:
+      *value = DW_LANG_Ruby;
+      return 0;
+    case DW_LNAME_Move:
+      *value = DW_LANG_Move;
+      return 0;
+    case DW_LNAME_Hylo:
+      *value = DW_LANG_Hylo;
+      return 0;
+    case DW_LNAME_HIP:
+      *value = DW_LANG_HIP;
+      return 0;
+    case DW_LNAME_Odin:
+      *value = DW_LANG_Odin;
+      return 0;
+    case DW_LNAME_P4:
+      *value = DW_LANG_P4;
+      return 0;
+    case DW_LNAME_Metal:
+      *value = DW_LANG_Metal;
+      return 0;
+    case DW_LNAME_V:
+      *value = DW_LANG_V;
+      return 0;
+    case DW_LNAME_Algol68:
+      *value = DW_LANG_Algol68;
+      return 0;
+    default:
+      __libdw_seterrno (DWARF_E_UNKNOWN_LANGUAGE);
+      return -1;
+    }
+}
+
 NEW_VERSION (dwarf_srclang, ELFUTILS_0.143)
 int
 dwarf_srclang (Dwarf_Die *die)
@@ -312,9 +507,29 @@ dwarf_srclang (Dwarf_Die *die)
   Dwarf_Attribute attr_mem;
   Dwarf_Word value;
 
-  return INTUSE(dwarf_formudata) (INTUSE(dwarf_attr_integrate)
-				  (die, DW_AT_language, &attr_mem),
-				  &value) == 0 ? (int) value : -1;
+  int res = INTUSE(dwarf_formudata) (INTUSE(dwarf_attr_integrate)
+				     (die, DW_AT_language, &attr_mem),
+				     &value) == 0 ? (int) value : -1;
+  if (res == -1)
+    {
+      res = INTUSE(dwarf_formudata) (INTUSE(dwarf_attr_integrate)
+				     (die, DW_AT_language_name, &attr_mem),
+				     &value);
+      if (res == 0)
+	{
+	  Dwarf_Word lname = value;
+	  Dwarf_Word lversion;
+	  res = INTUSE(dwarf_formudata) (INTUSE(dwarf_attr_integrate)
+					 (die, DW_AT_language_version,
+					  &attr_mem), &value);
+	  lversion = (res == 0) ? value : 0;
+	  res = language_to_srclang (lname, lversion, &value);
+	  if (res == 0)
+	    res = (int) value;
+	}
+    }
+
+  return res;
 }
 NEW_INTDEF (dwarf_srclang)
 OLD_VERSION (dwarf_srclang, ELFUTILS_0.122)
