@@ -834,7 +834,10 @@ enum
     DW_LNAME_P4 = 0x002b,
     DW_LNAME_Metal = 0x002c,
     DW_LNAME_V = 0x002d,
-    DW_LNAME_Algol68 = 0x002e
+    DW_LNAME_Algol68 = 0x002e,
+
+    DW_LNAME_lo_user = 0x8000,
+    DW_LNAME_hi_user = 0xffff
   };
 
 /* DWARF identifier case encodings.  */

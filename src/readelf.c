@@ -4372,6 +4372,20 @@ dwarf_lang_string (unsigned int lang)
 
 
 static const char *
+dwarf_lname_string (unsigned int lname)
+{
+  switch (lname)
+    {
+#define DWARF_ONE_KNOWN_DW_LNAME(NAME, CODE) case CODE: return #NAME;
+      DWARF_ALL_KNOWN_DW_LNAME
+#undef DWARF_ONE_KNOWN_DW_LNAME
+    default:
+      return NULL;
+    }
+}
+
+
+static const char *
 dwarf_inline_string (unsigned int code)
 {
   static const char *const known[] =
@@ -4675,6 +4689,15 @@ dwarf_lang_name (unsigned int lang)
 {
   const char *ret = dwarf_lang_string (lang);
   return string_or_unknown (ret, lang, DW_LANG_lo_user, DW_LANG_hi_user, false);
+}
+
+
+static const char *
+dwarf_lname_name (unsigned int lname)
+{
+  const char *ret = dwarf_lname_string (lname);
+  return string_or_unknown (ret, lname, DW_LNAME_lo_user, DW_LNAME_hi_user,
+			    false);
 }
 
 
@@ -7937,6 +7960,9 @@ attr_callback (Dwarf_Attribute *attrp, void *arg)
 
 	case DW_AT_language:
 	  valuestr = dwarf_lang_name (num);
+	  break;
+	case DW_AT_language_name:
+	  valuestr = dwarf_lname_name (num);
 	  break;
 	case DW_AT_encoding:
 	  valuestr = dwarf_encoding_name (num);

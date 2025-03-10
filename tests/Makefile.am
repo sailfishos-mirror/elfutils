@@ -165,6 +165,7 @@ TESTS = run-arextract.sh run-arsymtest.sh run-ar.sh newfile test-nlist \
 	run-test-flag-nobits.sh run-prelink-addr-test.sh \
 	run-dwarf-getstring.sh run-rerequest_tag.sh run-typeiter.sh \
 	run-readelf-d.sh run-readelf-gdb_index.sh run-unstrip-n.sh \
+	run-readelf-lnames.sh \
 	run-low_high_pc.sh run-macro-test.sh run-elf_cntl_gelf_getshdr.sh \
 	run-test-archive64.sh run-readelf-vmcoreinfo.sh \
 	run-readelf-mixed-corenote.sh run-dwfllines.sh \
@@ -451,6 +452,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     run-typeiter.sh testfile59.bz2 \
 	     run-readelf-d.sh testlib_dynseg.so.bz2 \
 	     run-readelf-Dd.sh \
+	     run-readelf-lnames.sh testfile-lnames.bz2 \
 	     testfile-s390x-hash-both.bz2 \
 	     run-readelf-gdb_index.sh testfilegdbindex5.bz2 \
 	     testfilegdbindex7.bz2 testfilegdbindex9.bz2 \
