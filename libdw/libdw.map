@@ -399,4 +399,5 @@ ELFUTILS_0.193 {
     dwfl_module_gettracker;
     dwfl_process_tracker_find_elf;
     dwfl_process_tracker_find_pid;
+    dwfl_perf_sample_getframes;
 } ELFUTILS_0.192;
