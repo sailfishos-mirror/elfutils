@@ -34,6 +34,24 @@
 #include <libeblP.h>
 #include <assert.h>
 
+Dwarf_Word
+ebl_sample_base_addr (Ebl *ebl,
+                      const Dwarf_Word *regs, uint32_t n_regs,
+		      uint64_t regs_mask, uint32_t abi)
+{
+  assert (ebl->sample_base_addr != NULL);
+  return ebl->sample_base_addr (regs, n_regs, regs_mask, abi);
+}
+
+Dwarf_Word
+ebl_sample_pc (Ebl *ebl,
+	       const Dwarf_Word *regs, uint32_t n_regs,
+	       uint64_t regs_mask, uint32_t abi)
+{
+  assert (ebl->sample_pc != NULL);
+  return ebl->sample_pc (regs, n_regs, regs_mask, abi);
+}
+
 bool
 ebl_set_initial_registers_sample (Ebl *ebl,
 				  const Dwarf_Word *regs, uint32_t n_regs,

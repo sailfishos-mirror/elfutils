@@ -40,6 +40,56 @@
 #include "libebl_CPU.h"
 #include "libebl_PERF_FLAGS.h"
 
+Dwarf_Word
+find_reg (const Dwarf_Word *regs, uint32_t n_regs,
+          uint64_t regs_mask,
+	  /* XXX hypothetically needed if the register position varies
+	     for 32-bit perf_events samples; not needed on x86 */
+	  uint32_t abi __attribute__((unused)),
+	  int target)
+{
+  int j, k; uint64_t bit;
+  for (j = 0, k = 0, bit = 1; k < PERF_REG_X86_64_MAX; k++, bit <<= 1)
+    {
+      if (bit & regs_mask) {
+	if (n_regs <= (uint32_t) j)
+	  return 0; /* regs_mask count doesn't match n_regs */
+	if (k == target)
+	  return regs[j];
+	if (k > target)
+	  return 0; /* regs_mask doesn't include desired reg */
+	j++;
+      }
+    }
+  return 0;
+}
+
+/* Register ordering cf. linux arch/x86/include/uapi/asm/perf_regs.h,
+   enum perf_event_x86_regs: */
+Dwarf_Word
+x86_64_sample_base_addr (const Dwarf_Word *regs, uint32_t n_regs,
+                         uint64_t regs_mask, uint32_t abi)
+{
+#if !defined(__x86_64__) || !defined(__linux__)
+    return 0;
+#else /* __x86_64__ */
+    return find_reg(regs, n_regs, regs_mask, abi,
+		    7 /* index into perf_event_x86_regs */);
+#endif
+}
+
+Dwarf_Word
+x86_64_sample_pc (const Dwarf_Word *regs, uint32_t n_regs,
+                  uint64_t regs_mask, uint32_t abi)
+{
+#if !defined(__x86_64__) || !defined(__linux__)
+    return 0;
+#else /* __x86_64__ */
+    return find_reg(regs, n_regs, regs_mask, abi,
+		    8 /* index into perf_event_x86_regs */);
+#endif
+}
+
 bool
 x86_64_set_initial_registers_sample (const Dwarf_Word *regs, uint32_t n_regs,
 				     uint64_t regs_mask, uint32_t abi,

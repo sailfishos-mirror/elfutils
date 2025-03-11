@@ -64,6 +64,8 @@ x86_64_init (Elf *elf __attribute__ ((unused)),
   eh->frame_nregs = 17;
   HOOK (eh, set_initial_registers_tid);
   HOOK (eh, set_initial_registers_sample);
+  HOOK (eh, sample_base_addr);
+  HOOK (eh, sample_pc);
   eh->perf_frame_regs_mask = PERF_FRAME_REGISTERS_X86_64;
   HOOK (eh, unwind);
   HOOK (eh, check_reloc_target_type);

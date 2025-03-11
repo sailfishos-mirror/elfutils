@@ -166,6 +166,14 @@ bool EBLHOOK(set_initial_registers_sample) (const Dwarf_Word *regs, uint32_t n_r
 					    ebl_tid_registers_t *setfunc,
 					    void *arg);
 
+/* Extract the stack address from a perf_events register sample.  */
+Dwarf_Word EBLHOOK(sample_base_addr) (const Dwarf_Word *regs, uint32_t n_regs,
+				      uint64_t regs_mask, uint32_t abi);
+
+/* Extract the instruction pointer from a perf_events register sample.  */
+Dwarf_Word EBLHOOK(sample_pc) (const Dwarf_Word *regs, uint32_t n_regs,
+			       uint64_t regs_mask, uint32_t abi);
+
 /* Convert *REGNO as is in DWARF to a lower range suitable for
    Dwarf_Frame->REGS indexing.  */
 bool EBLHOOK(dwarf_to_regno) (Ebl *ebl, unsigned *regno);

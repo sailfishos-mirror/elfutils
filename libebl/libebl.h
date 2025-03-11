@@ -350,6 +350,19 @@ extern bool ebl_set_initial_registers_sample (Ebl *ebl,
 					      void *arg)
   __nonnull_attribute__ (1, 2, 6);
 
+/* Extract the stack address from a perf_events register sample.  */
+Dwarf_Word ebl_sample_base_addr (Ebl *ebl,
+				 const Dwarf_Word *regs, uint32_t n_regs,
+				 uint64_t regs_mask, uint32_t abi)
+  __nonnull_attribute__ (1, 2);
+
+/* Extract the instruction pointer from a perf_events register sample.  */
+Dwarf_Word ebl_sample_pc (Ebl *ebl,
+			  const Dwarf_Word *regs, uint32_t n_regs,
+			  uint64_t regs_mask, uint32_t abi)
+  __nonnull_attribute__ (1, 2);
+
+
 /* Preferred sample_regs_user mask to request from linux perf_events
    to allow unwinding on EBL architecture.  Omitting some of these
    registers may result in failed or inaccurate unwinding. */
