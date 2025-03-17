@@ -467,6 +467,10 @@ struct Dwarf_CU
      Covers dwarf_getsrclines and dwarf_getsrcfiles.  */
   mutex_define(, src_lock);
 
+  /* Synchronize access to the str_off_base of this Dwarf_CU.
+     Covers __libdw_str_offsets_base_off.  */
+  mutex_define(, str_off_base_lock);
+
   /* Memory boundaries of this CU.  */
   void *startp;
   void *endp;
@@ -1210,6 +1214,7 @@ str_offsets_base_off (Dwarf *dbg, Dwarf_CU *cu)
   Dwarf_Off off = 0;
   if (cu != NULL)
     {
+      mutex_lock (cu->str_off_base_lock);
       if (cu->str_off_base == (Dwarf_Off) -1)
 	{
 	  Dwarf_Off dwp_offset;
@@ -1224,6 +1229,7 @@ str_offsets_base_off (Dwarf *dbg, Dwarf_CU *cu)
 	      if (dwarf_formudata (&attr, &base) == 0)
 		{
 		  cu->str_off_base = off + base;
+		  mutex_unlock (cu->str_off_base_lock);
 		  return cu->str_off_base;
 		}
 	    }
@@ -1231,6 +1237,7 @@ str_offsets_base_off (Dwarf *dbg, Dwarf_CU *cu)
 	  if (cu->version < 5)
 	    {
 	      cu->str_off_base = off;
+	      mutex_unlock (cu->str_off_base_lock);
 	      return cu->str_off_base;
 	    }
 
@@ -1238,7 +1245,10 @@ str_offsets_base_off (Dwarf *dbg, Dwarf_CU *cu)
 	    dbg = cu->dbg;
 	}
       else
-	return cu->str_off_base;
+	{
+	  mutex_unlock (cu->str_off_base_lock);
+	  return cu->str_off_base;
+	}
     }
 
   /* No str_offsets_base attribute, we have to assume "zero".
@@ -1288,7 +1298,10 @@ str_offsets_base_off (Dwarf *dbg, Dwarf_CU *cu)
 
  no_header:
   if (cu != NULL)
-    cu->str_off_base = off;
+    {
+      cu->str_off_base = off;
+      mutex_unlock (cu->str_off_base_lock);
+    }
 
   return off;
 }

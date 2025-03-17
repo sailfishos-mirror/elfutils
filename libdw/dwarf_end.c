@@ -71,6 +71,7 @@ cu_free (void *arg)
       rwlock_fini (p->abbrev_lock);
       rwlock_fini (p->split_lock);
       mutex_fini (p->src_lock);
+      mutex_fini (p->str_off_base_lock);
 
       /* Free split dwarf one way (from skeleton to split).  */
       if (p->unit_type == DW_UT_skeleton

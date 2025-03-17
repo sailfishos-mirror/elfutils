@@ -180,6 +180,7 @@ __libdw_intern_next_unit (Dwarf *dbg, bool debug_types)
   rwlock_init (newp->abbrev_lock);
   rwlock_init (newp->split_lock);
   mutex_init (newp->src_lock);
+  mutex_init (newp->str_off_base_lock);
 
   /* v4 debug type units have version == 4 and unit_type == DW_UT_type.  */
   if (debug_types)
