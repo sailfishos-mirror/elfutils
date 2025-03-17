@@ -1442,8 +1442,10 @@ dwarf_getsrclines (Dwarf_Die *cudie, Dwarf_Lines **lines, size_t *nlines)
       return -1;
     }
 
-  /* Get the information if it is not already known.  */
   struct Dwarf_CU *const cu = cudie->cu;
+  mutex_lock (cu->src_lock);
+
+  /* Get the information if it is not already known.  */
   if (cu->lines == NULL)
     {
       /* For split units always pick the lines from the skeleton.  */
@@ -1464,10 +1466,13 @@ dwarf_getsrclines (Dwarf_Die *cudie, Dwarf_Lines **lines, size_t *nlines)
 		  *lines = cu->lines;
 		  *nlines = cu->lines->nlines;
 		}
+
+	      mutex_unlock (cu->src_lock);
 	      return res;
 	    }
 
 	  __libdw_seterrno (DWARF_E_NO_DEBUG_LINE);
+	  mutex_unlock (cu->src_lock);
 	  return -1;
 	}
 
@@ -1485,21 +1490,29 @@ dwarf_getsrclines (Dwarf_Die *cudie, Dwarf_Lines **lines, size_t *nlines)
       Dwarf_Off debug_line_offset;
       if (__libdw_formptr (stmt_list, IDX_debug_line, DWARF_E_NO_DEBUG_LINE,
 			   NULL, &debug_line_offset) == NULL)
-	return -1;
+	{
+	  mutex_unlock (cu->src_lock);
+	  return -1;
+	}
 
       if (__libdw_getsrclines (cu->dbg, debug_line_offset,
 			       __libdw_getcompdir (cudie),
 			       cu->address_size, &cu->lines, &cu->files) < 0)
-	return -1;
+	{
+	  mutex_unlock (cu->src_lock);
+	  return -1;
+	}
     }
   else if (cu->lines == (void *) -1l)
-    return -1;
+    {
+      mutex_unlock (cu->src_lock);
+      return -1;
+    }
 
   *lines = cu->lines;
   *nlines = cu->lines->nlines;
 
-  // XXX Eventually: unlocking here.
-
+  mutex_unlock (cu->src_lock);
   return 0;
 }
 INTDEF(dwarf_getsrclines)

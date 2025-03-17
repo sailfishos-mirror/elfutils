@@ -265,10 +265,12 @@ struct Dwarf
   pthread_rwlock_t mem_rwl;
 
   /* Recursive mutex intended for setting/getting alt_dwarf, next_tu_offset,
-     and next_cu_offset.  Covers dwarf_getsrclines, dwarf_getsrcfiles and
-     dwarf_macro_getsrcfiles.  Should also be held when calling
+     and next_cu_offset.  Should be held when calling
      __libdw_intern_next_unit.  */
   mutex_define(, dwarf_lock);
+
+  /* Synchronize access to dwarf_macro_getsrcfiles.  */
+  mutex_define(, macro_lock);
 
   /* Internal memory handling.  This is basically a simplified thread-local
      reimplementation of obstacks.  Unfortunately the standard obstack
@@ -460,6 +462,10 @@ struct Dwarf_CU
   /* Synchronize access to the split member of this Dwarf_CU.
      Covers __libdw_find_split_unit.  */
   rwlock_define(, split_lock);
+
+  /* Synchronize access to the lines and files members.
+     Covers dwarf_getsrclines and dwarf_getsrcfiles.  */
+  mutex_define(, src_lock);
 
   /* Memory boundaries of this CU.  */
   void *startp;

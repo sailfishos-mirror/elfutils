@@ -41,6 +41,8 @@ dwarf_macro_getsrcfiles (Dwarf *dbg, Dwarf_Macro *macro,
 
   /* macro is declared NN */
   Dwarf_Macro_Op_Table *const table = macro->table;
+
+  mutex_lock (table->dbg->macro_lock);
   if (table->files == NULL)
     {
       Dwarf_Off line_offset = table->line_offset;
@@ -48,6 +50,7 @@ dwarf_macro_getsrcfiles (Dwarf *dbg, Dwarf_Macro *macro,
 	{
 	  *files = NULL;
 	  *nfiles = 0;
+	  mutex_unlock (table->dbg->macro_lock);
 	  return 0;
 	}
 
@@ -80,9 +83,14 @@ dwarf_macro_getsrcfiles (Dwarf *dbg, Dwarf_Macro *macro,
     }
 
   if (table->files == (void *) -1)
-    return -1;
+    {
+      mutex_unlock (table->dbg->macro_lock);
+      return -1;
+    }
 
   *files = table->files;
   *nfiles = table->files->nfiles;
+
+  mutex_unlock (table->dbg->macro_lock);
   return 0;
 }

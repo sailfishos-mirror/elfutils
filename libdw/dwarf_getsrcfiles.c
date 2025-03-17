@@ -47,9 +47,10 @@ dwarf_getsrcfiles (Dwarf_Die *cudie, Dwarf_Files **files, size_t *nfiles)
     }
 
   int res = -1;
+  struct Dwarf_CU *const cu = cudie->cu;
+  mutex_lock (cudie->cu->src_lock);
 
   /* Get the information if it is not already known.  */
-  struct Dwarf_CU *const cu = cudie->cu;
   if (cu->files == NULL)
     {
       /* For split units there might be a simple file table (without lines).
@@ -96,7 +97,10 @@ dwarf_getsrcfiles (Dwarf_Die *cudie, Dwarf_Files **files, size_t *nfiles)
 	  Dwarf_Off debug_line_offset;
 	  if (__libdw_formptr (stmt_list, IDX_debug_line, DWARF_E_NO_DEBUG_LINE,
 			       NULL, &debug_line_offset) == NULL)
-	    return -1;
+	    {
+	      mutex_unlock (cudie->cu->src_lock);
+	      return -1;
+	    }
 
 	  res = __libdw_getsrcfiles (cu->dbg, debug_line_offset,
 				     __libdw_getcompdir (cudie),
@@ -115,8 +119,7 @@ dwarf_getsrcfiles (Dwarf_Die *cudie, Dwarf_Files **files, size_t *nfiles)
 	*nfiles = cu->files->nfiles;
     }
 
-  // XXX Eventually: unlocking here.
-
+  mutex_unlock (cudie->cu->src_lock);
   return res;
 }
 INTDEF (dwarf_getsrcfiles)

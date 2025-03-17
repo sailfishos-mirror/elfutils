@@ -70,6 +70,7 @@ cu_free (void *arg)
       Dwarf_Abbrev_Hash_free (&p->abbrev_hash);
       rwlock_fini (p->abbrev_lock);
       rwlock_fini (p->split_lock);
+      mutex_fini (p->src_lock);
 
       /* Free split dwarf one way (from skeleton to split).  */
       if (p->unit_type == DW_UT_skeleton
@@ -130,6 +131,7 @@ dwarf_end (Dwarf *dwarf)
         free (dwarf->mem_tails);
       pthread_rwlock_destroy (&dwarf->mem_rwl);
       mutex_fini (dwarf->dwarf_lock);
+      mutex_fini (dwarf->macro_lock);
 
       /* Free the pubnames helper structure.  */
       free (dwarf->pubnames_sets);
