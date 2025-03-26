@@ -26,7 +26,7 @@ check_thread_safety_enabled()
 	${abs_builddir}/../config.h | awk '{print $3}')
 
   # Test will only be run if USE_LOCKS is defined. Otherwise, skip.
-  if [[ "$USE_LOCKS" != 1 ]]; then
+  if [ "$USE_LOCKS" != 1 ]; then
     echo "USE_LOCKS is not defined. Skipping test."
     exit 77
   fi
