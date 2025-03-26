@@ -68,6 +68,7 @@
 /elf-print-reloc-syms
 /emptyfile
 /eu_search_cfi
+/eu_search_macros
 /fillfile
 /find-prologues
 /funcretval
