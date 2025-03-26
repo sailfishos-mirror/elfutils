@@ -66,6 +66,7 @@ check_PROGRAMS = arextract arsymtest newfile saridx scnnames sectiondump \
 		  msg_tst system-elf-libelf-test system-elf-gelf-test \
 		  nvidia_extended_linemap_libdw elf-print-reloc-syms \
 		  cu-dwp-section-info declfiles test-manyfuncs \
+		  eu_search_cfi \
 		  $(asm_TESTS)
 
 asm_TESTS = asm-tst1 asm-tst2 asm-tst3 asm-tst4 asm-tst5 \
@@ -232,7 +233,8 @@ TESTS = run-arextract.sh run-arsymtest.sh run-ar.sh newfile test-nlist \
 	run-readelf-Dd.sh run-dwfl-core-noncontig.sh run-cu-dwp-section-info.sh \
 	run-declfiles.sh \
 	run-sysroot.sh \
-	run-test-manyfuncs.sh
+	run-test-manyfuncs.sh \
+	run-eu-search-cfi.sh
 
 if !BIARCH
 export ELFUTILS_DISABLE_BIARCH = 1
@@ -707,7 +709,8 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     testfile-define-file.bz2 \
 	     testfile-sysroot.tar.bz2 run-sysroot.sh \
 	     run-test-manyfuncs.sh manyfuncs.c \
-	     run-debuginfod-seekable.sh thread-safety-subr.sh
+	     run-debuginfod-seekable.sh thread-safety-subr.sh \
+	     run-eu-search-cfi.sh
 
 
 if USE_HELGRIND
@@ -893,6 +896,8 @@ nvidia_extended_linemap_libdw_LDADD = $(libelf) $(libdw)
 elf_print_reloc_syms_LDADD = $(libelf)
 cu_dwp_section_info_LDADD = $(libdw)
 declfiles_LDADD = $(libdw)
+eu_search_cfi_LDFLAGS = -pthread $(AM_LDFLAGS)
+eu_search_cfi_LDADD = $(libeu) $(libelf) $(libdw)
 test_manyfuncs_LDADD = $(libelf)
 # Make sure the manyfunc.o test object is generated before test-manyfuncs
 EXTRA_test_manyfuncs_DEPENDENCIES = manyfuncs.o
