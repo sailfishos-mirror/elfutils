@@ -707,7 +707,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     testfile-define-file.bz2 \
 	     testfile-sysroot.tar.bz2 run-sysroot.sh \
 	     run-test-manyfuncs.sh manyfuncs.c \
-	     run-debuginfod-seekable.sh
+	     run-debuginfod-seekable.sh thread-safety-subr.sh
 
 
 if USE_HELGRIND
