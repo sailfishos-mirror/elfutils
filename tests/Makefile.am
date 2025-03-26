@@ -710,8 +710,12 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     run-debuginfod-seekable.sh
 
 
+if USE_HELGRIND
+valgrind_cmd=valgrind -q --tool=helgrind --error-exitcode=1 --track-fds=yes
+else
 if USE_VALGRIND
 valgrind_cmd=valgrind -q --leak-check=full --error-exitcode=1 --track-fds=yes
+endif
 endif
 
 

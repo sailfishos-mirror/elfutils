@@ -363,10 +363,15 @@ if test "$use_address" = yes; then
 fi
 AM_CONDITIONAL(USE_ADDRESS_SANITIZER, test "$use_address" = yes)
 
+AC_ARG_ENABLE([helgrind],
+AS_HELP_STRING([--enable-helgrind],[run all tests under the valgrind tool helgrind]),
+[use_helgrind=$enableval], [use_helgrind=no])
+
 AC_ARG_ENABLE([valgrind],
 AS_HELP_STRING([--enable-valgrind],[run all tests under valgrind]),
 [use_valgrind=$enableval], [use_valgrind=no])
-if test "$use_valgrind" = yes; then
+
+if test "$use_valgrind" = yes -o "$use_helgrind" = yes; then
   if test "$use_address" = yes; then
     AC_MSG_ERROR([cannot enable valgrind and sanitize address together])
   fi
@@ -375,7 +380,8 @@ if test "$use_valgrind" = yes; then
     AC_MSG_ERROR([valgrind not found])
   fi
 fi
-AM_CONDITIONAL(USE_VALGRIND, test "$use_valgrind" = yes)
+AM_CONDITIONAL(USE_VALGRIND, test "$use_valgrind" = yes -o "$use_helgrind" = yes)
+AM_CONDITIONAL(USE_HELGRIND, test "$use_helgrind" = yes)
 
 AC_ARG_WITH([valgrind],
 AS_HELP_STRING([--with-valgrind],[include directory for Valgrind headers]),
@@ -394,6 +400,12 @@ fi
 AC_ARG_ENABLE([valgrind-annotations],
 AS_HELP_STRING([--enable-valgrind-annotations],[insert extra annotations for better valgrind support]),
 [use_vg_annotations=$enableval], [use_vg_annotations=no])
+
+# Helgrind requires Valgrind annotations.
+if test "$use_vg_annotations" = no -a "$use_helgrind" = yes; then
+  AC_MSG_ERROR(["--enable-helgrind requires --enable-valgrind-annotations"])
+fi
+
 if test "$use_vg_annotations" = yes; then
     if test "x$HAVE_VALGRIND_HEADERS" != "xyes"; then
       AC_MSG_CHECKING([whether Valgrind headers are available])
