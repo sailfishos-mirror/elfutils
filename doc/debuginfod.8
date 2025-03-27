@@ -155,6 +155,11 @@ opened, if possible.  The webapi is documented below.  The default
 port number is 8002.
 
 .TP
+.B "\-\-listen\-address=ADDR"
+Set the IP address (IPv4/IPv6 address of the system) on which
+debuginfod should listen, to service HTTP requests.
+
+.TP
 .B "\-\-cors"
 Add CORS-related response headers and OPTIONS method processing.
 This allows third-party webapps to query debuginfod data, which may

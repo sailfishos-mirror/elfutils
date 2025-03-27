@@ -81,6 +81,7 @@ extern "C" {
 #include <math.h>
 #include <float.h>
 #include <fnmatch.h>
+#include <arpa/inet.h>
 
 
 /* If fts.h is included before config.h, its indirect inclusions may not
@@ -481,6 +482,8 @@ static const struct argp_option options[] =
 #define ARGP_KEY_METADATA_MAXTIME 0x100C
    { "metadata-maxtime", ARGP_KEY_METADATA_MAXTIME, "SECONDS", 0,
      "Number of seconds to limit metadata query run time, 0=unlimited.", 0 },
+#define ARGP_KEY_HTTP_ADDR 0x100D
+   { "listen-address", ARGP_KEY_HTTP_ADDR, "ADDR", 0, "HTTP address to listen on.", 0 },
    { NULL, 0, NULL, 0, NULL, 0 },
   };
 
@@ -512,6 +515,8 @@ static volatile sig_atomic_t sigusr1 = 0;
 static volatile sig_atomic_t forced_groom_count = 0;
 static volatile sig_atomic_t sigusr2 = 0;
 static unsigned http_port = 8002;
+static struct sockaddr_in6 http_sockaddr;
+static string addr_info = "";
 static bool webapi_cors = false;
 static unsigned rescan_s = 300;
 static unsigned groom_s = 86400;
@@ -753,6 +758,16 @@ parse_opt (int key, char *arg,
       requires_koji_sigcache_mapping = true;
       break;
 #endif
+    case ARGP_KEY_HTTP_ADDR:
+      if (inet_pton(AF_INET, arg, &(((sockaddr_in*)&http_sockaddr)->sin_addr)) == 1)
+          http_sockaddr.sin6_family = AF_INET;
+      else
+          if (inet_pton(AF_INET6, arg, &http_sockaddr.sin6_addr) == 1)
+              http_sockaddr.sin6_family = AF_INET6;
+          else
+              argp_failure(state, 1, EINVAL, "listen-address");
+      addr_info = arg;
+      break;
       // case 'h': argp_state_help (state, stderr, ARGP_HELP_LONG|ARGP_HELP_EXIT_OK);
     default: return ARGP_ERR_UNKNOWN;
     }
@@ -5596,6 +5611,8 @@ main (int argc, char *argv[])
   fdcache_prefetch = 64; // guesstimate storage is this much less costly than re-decompression
 
   /* Parse and process arguments.  */
+  memset(&http_sockaddr, 0, sizeof(http_sockaddr));
+  http_sockaddr.sin6_family = AF_UNSPEC;
   int remaining;
   (void) argp_parse (&argp, argc, argv, ARGP_IN_ORDER, &remaining, NULL);
   if (remaining != argc)
@@ -5702,50 +5719,75 @@ main (int argc, char *argv[])
 #endif
 			    | MHD_USE_DEBUG); /* report errors to stderr */
 
-  // Start httpd server threads.  Use a single dual-homed pool.
-  MHD_Daemon *d46 = MHD_start_daemon (mhd_flags, http_port,
-				      NULL, NULL, /* default accept policy */
-				      handler_cb, NULL, /* handler callback */
-				      MHD_OPTION_EXTERNAL_LOGGER,
-				      error_cb, NULL,
-				      MHD_OPTION_THREAD_POOL_SIZE,
-				      (int)connection_pool,
-				      MHD_OPTION_END);
+  MHD_Daemon *dsa = NULL,
+	     *d4 = NULL,
+	     *d46 = NULL;
 
-  MHD_Daemon *d4 = NULL;
-  if (d46 == NULL)
+  if (http_sockaddr.sin6_family != AF_UNSPEC)
     {
-      // Cannot use dual_stack, use ipv4 only
-      mhd_flags &= ~(MHD_USE_DUAL_STACK);
-      d4 = MHD_start_daemon (mhd_flags, http_port,
-			     NULL, NULL, /* default accept policy */
+      if (http_sockaddr.sin6_family == AF_INET)
+	((sockaddr_in*)&http_sockaddr)->sin_port = htons(http_port);
+      if (http_sockaddr.sin6_family == AF_INET6)
+	http_sockaddr.sin6_port = htons(http_port);
+      // Start httpd server threads on socket addr:port.
+      dsa = MHD_start_daemon (mhd_flags & ~MHD_USE_DUAL_STACK, http_port,
+			      NULL, NULL, /* default accept policy */
 			     handler_cb, NULL, /* handler callback */
 			     MHD_OPTION_EXTERNAL_LOGGER,
 			     error_cb, NULL,
-			     (connection_pool
-			      ? MHD_OPTION_THREAD_POOL_SIZE
-			      : MHD_OPTION_END),
-			     (connection_pool
-			      ? (int)connection_pool
-			      : MHD_OPTION_END),
+			     MHD_OPTION_SOCK_ADDR,
+			     (struct sockaddr *) &http_sockaddr,
+			     MHD_OPTION_THREAD_POOL_SIZE,
+			     (int)connection_pool,
 			     MHD_OPTION_END);
-      if (d4 == NULL)
-	{
-	  sqlite3 *database = db;
-	  sqlite3 *databaseq = dbq;
-	  db = dbq = 0; // for signal_handler not to freak
-	  sqlite3_close (databaseq);
-	  sqlite3_close (database);
-	  error (EXIT_FAILURE, 0, "cannot start http server at port %d",
-		 http_port);
-	}
-
     }
-  obatched(clog) << "started http server on"
-                 << (d4 != NULL ? " IPv4 " : " IPv4 IPv6 ")
-                 << "port=" << http_port
-                 << (webapi_cors ? " with cors" : "")
-                 << endl;
+  else
+    {
+      // Start httpd server threads.  Use a single dual-homed pool.
+      d46 = MHD_start_daemon (mhd_flags, http_port,
+			      NULL, NULL, /* default accept policy */
+			      handler_cb, NULL, /* handler callback */
+			      MHD_OPTION_EXTERNAL_LOGGER,
+			      error_cb, NULL,
+			      MHD_OPTION_THREAD_POOL_SIZE,
+			      (int)connection_pool,
+			      MHD_OPTION_END);
+      addr_info = "IPv4 IPv6";
+      if (d46 == NULL)
+	{
+	  // Cannot use dual_stack, use ipv4 only
+	  mhd_flags &= ~(MHD_USE_DUAL_STACK);
+	  d4 = MHD_start_daemon (mhd_flags, http_port,
+				 NULL, NULL, /* default accept policy */
+				 handler_cb, NULL, /* handler callback */
+				 MHD_OPTION_EXTERNAL_LOGGER,
+				 error_cb, NULL,
+				 (connection_pool
+				  ? MHD_OPTION_THREAD_POOL_SIZE
+				  : MHD_OPTION_END),
+				 (connection_pool
+				  ? (int)connection_pool
+				  : MHD_OPTION_END),
+				 MHD_OPTION_END);
+	  addr_info = "IPv4";
+	}
+    }
+  if (d4 == NULL && d46 == NULL && dsa == NULL)
+    {
+      sqlite3 *database = db;
+      sqlite3 *databaseq = dbq;
+      db = dbq = 0; // for signal_handler not to freak
+      sqlite3_close (databaseq);
+      sqlite3_close (database);
+      error (EXIT_FAILURE, 0, "cannot start http server on %s port %d",
+	     addr_info.c_str(), http_port);
+    }
+
+  obatched(clog) << "started http server on "
+		 << addr_info
+		 << " port=" << http_port
+		 << (webapi_cors ? " with cors" : "")
+		 << endl;
 
   // add maxigroom sql if -G given
   if (maxigroom)
@@ -5869,6 +5911,7 @@ main (int argc, char *argv[])
     pthread_join (it, NULL);
 
   /* Stop all the web service threads. */
+  if (dsa) MHD_stop_daemon (dsa);
   if (d46) MHD_stop_daemon (d46);
   if (d4) MHD_stop_daemon (d4);
 
