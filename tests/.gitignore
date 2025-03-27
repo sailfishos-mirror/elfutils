@@ -41,6 +41,7 @@
 /dwarf_default_lower_bound
 /dwarfcfi
 /dwelf_elf_e_machine_string
+/dwarf_language_lower_bound
 /dwelfgnucompressed
 /dwfl-addr-sect
 /dwfl-bug-addr-overflow
@@ -115,6 +116,7 @@
 /system-elf-gelf-test
 /test-elf_cntl_gelf_getshdr
 /test-flag-nobits
+/test-manyfuncs
 /test-nlist
 /typeiter
 /typeiter2
