@@ -118,6 +118,10 @@ static int srclang_to_language (Dwarf_Word srclang,
       *lname = DW_LNAME_D;
       *lversion = 0;
       return 0;
+    case DW_LANG_Dylan:
+      *lname = DW_LNAME_Dylan;
+      *lversion = 0;
+      return 0;
     case DW_LANG_Python:
       *lname = DW_LNAME_Python;
       *lversion = 0;
@@ -299,6 +303,18 @@ static int srclang_to_language (Dwarf_Word srclang,
       *lname = DW_LNAME_Hylo;
       *lversion = 0;
       return 0;
+    case DW_LANG_V:
+      *lname = DW_LNAME_V;
+      *lversion = 0;
+      return 0;
+    case DW_LANG_Algol68:
+      *lname = DW_LNAME_Algol68;
+      *lversion = 0;
+      return 0;
+    case DW_LANG_Nim:
+      *lname = DW_LNAME_Nim;
+      *lversion = 0;
+      return 0;
     default:
       __libdw_seterrno (DWARF_E_UNKNOWN_LANGUAGE);
       return -1;
@@ -447,7 +463,7 @@ language_to_srclang (Dwarf_Word lname, Dwarf_Word lversion, Dwarf_Word *value)
       *value = DW_LANG_C_sharp;
       return 0;
     case DW_LNAME_Mojo:
-      *value = DW_LANG_Move;
+      *value = DW_LANG_Mojo;
       return 0;
     case DW_LNAME_GLSL:
       *value = DW_LANG_GLSL;
@@ -493,6 +509,9 @@ language_to_srclang (Dwarf_Word lname, Dwarf_Word lversion, Dwarf_Word *value)
       return 0;
     case DW_LNAME_Algol68:
       *value = DW_LANG_Algol68;
+      return 0;
+    case DW_LNAME_Nim:
+      *value = DW_LANG_Nim;
       return 0;
     default:
       __libdw_seterrno (DWARF_E_UNKNOWN_LANGUAGE);
@@ -574,3 +593,69 @@ dwarf_language (Dwarf_Die *cudie, Dwarf_Word *lname, Dwarf_Word *lversion)
   return res;
 }
 INTDEF (dwarf_language)
+
+#ifdef MAIN_CHECK
+#include "known-dwarf.h"
+#include <inttypes.h>
+#include <stdio.h>
+
+void
+test_lang (const char *name, Dwarf_Word lang)
+{
+  printf ("Testing %s: 0x%" PRIx64 "\n", name, lang);
+
+  Dwarf_Word lname;
+  Dwarf_Word lversion;
+  int res = srclang_to_language (lang, &lname, &lversion);
+  if (res != 0)
+    {
+      printf ("srclang_to_language failed (%d) for %s\n", res, name);
+      exit (-1);
+    }
+
+  Dwarf_Word rlang;
+  res = language_to_srclang (lname, lversion, &rlang);
+  if (res != 0)
+    {
+      printf ("language_to_srclang (%" PRId64 ", %" PRId64 ") failed (%d)\n",
+	      lname, lversion, res);
+      exit (-1);
+    }
+
+  /* Most langs should roundtrip, but there are some exceptions.  */
+  switch (lang)
+    {
+    case DW_LANG_Assembly:
+      if (rlang != DW_LANG_Mips_Assembler)
+	{
+	  printf ("For compatibility Assembly should go to Mips_Assembler\n");
+	  exit (-1);
+	}
+      break;
+    case DW_LANG_C_plus_plus_03:
+      if (rlang != DW_LANG_C_plus_plus)
+	{
+	  printf ("For c++03 doesn't exist it is just c++\n");
+	  exit (-1);
+	}
+      break;
+    default:
+      if (lang != rlang)
+	{
+	  printf ("going from srclang to lang and back gives different name "
+		  "for %s (%" PRId64 " != %" PRId64 ")\n", name, lang, rlang);
+	  exit (-1);
+	}
+    }
+}
+
+int
+main (void)
+{
+  /* Test all known language codes.  */
+#define DWARF_ONE_KNOWN_DW_LANG(NAME, CODE) test_lang (#NAME, CODE);
+  DWARF_ALL_KNOWN_DW_LANG
+#undef DWARF_ONE_KNOWN_DW_LANG
+  return 0;
+}
+#endif

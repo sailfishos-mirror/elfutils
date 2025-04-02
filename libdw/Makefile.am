@@ -160,3 +160,14 @@ libdw.manifest: $(libdw_a_OBJECTS)
 MOSTLYCLEANFILES = $(am_libdw_a_OBJECTS) $(am_libdw_pic_a_OBJECTS) libdw.so.$(VERSION)
 CLEANFILES = libdw.so $(EXTRA_libdw_a_DEPENDENCIES)
 MAINTAINERCLEANFILES = $(srcdir)/known-dwarf.h
+
+# Internal checks
+check_PROGRAMS = dwarf_srclang_check
+TESTS = $(check_PROGRAMS)
+
+CHECK_DEF_FLAGS = $(DEFS) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -DMAIN_CHECK=1
+
+.SECONDEXPANSION:
+dwarf_srclang_check$(EXEEXT): $$(filter-out $$(subst _check,,$$@).o,$(libdw_a_OBJECTS)) $$(subst _check,,$$@).c
+	$(AM_V_CC)$(CC) $(CHECK_DEF_FLAGS) -o $@ $^ $(filter-out libdw_pic.a,$(libdw_so_LIBS)) $(libdw_so_LDLIBS)
+nodist_dwarf_srclang_check_SOURCES = dwarf_srclang_check.c

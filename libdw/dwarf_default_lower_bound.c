@@ -89,6 +89,7 @@ dwarf_default_lower_bound (int lang, Dwarf_Sword *result)
     case DW_LANG_Move:
     case DW_LANG_Hylo:
     case DW_LANG_V:
+    case DW_LANG_Nim:
       *result = 0;
       return 0;
 
@@ -170,6 +171,7 @@ dwarf_language_lower_bound (Dwarf_Word lang, Dwarf_Sword *result)
     case DW_LNAME_P4:
     case DW_LNAME_Metal:
     case DW_LNAME_V:
+    case DW_LNAME_Nim:
       *result = 0;
       return 0;
 
