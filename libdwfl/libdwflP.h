@@ -1,5 +1,5 @@
 /* Internal definitions for libdwfl.
-   Copyright (C) 2005-2015, 2018, 2024 Red Hat, Inc.
+   Copyright (C) 2005-2015, 2018, 2024-2025 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -590,6 +590,15 @@ extern Dwfl_Module *__libdwfl_report_offline (Dwfl *dwfl, const char *name,
 /* Free PROCESS.  Unlink and free also any structures it references.  */
 extern void __libdwfl_process_free (Dwfl_Process *process)
   internal_function;
+
+/* Basic implementation of Dwfl_Thread_Callbacks.set_initial_registers.
+   ARG must be a Dwfl_Thread *.  Calls dwfl_thread_state_register_pc
+   if firstreg is -1 (indicating arch PC), dwfl_thread_state_registers
+   otherwise.  */
+extern bool __libdwfl_set_initial_registers_thread (int firstreg,
+						    unsigned nregs,
+						    const Dwarf_Word *regs,
+						    void *arg);
 
 /* Update STATE->unwound for the unwound frame.
    On error STATE->unwound == NULL
