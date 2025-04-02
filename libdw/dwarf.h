@@ -777,6 +777,7 @@ enum
     DW_LANG_Hylo = 0x0042,	     /* Hylo */
     DW_LANG_V = 0x0043,		     /* V Programming Language */
     DW_LANG_Algol68 = 0x0044,	     /* Algol68 */
+    DW_LANG_Nim = 0x0045,	     /* Nim */
 
     DW_LANG_lo_user = 0x8000,
     DW_LANG_Mips_Assembler = 0x8001, /* Assembler */
@@ -835,6 +836,7 @@ enum
     DW_LNAME_Metal = 0x002c,
     DW_LNAME_V = 0x002d,
     DW_LNAME_Algol68 = 0x002e,
+    DW_LNAME_Nim = 0x002f,
 
     DW_LNAME_lo_user = 0x8000,
     DW_LNAME_hi_user = 0xffff
