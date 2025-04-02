@@ -700,6 +700,9 @@ AC_CONFIG_FILES([libdw/Makefile])
 dnl Higher-level DWARF support library.
 AC_CONFIG_FILES([libdwfl/Makefile])
 
+dnl Higher-level DWARF stacktrace support library
+AC_CONFIG_FILES([libdwfl_stacktrace/Makefile])
+
 dnl CPU handling library.
 AC_CONFIG_FILES([libcpu/Makefile])
 

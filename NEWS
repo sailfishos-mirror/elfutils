@@ -4,6 +4,12 @@ debuginfod: Add CORS (webapp access) support to webapi.
 
 libdw: Add dwarf_language and dwarf_language_lower_bound functions.
 
+libdwfl_stacktrace: Experimental new library interface for unwinding
+                    stack samples into call chains, and tracking and
+                    caching Elf data for multiple processes, building
+                    on libdwfl.  Initially supports perf_events stack
+                    sample data.
+
 Version 0.192 "New rules, faster tools"
 
 CONDUCT: A new code of conduct has been adopted.  See the

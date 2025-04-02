@@ -1,6 +1,6 @@
 ## Process this file with automake to create Makefile.in
 ##
-## Copyright (C) 2002-2010, 2012, 2014, 2016, 2018 Red Hat, Inc.
+## Copyright (C) 2002-2010, 2012, 2014, 2016, 2018, 2025 Red Hat, Inc.
 ## This file is part of elfutils.
 ##
 ## This file is free software; you can redistribute it and/or modify
@@ -107,7 +107,7 @@ am_libdw_pic_a_OBJECTS = $(libdw_a_SOURCES:.c=.os)
 
 libdw_so_LIBS = ../libebl/libebl_pic.a ../backends/libebl_backends_pic.a \
 		../libcpu/libcpu_pic.a libdw_pic.a ../libdwelf/libdwelf_pic.a \
-		../libdwfl/libdwfl_pic.a
+		../libdwfl/libdwfl_pic.a ../libdwfl_stacktrace/libdwfl_stacktrace_pic.a
 libdw_so_DEPS = ../lib/libeu.a ../libelf/libelf.so
 libdw_so_LDLIBS = $(libdw_so_DEPS) -ldl -lz $(argp_LDADD) $(fts_LIBS) $(obstack_LIBS) $(zip_LIBS) -pthread
 libdw.so: $(srcdir)/libdw.map $(libdw_so_LIBS) $(libdw_so_DEPS)
@@ -134,6 +134,9 @@ uninstall: uninstall-am
 
 libdwfl_objects = $(shell cat ../libdwfl/libdwfl.manifest)
 libdw_a_LIBADD = $(addprefix ../libdwfl/,$(libdwfl_objects))
+
+libdwfl_stacktrace_objects = $(shell cat ../libdwfl_stacktrace/libdwfl_stacktrace.manifest)
+libdw_a_LIBADD += $(addprefix ../libdwfl_stacktrace/,$(libdwfl_stacktrace_objects))
 
 libdwelf_objects = $(shell cat ../libdwelf/libdwelf.manifest)
 libdw_a_LIBADD += $(addprefix ../libdwelf/,$(libdwelf_objects))

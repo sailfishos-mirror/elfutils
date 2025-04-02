@@ -391,3 +391,9 @@ ELFUTILS_0.193 {
     dwarf_language;
     dwarf_language_lower_bound;
 } ELFUTILS_0.192;
+
+/* XXX Experimental libdwfl_stacktrace API. */
+ELFUTILS_0.193_EXPERIMENTAL {
+  global:
+    dwflst_perf_sample_preferred_regs_mask;
+};
