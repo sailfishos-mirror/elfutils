@@ -1,6 +1,6 @@
 ## Process this file with automake to create Makefile.in
 ##
-## Copyright (C) 2000-2010, 2013, 2014 Red Hat, Inc.
+## Copyright (C) 2000-2010, 2013, 2014, 2025 Red Hat, Inc.
 ## Copyright (C) 2012 Tilera Corporation
 ## This file is part of elfutils.
 ##
@@ -41,13 +41,13 @@ modules = i386 sh x86_64 ia64 alpha arm aarch64 sparc ppc ppc64 s390 \
 
 i386_SRCS = i386_init.c i386_symbol.c i386_corenote.c i386_cfi.c \
 	    i386_retval.c i386_regs.c i386_auxv.c \
-	    i386_initreg.c i386_unwind.c
+	    i386_initreg.c i386_initreg_sample.c i386_unwind.c
 
 sh_SRCS = sh_init.c sh_symbol.c sh_corenote.c sh_regs.c sh_retval.c
 
 x86_64_SRCS = x86_64_init.c x86_64_symbol.c x86_64_corenote.c x86_64_cfi.c \
 	      x86_64_retval.c x86_64_regs.c x86_64_initreg.c \
-	      x86_64_unwind.c x32_corenote.c
+	      x86_64_initreg_sample.c x86_64_unwind.c x32_corenote.c
 
 
 ia64_SRCS = ia64_init.c ia64_symbol.c ia64_regs.c ia64_retval.c
@@ -119,7 +119,9 @@ libebl_backends_a_SOURCES = $(i386_SRCS) $(sh_SRCS) $(x86_64_SRCS) \
 libebl_backends_pic_a_SOURCES =
 am_libebl_backends_pic_a_OBJECTS = $(libebl_backends_a_SOURCES:.c=.os)
 
-noinst_HEADERS = libebl_CPU.h common-reloc.c linux-core-note.c x86_corenote.c
+noinst_HEADERS = libebl_CPU.h libebl_PERF_FLAGS.h common-reloc.c \
+	    linux-core-note.c x86_corenote.c \
+	    linux-perf-regs.c x86_initreg_sample.c
 
 EXTRA_DIST = $(modules:=_reloc.def)
 
