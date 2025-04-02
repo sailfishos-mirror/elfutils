@@ -385,3 +385,8 @@ ELFUTILS_0.192 {
     dwfl_frame_unwound_source;
     dwfl_unwound_source_str;
 } ELFUTILS_0.191;
+
+ELFUTILS_0.193 {
+  global:
+    dwfl_perf_sample_preferred_regs_mask;
+} ELFUTILS_0.192;
