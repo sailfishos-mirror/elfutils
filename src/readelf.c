@@ -341,6 +341,7 @@ static void print_strings (Ebl *ebl);
 static void dump_archive_index (Elf *, const char *);
 static void print_dwarf_addr (Dwfl_Module *dwflmod, int address_size,
 			      Dwarf_Addr address, Dwarf_Addr raw);
+static void print_flag_info(void);
 
 enum dyn_idx
 {
@@ -1406,9 +1407,19 @@ There are %zd section headers, starting at offset %#" PRIx64 ":\n\
 	}
     }
 
+  print_flag_info();
   fputc ('\n', stdout);
 }
 
+/* Print flag information.  */
+static void
+print_flag_info (void)
+{
+	puts ("Key to Flags:");
+	puts ("  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),");
+	puts ("  L (link order), N (extra OS processing required), G (group), T (TLS),");
+	puts ("  C (compressed), O (ordered), R (GNU retain), E (exclude)");
+}
 
 /* Print the program header.  */
 static void
