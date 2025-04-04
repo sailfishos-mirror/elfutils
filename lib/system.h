@@ -31,7 +31,12 @@
 #ifndef LIB_SYSTEM_H
 #define LIB_SYSTEM_H	1
 
-#include <config.h>
+/* Prevent double inclusion of config.h, config.h includes eu-config.h.  */
+#ifdef HAVE_CONFIG_H
+#ifndef EU_CONFIG_H
+# include <config.h>
+#endif
+#endif
 
 #include <errno.h>
 #include <stdbool.h>
