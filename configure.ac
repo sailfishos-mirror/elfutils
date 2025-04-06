@@ -228,11 +228,7 @@ AS_IF([test "x$ac_cv_tls" != xyes],
 
 dnl Although we test for C11 above that doesn't mean we have stdatomic.h
 dnl We need at least gcc 4.9+ for that.
-AC_CACHE_CHECK([whether gcc provides stdatomic.h], ac_cv_has_stdatomic,
-  [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[#include <stdatomic.h>]])],
-		     ac_cv_has_stdatomic=yes, ac_cv_has_stdatomic=no)])
-AS_IF([test "x$ac_cv_has_stdatomic" = "xno"],
-      [AC_MSG_ERROR([stdatomic.h required])])
+AC_CHECK_HEADERS([stdatomic.h], [], [AC_MSG_ERROR([stdatomic.h required])])
 
 dnl This test must come as early as possible after the compiler configuration
 dnl tests, because the choice of the file model can (in principle) affect
