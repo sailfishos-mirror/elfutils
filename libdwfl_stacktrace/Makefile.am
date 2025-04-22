@@ -41,6 +41,9 @@ pkginclude_HEADERS = libdwfl_stacktrace.h
 
 
 libdwfl_stacktrace_a_SOURCES = dwflst_process_tracker.c \
+			       dwflst_tracker_find_elf.c \
+			       dwflst_tracker_elftab.c \
+			       libdwfl_stacktrace_next_prime.c \
 			       dwflst_perf_frame.c
 
 libdwfl_stacktrace = $(libdw)
@@ -52,7 +55,7 @@ libeu = ../lib/libeu.a
 libdwfl_stacktrace_pic_a_SOURCES =
 am_libdwfl_stacktrace_pic_a_OBJECTS = $(libdwfl_stacktrace_a_SOURCES:.c=.os)
 
-noinst_HEADERS = libdwfl_stacktraceP.h
+noinst_HEADERS = libdwfl_stacktraceP.h dwflst_tracker_elftab.h
 
 EXTRA_libdwfl_stacktrace_a_DEPENDENCIES = libdwfl_stacktrace.manifest
 

@@ -400,4 +400,8 @@ ELFUTILS_0.193_EXPERIMENTAL {
     dwflst_tracker_begin;
     dwflst_tracker_dwfl_begin;
     dwflst_tracker_end;
+    dwflst_tracker_find_cached_elf;
+    dwflst_tracker_cache_elf;
+    dwflst_module_gettracker;
+    dwflst_tracker_linux_proc_find_elf;
 };
