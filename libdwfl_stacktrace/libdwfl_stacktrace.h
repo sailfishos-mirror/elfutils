@@ -114,7 +114,20 @@ extern int dwflst_tracker_linux_proc_find_elf (Dwfl_Module *mod, void **userdata
 					       char **file_name, Elf **);
 
 
-/* XXX dwflst_perf_sample_getframes to be added in subsequent patch */
+/* Like dwfl_thread_getframes, but iterates through the frames for a
+   linux perf_events stack sample rather than a live thread.  Calls
+   dwfl_attach_state on DWFL, with architecture specified by ELF, ELF
+   must remain valid during Dwfl lifetime.  Returns zero if all frames
+   have been processed by the callback, returns -1 on error, or the
+   value of the callback when not DWARF_CB_OK.  -1 returned on error
+   will set dwfl_errno ().  */
+int dwflst_perf_sample_getframes (Dwfl *dwfl, Elf *elf, pid_t pid, pid_t tid,
+				  const void *stack, size_t stack_size,
+				  const Dwarf_Word *regs, uint32_t n_regs,
+				  uint64_t perf_regs_mask, uint32_t abi,
+				  int (*callback) (Dwfl_Frame *state, void *arg),
+				  void *arg)
+  __nonnull_attribute__ (1, 5, 7, 11);
 
 /* Returns the linux perf_events register mask describing a set of
    registers sufficient for unwinding on MACHINE, or 0 if libdwfl does
