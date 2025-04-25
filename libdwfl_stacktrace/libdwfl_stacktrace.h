@@ -81,6 +81,20 @@ extern bool dwflst_tracker_cache_elf (Dwflst_Process_Tracker *tracker,
 				      Elf *elf, int fd)
   __nonnull_attribute__ (1, 2);
 
+/* Find the Dwfl corresponding to PID.  If CALLBACK is non-NULL and
+   the Dwfl has not been created, invoke CALLBACK, which should return
+   a Dwfl linked to the tracker (or NULL if Dwfl creation also fails).
+   The Dwfl will be automatically added to the tracker's internal
+   table when its pid is confirmed by calling dwfl_attach_state.
+   Returns NULL if Dwfl was not found and callback failed.  */
+extern Dwfl *dwflst_tracker_find_pid (Dwflst_Process_Tracker *tracker,
+				      pid_t pid,
+				      Dwfl *(*callback) (Dwflst_Process_Tracker *tracker,
+							 pid_t pid,
+							 void *arg),
+				      void *arg)
+  __nonnull_attribute__ (1);
+
 /* For implementing a find_elf callback based on the prior two functions.
    Returns the Dwflst_Process_Tracker corresponding to MOD.  */
 extern Dwflst_Process_Tracker *dwflst_module_gettracker (Dwfl_Module *mod);
