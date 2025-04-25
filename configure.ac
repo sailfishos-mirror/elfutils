@@ -18,7 +18,7 @@ dnl  GNU General Public License for more details.
 dnl
 dnl  You should have received a copy of the GNU General Public License
 dnl  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-AC_INIT([elfutils],[0.192],[https://sourceware.org/bugzilla],[elfutils],[http://elfutils.org/])
+AC_INIT([elfutils],[0.193],[https://sourceware.org/bugzilla],[elfutils],[http://elfutils.org/])
 
 LIBDEBUGINFOD_SONAME=libdebuginfod.so.1
 AC_SUBST([LIBDEBUGINFOD_SONAME])
@@ -39,7 +39,7 @@ fi
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_FILES([config/Makefile])
 
-AC_COPYRIGHT([Copyright (C) 1996-2024 The elfutils developers.])
+AC_COPYRIGHT([Copyright (C) 1996-2025 The elfutils developers.])
 AC_PREREQ(2.69)			dnl Minimum Autoconf version required.
 
 dnl We use GNU make extensions; automake 1.10 defaults to -Wportability.

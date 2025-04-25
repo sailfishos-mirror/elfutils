@@ -378,6 +378,27 @@ exit 0
 %systemd_postun_with_restart debuginfod.service
 
 %changelog
+* Fri Apr 25 2025 Aaron Merey <amerey@redhat.com> 0.193-1
+- debuginfod: Add CORS (webapp access) support to webapi and --cors 
+  option.
+- Add --listen-address option for binding the HTTP listen socket to a
+  specific IPv4 or IPv6 address.
+- debuginfod client now caches x-debuginfod-* HTTP headers alongside
+  downloaded files.
+- libdw: Add dwarf_language and dwarf_language_lower_bound functions.
+- Improved support for DWARF6 language metadata as well as DWARF language
+  constants for Nim, Dylan, Algol68, V and Mojo.
+- dwarf_srclang is now forward-compatible with DWARF6 language constants.
+- libdwfl_stacktrace: Experimental new library interface for unwinding
+  stack samples into call chains, and tracking and caching Elf data for
+  multiple processes, building on libdwfl.  Initially supports perf_events
+  stack sample data.
+- libelf: elf_scnshndx has been rewritten to be more robust, particularily
+  for ELF files with more than 64K sections.
+- readelf: Improved handling of corrupt ELF data.
+- --section-headers output now includes a "Key to Flags" explaining section
+  flag meanings.
+
 * Fri Oct 18 2024 Aaron Merey <amerey@redhat.com> 0.192-1
 - CONDUCT: A new code of conduct has been adopted.  See the CONDUCT file
   for more information.
