@@ -1,4 +1,4 @@
-/* Internal definitions for libdwfl_stacktrace.
+/* Dwflst_Process_Tracker Elf table implementation.
    Copyright (C) 2025 Red Hat, Inc.
    This file is part of elfutils.
 
@@ -26,39 +26,20 @@
    the GNU Lesser General Public License along with this program.  If
    not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef _LIBDWFL_STACKTRACEP_H
-#define _LIBDWFL_STACKTRACEP_H 1
+#ifdef HAVE_CONFIG_H
+#  include <config.h>
+#endif
 
-#include <libdwfl_stacktrace.h>
+#include <string.h>
 
-#include "libdwflP.h"
+#include <libdwfl_stacktraceP.h>
 
-/* Hash table for Elf *. */
-typedef struct
-{
-  char *module_name; /* dwfltracker_elftab_ent is used iff non-NULL.  */
-  int fd;
-  Elf *elf;
-  dev_t dev;
-  ino_t ino;
-  time_t last_mtime;
-} dwflst_tracker_elf_info;
-#include "dwflst_tracker_elftab.h"
+/* Definitions for the Elf table. */
+#define TYPE dwflst_tracker_elf_info *
+#define NAME dwflst_tracker_elftab
+#define ITERATE 1
+#define COMPARE(a, b) \
+  (strcmp ((a)->module_name, (b)->module_name)		\
+   && (a)->dev == (b)->dev && (a)->ino == (b)->ino)
 
-struct Dwflst_Process_Tracker
-{
-  const Dwfl_Callbacks *callbacks;
-
-  /* Table of cached Elf * including fd, path, fstat info.  */
-  dwflst_tracker_elftab elftab;
-  rwlock_define(, elftab_lock);
-};
-
-
-/* Avoid PLT entries.  */
-INTDECL (dwflst_module_gettracker)
-INTDECL (dwflst_tracker_find_cached_elf)
-INTDECL (dwflst_tracker_cache_elf)
-
-
-#endif  /* libdwfl_stacktraceP.h */
+#include "../lib/dynamicsizehash_concurrent.c"

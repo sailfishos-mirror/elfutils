@@ -32,6 +32,8 @@
 
 #include "libdwfl_stacktraceP.h"
 
+#define HTAB_DEFAULT_SIZE 1021
+
 Dwflst_Process_Tracker *dwflst_tracker_begin (const Dwfl_Callbacks *callbacks)
 {
   Dwflst_Process_Tracker *tracker = calloc (1, sizeof *tracker);
@@ -40,6 +42,9 @@ Dwflst_Process_Tracker *dwflst_tracker_begin (const Dwfl_Callbacks *callbacks)
       __libdwfl_seterrno (DWFL_E_NOMEM);
       return tracker;
     }
+
+  dwflst_tracker_elftab_init (&tracker->elftab, HTAB_DEFAULT_SIZE);
+  rwlock_init (tracker->elftab_lock);
 
   tracker->callbacks = callbacks;
   return tracker;
@@ -60,6 +65,27 @@ void dwflst_tracker_end (Dwflst_Process_Tracker *tracker)
 {
   if (tracker == NULL)
     return;
+
+  /* HACK to allow iteration of dynamicsizehash_concurrent.  */
+  /* XXX Based on lib/dynamicsizehash_concurrent.c free().  */
+  rwlock_fini (tracker->elftab_lock);
+  pthread_rwlock_destroy(&tracker->elftab.resize_rwl);
+  for (size_t idx = 1; idx <= tracker->elftab.size; idx++)
+    {
+      dwflst_tracker_elftab_ent *ent = &tracker->elftab.table[idx];
+      if (ent->hashval == 0)
+	continue;
+      dwflst_tracker_elf_info *t =
+	(dwflst_tracker_elf_info *) atomic_load_explicit (&ent->val_ptr,
+							  memory_order_relaxed);
+      free(t->module_name);
+      if (t->fd >= 0)
+	close(t->fd);
+      if (t->elf != NULL)
+	elf_end(t->elf);
+      free(t); /* TODO: Check necessity. */
+    }
+  free (tracker->elftab.table);
 
   /* TODO: Call dwfl_end for each Dwfl connected to this tracker. */
   free (tracker);

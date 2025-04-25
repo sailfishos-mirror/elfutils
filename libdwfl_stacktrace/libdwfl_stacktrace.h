@@ -57,8 +57,47 @@ extern Dwflst_Process_Tracker *dwflst_tracker_begin (const Dwfl_Callbacks *callb
 extern Dwfl *dwflst_tracker_dwfl_begin (Dwflst_Process_Tracker *tracker)
   __nonnull_attribute__ (1);
 
-/* End all sessions with this tracker.  */
+/* Try to find a cached Elf corresponding to MODULE_NAME.  Verifies
+   that the cached Elf has dev/ino/mtime matching the file on disk.
+   Non-NULL MODULE_PATH specifies an alternate location for the module
+   e.g. /proc/PID/root/MODULE_NAME.  Stores FILE_NAME and ELFP values.
+   Returns fd similar to the find_elf callbacks, or -1 if cached Elf
+   was not found.  */
+extern int dwflst_tracker_find_cached_elf (Dwflst_Process_Tracker *tracker,
+					   const char *module_name,
+					   const char *module_path,
+					   char **file_name, Elf **elfp)
+  __nonnull_attribute__ (1, 2, 4, 5);
+
+/* Store an Elf corresponding to MODULE_NAME in the tracker's cache.
+   FILE_NAME and FD values must be provided, similar to the output of
+   a find_elf callback.  Returns TRUE iff the Elf was successfully
+   stored in the cache.  The tracker will retain the Elf* via libelf's
+   reference counting mechanism, and release its reference during
+   dwflst_tracker_end.  */
+extern bool dwflst_tracker_cache_elf (Dwflst_Process_Tracker *tracker,
+				      const char *module_name,
+				      const char *file_name,
+				      Elf *elf, int fd)
+  __nonnull_attribute__ (1, 2);
+
+/* For implementing a find_elf callback based on the prior two functions.
+   Returns the Dwflst_Process_Tracker corresponding to MOD.  */
+extern Dwflst_Process_Tracker *dwflst_module_gettracker (Dwfl_Module *mod);
+
+/* End all libdwfl sessions with this tracker.  */
 extern void dwflst_tracker_end (Dwflst_Process_Tracker *tracker);
+
+
+/* Adaptation of the dwfl_linux_proc_find_elf callback from libdwfl,
+   except this first attempts to look up a cached Elf* and fd from the
+   Dwfl_Module's Dwflst_Process_Tracker (if any).  If a new Elf* is
+   created, this callback saves it to the tracker's cache.
+   The cache will retain the Elf* via libelf's reference counting
+   mechanism, and release its reference during dwflst_tracker_end.  */
+extern int dwflst_tracker_linux_proc_find_elf (Dwfl_Module *mod, void **userdata,
+					       const char *module_name, Dwarf_Addr base,
+					       char **file_name, Elf **);
 
 
 /* XXX dwflst_perf_sample_getframes to be added in subsequent patch */
