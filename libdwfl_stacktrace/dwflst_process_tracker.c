@@ -1,5 +1,5 @@
-/* Internal definitions for libdwfl_stacktrace.
-   Copyright (C) 2025 Red Hat, Inc.
+/* Track multiple Dwfl structs for multiple processes.
+   Copyright (C) 2025, Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -26,17 +26,41 @@
    the GNU Lesser General Public License along with this program.  If
    not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef _LIBDWFL_STACKTRACEP_H
-#define _LIBDWFL_STACKTRACEP_H 1
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
 
-#include <libdwfl_stacktrace.h>
+#include "libdwfl_stacktraceP.h"
 
-#include "libdwflP.h"
-
-struct Dwflst_Process_Tracker
+Dwflst_Process_Tracker *dwflst_tracker_begin (const Dwfl_Callbacks *callbacks)
 {
-  const Dwfl_Callbacks *callbacks;
-  /* ... */
-};
+  Dwflst_Process_Tracker *tracker = calloc (1, sizeof *tracker);
+  if (tracker == NULL)
+    {
+      __libdwfl_seterrno (DWFL_E_NOMEM);
+      return tracker;
+    }
 
-#endif  /* libdwfl_stacktraceP.h */
+  tracker->callbacks = callbacks;
+  return tracker;
+}
+
+Dwfl *dwflst_tracker_dwfl_begin (Dwflst_Process_Tracker *tracker)
+{
+  Dwfl *dwfl = INTUSE(dwfl_begin) (tracker->callbacks);
+  if (dwfl == NULL)
+    return dwfl;
+
+  /* TODO: Could also share dwfl->debuginfod, but thread-safely? */
+  dwfl->tracker = tracker;
+  return dwfl;
+}
+
+void dwflst_tracker_end (Dwflst_Process_Tracker *tracker)
+{
+  if (tracker == NULL)
+    return;
+
+  /* TODO: Call dwfl_end for each Dwfl connected to this tracker. */
+  free (tracker);
+}
