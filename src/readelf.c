@@ -12322,7 +12322,8 @@ convert (Elf *core, Elf_Type type, uint_fast16_t count,
 typedef uint8_t GElf_Byte;
 
 static unsigned int
-handle_core_item (Elf *core, const Ebl_Core_Item *item, const void *desc,
+handle_core_item (Elf *core, const GElf_Ehdr *ehdr,
+		  const Ebl_Core_Item *item, const void *desc,
 		  unsigned int colno, size_t *repeated_size)
 {
   uint_fast16_t count = item->count ?: 1;
@@ -12501,8 +12502,6 @@ handle_core_item (Elf *core, const Ebl_Core_Item *item, const void *desc,
 	     high half is the padding; it's presumably zero, but should
 	     be ignored anyway.  For big-endian, it means the 32-bit
 	     field went into the high half of USEC.  */
-	  GElf_Ehdr ehdr_mem;
-	  GElf_Ehdr *ehdr = gelf_getehdr (core, &ehdr_mem);
 	  if (likely (ehdr->e_ident[EI_DATA] == ELFDATA2MSB))
 	    usec >>= 32;
 	  else
@@ -12594,7 +12593,8 @@ compare_core_item_groups (const void *a, const void *b)
 }
 
 static unsigned int
-handle_core_items (Elf *core, const void *desc, size_t descsz,
+handle_core_items (Elf *core, const GElf_Ehdr *ehdr,
+		   const void *desc, size_t descsz,
 		   const Ebl_Core_Item *items, size_t nitems)
 {
   if (nitems == 0)
@@ -12610,7 +12610,7 @@ handle_core_items (Elf *core, const void *desc, size_t descsz,
     {
       assert (items[0].offset == 0);
       size_t size = descsz;
-      colno = handle_core_item (core, items, desc, colno, &size);
+      colno = handle_core_item (core, ehdr, items, desc, colno, &size);
       /* If SIZE is not zero here there is some remaining data.  But we do not
 	 know how to process it anyway.  */
       return colno;
@@ -12645,7 +12645,7 @@ handle_core_items (Elf *core, const void *desc, size_t descsz,
 		&& ((*item)->group == groups[i][0]->group
 		    || !strcmp ((*item)->group, groups[i][0]->group)));
 	       ++item)
-	    colno = handle_core_item (core, *item, desc, colno, NULL);
+	    colno = handle_core_item (core, ehdr, *item, desc, colno, NULL);
 
 	  /* Force a line break at the end of the group.  */
 	  colno = WRAP_COLUMN;
@@ -13146,7 +13146,7 @@ handle_file_note (Elf *core, GElf_Word descsz, GElf_Off desc_pos)
 }
 
 static void
-handle_core_note (Ebl *ebl, const GElf_Nhdr *nhdr,
+handle_core_note (Ebl *ebl, const GElf_Ehdr *ehdr,  const GElf_Nhdr *nhdr,
 		  const char *name, const void *desc)
 {
   GElf_Word regs_offset;
@@ -13163,7 +13163,7 @@ handle_core_note (Ebl *ebl, const GElf_Nhdr *nhdr,
      so that the ITEMS array does not describe the whole thing.
      For non-register notes, the actual descsz might be a multiple
      of the unit size, not just exactly the unit size.  */
-  unsigned int colno = handle_core_items (ebl->elf, desc,
+  unsigned int colno = handle_core_items (ebl->elf, ehdr, desc,
 					  nregloc == 0 ? nhdr->n_descsz : 0,
 					  items, nitems);
   if (colno != 0)
@@ -13243,10 +13243,10 @@ handle_notes_data (Ebl *ebl, const GElf_Ehdr *ehdr,
 		    break;
 
 		  default:
-		    handle_core_note (ebl, &nhdr, name, desc);
+		    handle_core_note (ebl, ehdr, &nhdr, name, desc);
 		  }
 	      else
-		handle_core_note (ebl, &nhdr, name, desc);
+		handle_core_note (ebl, ehdr, &nhdr, name, desc);
 	    }
 	  else
 	    ebl_object_note (ebl, nhdr.n_namesz, name, nhdr.n_type,
