@@ -1946,7 +1946,13 @@ more sections in stripped file than debug file -- arguments reversed?"));
 
       /* Now we are ready to write the new symbol table.  */
       symdata = elf_getdata (unstripped_symtab, NULL);
+      if (symdata == NULL)
+        error_exit (0, "Failed to get data from symbol table: %s",
+		    elf_errmsg (-1));
       symstrdata = elf_getdata (unstripped_strtab, NULL);
+      if (symstrdata == NULL)
+        error_exit (0, "Failed to get data from symbol string table: %s",
+		    elf_errmsg (-1));
       Elf_Data *shndxdata = NULL;	/* XXX */
 
       /* If symtab and the section header table share the string table
