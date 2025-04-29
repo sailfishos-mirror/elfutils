@@ -498,6 +498,8 @@ do_oper_extract (int oper, const char *arfname, char **argv, int argc,
   while ((subelf = elf_begin (fd, cmd, elf)) != NULL)
     {
       Elf_Arhdr *arhdr = elf_getarhdr (subelf);
+      if (arhdr == NULL)
+	goto next;
 
       if (strcmp (arhdr->ar_name, "/") == 0)
 	{
@@ -943,6 +945,8 @@ do_oper_delete (const char *arfname, char **argv, int argc,
   while ((subelf = elf_begin (fd, cmd, elf)) != NULL)
     {
       Elf_Arhdr *arhdr = elf_getarhdr (subelf);
+      if (arhdr == NULL)
+	goto next;
 
       /* Ignore the symbol table and the long file name table here.  */
       if (strcmp (arhdr->ar_name, "/") == 0
@@ -1152,6 +1156,8 @@ do_oper_insert (int oper, const char *arfname, char **argv, int argc,
   while ((subelf = elf_begin (fd, cmd, elf)) != NULL)
     {
       Elf_Arhdr *arhdr = elf_getarhdr (subelf);
+      if (arhdr == NULL)
+	goto next;
 
       /* Ignore the symbol table and the long file name table here.  */
       if (strcmp (arhdr->ar_name, "/") == 0
