@@ -168,7 +168,8 @@ MAINTAINERCLEANFILES = $(srcdir)/known-dwarf.h
 check_PROGRAMS = dwarf_srclang_check
 TESTS = $(check_PROGRAMS)
 
-CHECK_DEF_FLAGS = $(DEFS) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -DMAIN_CHECK=1
+CHECK_DEF_FLAGS = $(DEFS) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) \
+       -Wl,-rpath,../libelf -DMAIN_CHECK=1
 
 .SECONDEXPANSION:
 dwarf_srclang_check$(EXEEXT): $$(filter-out $$(subst _check,,$$@).o,$(libdw_a_OBJECTS)) $$(subst _check,,$$@).c
