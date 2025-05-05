@@ -32,7 +32,11 @@
 #define _LIBEBL_PERF_FLAGS_H 1
 
 #if defined(__linux__)
+/* XXX Need to exclude __linux__ arches without perf_regs.h. */
+#if defined(__x86_64__) || defined(__i386__)
+/* || defined(other_architecture)... */
 # include <asm/perf_regs.h>
+#endif
 #endif
 
 #if defined(_ASM_X86_PERF_REGS_H)
@@ -49,8 +53,8 @@
    see the code in tools/perf/util/intel-pt.c intel_pt_add_gp_regs()
    and note how regs are added in the same order as the perf_regs.h enum.  */
 #else
-/* Since asm/perf_regs.h gives the register layout for a different arch,
-   we can't unwind x86_64 frames.  */
+/* Since asm/perf_regs.h is absent, or gives the register layout for a
+   different arch, we can't unwind i386 and x86_64 frames. */
 #define PERF_FRAME_REGISTERS_I386 0
 #define PERF_FRAME_REGISTERS_X86_64 0
 #endif
