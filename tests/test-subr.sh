@@ -23,7 +23,9 @@
 set -e
 
 # Each test runs in its own directory to make sure they can run in parallel.
-test_dir="${TMPDIR-/var/tmp}/elfutils-test-$$"
+test_name=$(basename $0)
+random_number=$(od -An -N8 -tx8 /dev/urandom | xargs)
+test_dir="${TMPDIR-/var/tmp}/elfutils-test-$test_name.${random_number}"
 mkdir -p "$test_dir"
 orig_dir="${PWD}"
 cd "$test_dir"
