@@ -54,6 +54,24 @@ TID nn:
 #4  nn __libc_start_main@@GLIBC_2.34
 #5  nn _start
 EOF
+# fedora-s390x: need GLIBC_nn
+# fedora-i386: kernel_vsyscall in front, more blank frames
+# opensusetw-x86_64: internal_syscall_cancel in front, more blank frames (main)
+# fedora-ppc64le: need @@GLIBC_nn vs @GLIBC_nn, rpl_nanosleep, xnanosleep in front, no _start in back
+# debian-ppc64: need @@GLIBC_nn vs @GLIBC_nn, __internal_syscall_cancel in front, more blank frames (main)
+# debian-coverage: more blank frames (main, _start)
+# opensuseleap-x86_64: more blank frames (main, _start)
+# debian-amd64: more blank frames (main, _start)
+# fedora-coverage: __internal_syscall_cancel in front
+# fedora-x86_64: __internal_syscall_cancel in front
+# ubuntu-riscv: 'Operation not permitted' (run a simpler eu-stack test and skip on this error?)
+# debian-armhf: 'Operation not permitted'
+# alma-x86_64: no clock_nanosleep in front, rpl_nanosleep, x_nanosleep in front
+# fedora-arm64: need @@GLIBC_nn vs @GLIBC_nn
+#
+# blank frames issue might be due to debuginfo availability, go away
+# when we use our own program rather than /usr/bin/sleep
+
 # PID 169385 - process
 # TID 169385:
 # #0  0x00007f04a98adbd7 clock_nanosleep@GLIBC_2.2.5
