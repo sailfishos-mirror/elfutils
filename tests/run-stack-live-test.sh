@@ -21,7 +21,7 @@
 # the actual binary name under test might be different. It is used in
 # the error message, which we also try to match.
 if test "$elfutils_testrun" = "installed"; then
-STACKCMD=${bindir}/`program_transform stack`    
+STACKCMD=${bindir}/`program_transform stack`
 else
 STACKCMD=${abs_top_builddir}/src/stack
 fi
