@@ -548,6 +548,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     testfile-backtrace-demangle.core.bz2 \
 	     run-stack-d-test.sh run-stack-i-test.sh \
 	     run-stack-demangled-test.sh \
+	     run-stack-live-test.sh \
 	     testfiledwarfinlines.bz2 testfiledwarfinlines.core.bz2 \
 	     run-readelf-zdebug.sh testfile-debug.bz2 testfile-zdebug.bz2 \
 	     run-readelf-zdebug-rel.sh testfile-debug-rel.o.bz2 \
