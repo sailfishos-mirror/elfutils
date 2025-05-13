@@ -27,37 +27,37 @@ notrans_dist_man1_MANS= debuginfod-find.1
 
 # Section 3, Library calls
 # libelf man pages (all notrans)
-notrans_dist_man3_MANS= elf_update.3 \
-			elf_getdata.3 \
-			elf_clone.3 \
-			elf_begin.3 \
+notrans_dist_man3_MANS= elf32_checksum.3 \
+			elf32_fsize.3 \
+			elf32_getchdr.3 \
 			elf32_getehdr.3 \
+			elf32_getphdr.3 \
+			elf32_getshdr.3 \
+			elf32_newehdr.3 \
+			elf32_newphdr.3 \
+			elf32_offscn.3 \
+			elf32_xlatetof.3 \
+			elf32_xlatetom.3 \
+			elf64_checksum.3 \
+			elf64_fsize.3 \
+			elf64_getchdr.3 \
 			elf64_getehdr.3 \
+			elf64_getphdr.3 \
+			elf64_getshdr.3 \
+			elf64_newehdr.3 \
+			elf64_newphdr.3 \
+			elf64_offscn.3 \
+			elf64_xlatetof.3 \
+			elf64_xlatetom.3 \
+			elf_begin.3 \
+			elf_clone.3 \
 			elf_errmsg.3 \
 			elf_errno.3 \
-			elf_version.3 \
-			elf32_offscn.3 \
-			elf64_offscn.3 \
+			elf_getdata.3 \
 			elf_getscn.3 \
 			elf_ndxscn.3 \
-			elf32_xlatetom.3 \
-			elf64_xlatetom.3 \
-			elf32_xlatetof.3 \
-			elf64_xlatetof.3 \
-			elf32_newphdr.3 \
-			elf64_newphdr.3 \
-			elf32_newehdr.3 \
-			elf64_newehdr.3 \
-			elf32_getshdr.3 \
-			elf64_getshdr.3 \
-			elf32_getphdr.3 \
-			elf64_getphdr.3 \
-			elf32_getchdr.3 \
-			elf64_getchdr.3 \
-			elf32_fsize.3 \
-			elf64_fsize.3 \
-			elf32_checksum.3 \
-			elf64_checksum.3 \
+			elf_update.3 \
+			elf_version.3 \
 			libelf.3
 
 # libdebuginfod man pages (also notrans)
