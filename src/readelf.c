@@ -3047,53 +3047,83 @@ handle_dynamic_symtab (Ebl *ebl)
   Elf_Data *verdef_data = NULL;
   Elf_Data *verneed_data = NULL;
 
-  symdata = elf_getdata_rawchunk (
-      ebl->elf, offs[i_symtab],
-      gelf_fsize (ebl->elf, ELF_T_SYM, syments, EV_CURRENT), ELF_T_SYM);
-  symstrdata = elf_getdata_rawchunk (ebl->elf, offs[i_strtab], addrs[i_strsz],
-                                     ELF_T_BYTE);
-  versym_data = elf_getdata_rawchunk (
-      ebl->elf, offs[i_versym], syments * sizeof (Elf64_Half), ELF_T_HALF);
+  if (offs[i_symtab] != 0)
+    symdata = elf_getdata_rawchunk (
+	ebl->elf, offs[i_symtab],
+	gelf_fsize (ebl->elf, ELF_T_SYM, syments, EV_CURRENT), ELF_T_SYM);
+
+  if (offs[i_strtab] != 0 && addrs[i_strsz] != 0)
+    symstrdata = elf_getdata_rawchunk (ebl->elf, offs[i_strtab], addrs[i_strsz],
+				       ELF_T_BYTE);
+
+  if (offs[i_versym] != 0)
+    versym_data = elf_getdata_rawchunk (
+	ebl->elf, offs[i_versym], syments * sizeof (Elf64_Half), ELF_T_HALF);
 
   /* Get the verneed_data without vernaux.  */
-  verneed_data = elf_getdata_rawchunk (
-      ebl->elf, offs[i_verneed], addrs[i_verneednum] * sizeof (Elf64_Verneed),
-      ELF_T_VNEED);
+  if (offs[i_verneed] != 0 && addrs[i_verneednum] != 0)
+    {
+      verneed_data = elf_getdata_rawchunk (
+	ebl->elf, offs[i_verneed], addrs[i_verneednum] * sizeof (Elf64_Verneed),
+	ELF_T_VNEED);
+
+      if (verneed_data->d_size < sizeof (GElf_Verneed))
+	error_exit (0, _("malformed SHT_GNU_verneed data"));
+    }
+
   size_t vernauxnum = 0;
   size_t vn_next_offset = 0;
 
-  for (size_t i = 0; i < addrs[i_verneednum]; i++)
-    {
-      GElf_Verneed *verneed
-          = (GElf_Verneed *)(verneed_data->d_buf + vn_next_offset);
-      vernauxnum += verneed->vn_cnt;
-      vn_next_offset += verneed->vn_next;
-    }
+  if (verneed_data != NULL && verneed_data->d_buf != NULL)
+    for (size_t i = 0; i < addrs[i_verneednum]; i++)
+      {
+	if (vn_next_offset > (verneed_data->d_size - sizeof (GElf_Verneed)))
+	  error_exit (0, _("invalid SHT_GNU_verneed data"));
+
+	GElf_Verneed *verneed
+	  = (GElf_Verneed *)(verneed_data->d_buf + vn_next_offset);
+	vernauxnum += verneed->vn_cnt;
+	vn_next_offset += verneed->vn_next;
+      }
 
   /* Update the verneed_data to include the vernaux.  */
-  verneed_data = elf_getdata_rawchunk (
-      ebl->elf, offs[i_verneed],
-      (addrs[i_verneednum] + vernauxnum) * sizeof (GElf_Verneed), ELF_T_VNEED);
+  if (offs[i_verneed] != 0 && addrs[i_verneednum] != 0)
+    verneed_data = elf_getdata_rawchunk (
+	ebl->elf, offs[i_verneed],
+	(addrs[i_verneednum] + vernauxnum) * sizeof (GElf_Verneed),
+	ELF_T_VNEED);
 
   /* Get the verdef_data without verdaux.  */
-  verdef_data = elf_getdata_rawchunk (
-      ebl->elf, offs[i_verdef], addrs[i_verdefnum] * sizeof (Elf64_Verdef),
-      ELF_T_VDEF);
+  if (offs[i_verdef] != 0 && addrs[i_verdefnum] != 0)
+    {
+      verdef_data = elf_getdata_rawchunk (
+	ebl->elf, offs[i_verdef], addrs[i_verdefnum] * sizeof (Elf64_Verdef),
+	ELF_T_VDEF);
+
+      if (verdef_data->d_size < sizeof (GElf_Verdef))
+	error_exit (0, _("malformed SHT_GNU_verdef data"));
+    }
+
   size_t verdauxnum = 0;
   size_t vd_next_offset = 0;
 
-  for (size_t i = 0; i < addrs[i_verdefnum]; i++)
-    {
-      GElf_Verdef *verdef
-          = (GElf_Verdef *)(verdef_data->d_buf + vd_next_offset);
-      verdauxnum += verdef->vd_cnt;
-      vd_next_offset += verdef->vd_next;
-    }
+  if (verdef_data != NULL && verdef_data->d_buf != NULL)
+    for (size_t i = 0; i < addrs[i_verdefnum]; i++)
+      {
+	if (vd_next_offset > (verdef_data->d_size - sizeof (GElf_Verdef)))
+	  error_exit (0, _("invalid SHT_GNU_verdef data"));
+
+	GElf_Verdef *verdef
+	  = (GElf_Verdef *)(verdef_data->d_buf + vd_next_offset);
+	verdauxnum += verdef->vd_cnt;
+	vd_next_offset += verdef->vd_next;
+      }
 
   /* Update the verdef_data to include the verdaux.  */
-  verdef_data = elf_getdata_rawchunk (
-      ebl->elf, offs[i_verdef],
-      (addrs[i_verdefnum] + verdauxnum) * sizeof (GElf_Verdef), ELF_T_VDEF);
+  if (offs[i_verdef] != 0 && addrs[i_verdefnum] != 0)
+    verdef_data = elf_getdata_rawchunk (
+	ebl->elf, offs[i_verdef],
+	(addrs[i_verdefnum] + verdauxnum) * sizeof (GElf_Verdef), ELF_T_VDEF);
 
   unsigned int nsyms = (unsigned int)syments;
   process_symtab (ebl, nsyms, 0, 0, 0, symdata, versym_data, symstrdata,
