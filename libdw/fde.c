@@ -142,8 +142,9 @@ intern_fde (Dwarf_CFI *cache, const Dwarf_FDE *entry)
   return fde;
 }
 
-struct dwarf_fde *
-internal_function
+/* Look for an FDE by its offset in the section.
+   Should be called with cache->lock held.  */
+static struct dwarf_fde *
 __libdw_fde_by_offset (Dwarf_CFI *cache, Dwarf_Off offset)
 {
   Dwarf_CFI_Entry entry;
