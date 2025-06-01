@@ -1447,7 +1447,7 @@ copy_elided_sections (Elf *unstripped, Elf *stripped,
     error_exit (0, _("\
 more sections in stripped file than debug file -- arguments reversed?"));
 
-  if (unlikely (stripped_shnum == 0))
+  if (unlikely (stripped_shnum <= 1))
     error_exit (0, _("no sections in stripped file"));
 
   /* Used as sanity check for allocated section offset, if the section
