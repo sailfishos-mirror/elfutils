@@ -37,6 +37,12 @@
 #include <inttypes.h>
 #include <fcntl.h>
 
+#ifdef HAVE_OPENAT2_RESOLVE_IN_ROOT
+#include <linux/openat2.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
+
 #include <system.h>
 
 
@@ -783,17 +789,39 @@ dwfl_segment_report_module (Dwfl *dwfl, int ndx, const char *name,
       /* We were not handed specific executable hence try to look for it in
 	 sysroot if it is set.  */
       if (dwfl->sysroot && !executable)
-        {
-	  int r;
-	  char *n;
+	{
+#ifdef HAVE_OPENAT2_RESOLVE_IN_ROOT
+	  int sysrootfd, err;
 
-	  r = asprintf (&n, "%s%s", dwfl->sysroot, name);
-	  if (r > 0)
+	  struct open_how how = {
+	    .flags = O_RDONLY,
+	    .resolve = RESOLVE_IN_ROOT,
+	  };
+
+	  sysrootfd = open (dwfl->sysroot, O_DIRECTORY|O_PATH);
+	  if (sysrootfd < 0)
+	    return -1;
+
+	  fd = syscall (SYS_openat2, sysrootfd, name, &how, sizeof(how));
+	  err = fd < 0 ? -errno : 0;
+
+	  close (sysrootfd);
+
+	  /* Fallback to regular open() if openat2 is not available. */
+	  if (fd < 0 && err == -ENOSYS)
+#endif
 	    {
-	      fd = open (n, O_RDONLY);
-	      free (n);
+	      int r;
+	      char *n;
+
+	      r = asprintf (&n, "%s%s", dwfl->sysroot, name);
+	      if (r > 0)
+		{
+		  fd = open (n, O_RDONLY);
+		  free (n);
+		}
 	    }
-        }
+	}
       else
 	  fd = open (name, O_RDONLY);
 

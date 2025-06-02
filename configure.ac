@@ -279,6 +279,32 @@ case "$CFLAGS" in
     ;;
 esac
 
+AC_CACHE_CHECK(
+  [for openat2 with RESOLVE_IN_ROOT support],
+  [eu_cv_openat2_RESOLVE_IN_ROOT],
+  [AC_LINK_IFELSE(
+    [AC_LANG_PROGRAM(
+      [[#define _GNU_SOURCE
+        #include <fcntl.h>
+        #include <stdlib.h>
+        #include <unistd.h>
+        #include <sys/syscall.h>
+        #include <linux/openat2.h>
+        #include <stdio.h>
+      ]], [[
+        struct open_how how = { .flags = O_RDONLY|O_DIRECTORY, .resolve = RESOLVE_IN_ROOT };
+        int dfd = open (".", O_PATH);
+        return syscall (SYS_openat2, dfd, ".", &how, sizeof(how)) < 0;
+      ]]
+    )],
+    [eu_cv_openat2_RESOLVE_IN_ROOT=yes],
+    [eu_cv_openat2_RESOLVE_IN_ROOT=no]
+  )]
+)
+AS_IF([test "x$eu_cv_openat2_RESOLVE_IN_ROOT" = xyes],
+      [AC_DEFINE([HAVE_OPENAT2_RESOLVE_IN_ROOT], [1], [Define if openat2 is available])]
+)
+
 dnl enable debugging of branch prediction.
 AC_ARG_ENABLE([debugpred],
 AS_HELP_STRING([--enable-debugpred],[build binaries with support to debug branch prediction]),
