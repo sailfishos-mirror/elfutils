@@ -64,6 +64,7 @@ __libdw_destroy_frame_cache (Dwarf_CFI *cache)
   eu_search_tree_fini (&cache->fde_tree, free_fde);
   eu_search_tree_fini (&cache->cie_tree, free_cie);
   eu_search_tree_fini (&cache->expr_tree, free_expr);
+  mutex_fini (cache->lock);
 
   if (cache->ebl != NULL && cache->ebl != (void *) -1l)
     ebl_closebackend (cache->ebl);

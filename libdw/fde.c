@@ -122,7 +122,8 @@ intern_fde (Dwarf_CFI *cache, const Dwarf_FDE *entry)
     fde->instructions += cie->fde_augmentation_data_size;
 
   /* Add the new entry to the search tree.  */
-  struct dwarf_fde **tres = eu_tsearch (fde, &cache->fde_tree, &compare_fde);
+  struct dwarf_fde **tres = eu_tsearch_nolock (fde, &cache->fde_tree,
+					       &compare_fde);
   if (tres == NULL)
     {
       free (fde);
@@ -252,7 +253,8 @@ __libdw_find_fde (Dwarf_CFI *cache, Dwarf_Addr address)
   /* Look for a cached FDE covering this address.  */
 
   const struct dwarf_fde fde_key = { .start = address, .end = 0 };
-  struct dwarf_fde **found = eu_tfind (&fde_key, &cache->fde_tree, &compare_fde);
+  struct dwarf_fde **found = eu_tfind_nolock (&fde_key, &cache->fde_tree,
+					      &compare_fde);
   if (found != NULL)
     return *found;
 

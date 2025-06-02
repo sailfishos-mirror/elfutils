@@ -70,6 +70,7 @@ dwarf_getcfi (Dwarf *dbg)
       eu_search_tree_init (&cfi->cie_tree);
       eu_search_tree_init (&cfi->fde_tree);
       eu_search_tree_init (&cfi->expr_tree);
+      mutex_init (cfi->lock);
 
       cfi->ebl = NULL;
 

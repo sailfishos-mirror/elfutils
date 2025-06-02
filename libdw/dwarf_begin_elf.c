@@ -359,6 +359,11 @@ valid_p (Dwarf *result)
 	  result->fake_loc_cu->version = 4;
 	  result->fake_loc_cu->split = NULL;
 	  eu_search_tree_init (&result->fake_loc_cu->locs_tree);
+	  rwlock_init (result->fake_loc_cu->abbrev_lock);
+	  rwlock_init (result->fake_loc_cu->split_lock);
+	  mutex_init (result->fake_loc_cu->src_lock);
+	  mutex_init (result->fake_loc_cu->str_off_base_lock);
+	  mutex_init (result->fake_loc_cu->intern_lock);
 	}
     }
 
@@ -387,6 +392,11 @@ valid_p (Dwarf *result)
 	  result->fake_loclists_cu->version = 5;
 	  result->fake_loclists_cu->split = NULL;
 	  eu_search_tree_init (&result->fake_loclists_cu->locs_tree);
+	  rwlock_init (result->fake_loclists_cu->abbrev_lock);
+	  rwlock_init (result->fake_loclists_cu->split_lock);
+	  mutex_init (result->fake_loclists_cu->src_lock);
+	  mutex_init (result->fake_loclists_cu->str_off_base_lock);
+	  mutex_init (result->fake_loclists_cu->intern_lock);
 	}
     }
 
@@ -420,6 +430,11 @@ valid_p (Dwarf *result)
 	  result->fake_addr_cu->version = 5;
 	  result->fake_addr_cu->split = NULL;
 	  eu_search_tree_init (&result->fake_addr_cu->locs_tree);
+	  rwlock_init (result->fake_addr_cu->abbrev_lock);
+	  rwlock_init (result->fake_addr_cu->split_lock);
+	  mutex_init (result->fake_addr_cu->src_lock);
+	  mutex_init (result->fake_addr_cu->str_off_base_lock);
+	  mutex_init (result->fake_addr_cu->intern_lock);
 	}
     }
 

@@ -98,6 +98,10 @@ struct Dwarf_CFI_s
   /* Search tree for parsed DWARF expressions, indexed by raw pointer.  */
   search_tree expr_tree;
 
+  /* Should be held when calling __libdw_find_fde, __libdw_fde_by_offset and
+     when __libdw_intern_expression is called with Dwarf_CFI members.  */
+  mutex_define(, lock);
+
   /* Backend hook.  */
   struct ebl *ebl;
 

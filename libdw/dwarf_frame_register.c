@@ -109,12 +109,16 @@ dwarf_frame_register (Dwarf_Frame *fs, int regno, Dwarf_Op ops_mem[3],
 	block.data = (void *) p;
 
 	/* Parse the expression into internal form.  */
-	if (__libdw_intern_expression (NULL,
-				       fs->cache->other_byte_order,
-				       address_size, 4,
-				       &fs->cache->expr_tree, &block,
-				       true, reg->rule == reg_val_expression,
-				       ops, nops, IDX_debug_frame) < 0)
+	mutex_lock (fs->cache->lock);
+	int res = __libdw_intern_expression (NULL,
+					     fs->cache->other_byte_order,
+					     address_size, 4,
+					     &fs->cache->expr_tree, &block,
+					     true, reg->rule == reg_val_expression,
+					     ops, nops, IDX_debug_frame);
+	mutex_unlock (fs->cache->lock);
+
+	if (res < 0)
 	  return -1;
 	break;
       }

@@ -269,7 +269,7 @@ struct Dwarf
      __libdw_intern_next_unit.  */
   mutex_define(, dwarf_lock);
 
-  /* Synchronize access to dwarf_macro_getsrcfiles.  */
+  /* Synchronize access to dwarf_macro_getsrcfiles and cache_op_table.  */
   mutex_define(, macro_lock);
 
   /* Internal memory handling.  This is basically a simplified thread-local
@@ -470,6 +470,10 @@ struct Dwarf_CU
   /* Synchronize access to the str_off_base of this Dwarf_CU.
      Covers __libdw_str_offsets_base_off.  */
   mutex_define(, str_off_base_lock);
+
+  /* Synchronize access to is_constant_offset.  Should also be held
+     when calling __libdw_intern_expression with Dwarf_CU members.  */
+  mutex_define(, intern_lock);
 
   /* Memory boundaries of this CU.  */
   void *startp;
@@ -949,8 +953,9 @@ extern int __libdw_visit_scopes (unsigned int depth,
 				 void *arg)
   __nonnull_attribute__ (2, 4) internal_function;
 
-/* Parse a DWARF Dwarf_Block into an array of Dwarf_Op's,
-   and cache the result (via tsearch).  */
+/* Parse a DWARF Dwarf_Block into an array of Dwarf_Op's, and cache the
+   result (via tsearch).  The owner of CACHE (typically a Dwarf_CU or
+   Dwarf_CFI_s) must hold a lock when calling this function.  */
 extern int __libdw_intern_expression (Dwarf *dbg,
 				      bool other_byte_order,
 				      unsigned int address_size,

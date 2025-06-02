@@ -322,15 +322,29 @@ cache_op_table (Dwarf *dbg, int sec_index, Dwarf_Off macoff,
   if (found != NULL)
     return *found;
 
+  mutex_lock (dbg->macro_lock);
+
+  found = eu_tfind_nolock (&fake, &dbg->macro_ops_tree, macro_op_compare);
+  if (found != NULL)
+    {
+      mutex_unlock (dbg->macro_lock);
+      return *found;
+    }
+
   Dwarf_Macro_Op_Table *table = sec_index == IDX_debug_macro
     ? get_table_for_offset (dbg, macoff, startp, endp, cudie)
     : get_macinfo_table (dbg, macoff, cudie);
 
   if (table == NULL)
-    return NULL;
+    {
+      mutex_unlock (dbg->macro_lock);
+      return NULL;
+    }
 
-  Dwarf_Macro_Op_Table **ret = eu_tsearch (table, &dbg->macro_ops_tree,
-					macro_op_compare);
+  Dwarf_Macro_Op_Table **ret = eu_tsearch_nolock (table, &dbg->macro_ops_tree,
+						  macro_op_compare);
+  mutex_unlock (dbg->macro_lock);
+
   if (unlikely (ret == NULL))
     {
       __libdw_seterrno (DWARF_E_NOMEM);
