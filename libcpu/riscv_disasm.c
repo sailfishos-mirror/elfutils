@@ -164,7 +164,10 @@ riscv_disasm (Ebl *ebl,
 	}
 
       char *mne = NULL;
-      char mnebuf[32];
+      /* Max length is 24, which is "illegal", so we print it as
+         "0x<48 hex chars>"
+         See: No instruction encodings defined for these sizes yet, below  */
+      char mnebuf[50];
       char *op[5] = { NULL, NULL, NULL, NULL, NULL };
       char immbuf[32];
       size_t len;
