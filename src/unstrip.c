@@ -1666,6 +1666,7 @@ more sections in stripped file than debug file -- arguments reversed?"));
 	  ELF_CHECK (newdata != NULL && gelf_update_shdr (sec->outscn,
 							  &sec->shdr),
 		     _("cannot add new section: %s"));
+	  unstripped_shnum++;
 
 	  if (strtab == NULL)
 	    strtab = dwelf_strtab_init (true);
