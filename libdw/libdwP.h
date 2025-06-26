@@ -32,8 +32,8 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#include <libdw.h>
-#include <dwarf.h>
+#include "libdw.h"
+#include "dwarf.h"
 #include "eu-search.h"
 
 

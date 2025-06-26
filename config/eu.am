@@ -1,7 +1,7 @@
 ## Common automake fragments for elfutils subdirectory makefiles.
 ##
 ## Copyright (C) 2010, 2014, 2016 Red Hat, Inc.
-## Copyright (C) 2023, Mark J. Wielaard <mark@klomp.org>
+## Copyright (C) 2023, 2025 Mark J. Wielaard <mark@klomp.org>
 ##
 ## This file is part of elfutils.
 ##
@@ -31,7 +31,24 @@
 ##
 
 DEFS = -D_GNU_SOURCE -DHAVE_CONFIG_H -DLOCALEDIR='"${localedir}"'
-AM_CPPFLAGS = -iquote . -I$(srcdir) -I$(top_srcdir)/lib -I..
+
+# -iquote dirs are just for "header" includes, -I for both <header>
+# and "header" includes. We don't want system <header> includes to
+# search . and srcdir. We do want the headers under lib and the abs
+# top build dir (for config.h).
+#
+# This is mainly to prevent things like #include <stack> to
+# accidentially import the stack binary instead of the standard C++
+# header file (which apparently clang plus libc++ do indirectly).
+# https://bugs.gentoo.org/925241
+# https://sourceware.org/bugzilla/show_bug.cgi?id=33103
+#
+# Note that DEFAULT_INCLUDES might add . and srcdir back.  So
+# DEFAULT_INCLUDES is disabled explicitly in src/Makefile.am (where
+# the stack binary is build). We could also use the nostdinc automake
+# option to completely suppress that, but that needs more auditing of
+# various installed vs not-installed header files.
+AM_CPPFLAGS = -iquote. -iquote$(srcdir) -I$(top_srcdir)/lib -I$(abs_top_builddir)
 
 # Drop the 'u' flag that automake adds by default. It is incompatible
 # with deterministic archives.
