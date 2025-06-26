@@ -23,7 +23,6 @@
 #include <argp.h>
 #include <assert.h>
 #include <fcntl.h>
-#include <gelf.h>
 #include <limits.h>
 #include <locale.h>
 #include <search.h>
@@ -41,6 +40,7 @@
 #include <system.h>
 #include <printversion.h>
 
+#include "gelf.h"
 #include "libeu.h"
 #include "arlib.h"
 

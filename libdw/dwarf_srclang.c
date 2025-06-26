@@ -32,7 +32,7 @@
 # include <config.h>
 #endif
 
-#include <dwarf.h>
+#include "dwarf.h"
 #include "libdwP.h"
 
 

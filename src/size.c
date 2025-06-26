@@ -22,9 +22,7 @@
 
 #include <argp.h>
 #include <fcntl.h>
-#include <gelf.h>
 #include <inttypes.h>
-#include <libelf.h>
 #include <locale.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -35,6 +33,9 @@
 
 #include <system.h>
 #include <printversion.h>
+
+#include "gelf.h"
+#include "libelf.h"
 
 /* Name and version of program.  */
 ARGP_PROGRAM_VERSION_HOOK_DEF = print_version;

@@ -29,10 +29,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include ELFUTILS_HEADER(elf)
-#include ELFUTILS_HEADER(ebl)
-#include ELFUTILS_HEADER(dwelf)
-#include <gelf.h>
+
+#include "libelf.h"
+#include "libebl.h"
+#include "libdwelf.h"
+#include "gelf.h"
 #include "system.h"
 #include "libeu.h"
 #include "printversion.h"

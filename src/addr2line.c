@@ -26,8 +26,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
-#include <libdwfl.h>
-#include <dwarf.h>
 #include <locale.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -39,6 +37,8 @@
 #include <system.h>
 #include <printversion.h>
 
+#include "libdwfl.h"
+#include "dwarf.h"
 
 /* Name and version of program.  */
 ARGP_PROGRAM_VERSION_HOOK_DEF = print_version;

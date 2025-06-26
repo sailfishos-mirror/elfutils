@@ -32,25 +32,26 @@
 #endif
 
 #include "printversion.h"
-#include <dwarf.h>
 #include <argp.h>
 #include <cstring>
 #include <set>
 #include <string>
 #include <cassert>
-#include <gelf.h>
 #include <memory>
 
 #ifdef ENABLE_LIBDEBUGINFOD
 #include "debuginfod.h"
 #endif
 
-#include <libdwfl.h>
 #include <fcntl.h>
 #include <iostream>
-#include <libdw.h>
 #include <sstream>
 #include <vector>
+
+#include "dwarf.h"
+#include "gelf.h"
+#include "libdw.h"
+#include "libdwfl.h"
 
 /* Libraries for use by the --zip option */
 #ifdef HAVE_LIBARCHIVE

@@ -24,12 +24,9 @@
 #include <argp.h>
 #include <assert.h>
 #include <ctype.h>
-#include <dwarf.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <gelf.h>
 #include <inttypes.h>
-#include <libdw.h>
 #include <locale.h>
 #include <obstack.h>
 #include <search.h>
@@ -44,6 +41,10 @@
 #include <system.h>
 #include <color.h>
 #include <printversion.h>
+
+#include "dwarf.h"
+#include "gelf.h"
+#include "libdw.h"
 #include "../libebl/libeblP.h"
 #include "../libdwfl/libdwflP.h"
 

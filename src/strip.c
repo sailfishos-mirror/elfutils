@@ -26,8 +26,6 @@
 #include <endian.h>
 #include <fcntl.h>
 #include <fnmatch.h>
-#include <gelf.h>
-#include <libelf.h>
 #include <locale.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -38,10 +36,13 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 
-#include <elf-knowledge.h>
-#include <libebl.h>
+#include "gelf.h"
+#include "libelf.h"
+#include "elf-knowledge.h"
+#include "libebl.h"
 #include "libdwelf.h"
-#include <libeu.h>
+#include "libeu.h"
+
 #include <system.h>
 #include <printversion.h>
 

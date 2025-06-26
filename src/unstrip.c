@@ -43,9 +43,9 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#include <gelf.h>
-#include <libebl.h>
-#include <libdwfl.h>
+#include "gelf.h"
+#include "libebl.h"
+#include "libdwfl.h"
 #include "system.h"
 #include "libdwelf.h"
 #include "libeu.h"

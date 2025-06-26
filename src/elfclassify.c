@@ -20,7 +20,6 @@
 
 #include <argp.h>
 #include <fcntl.h>
-#include <gelf.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -29,8 +28,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include ELFUTILS_HEADER(elf)
-#include ELFUTILS_HEADER(dwelf)
+#include "libelf.h"
+#include "libdwelf.h"
+#include "gelf.h"
 #include "printversion.h"
 
 /* Name and version of program.  */

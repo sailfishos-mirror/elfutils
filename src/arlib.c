@@ -21,13 +21,13 @@
 #endif
 
 #include <assert.h>
-#include <gelf.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-#include <libeu.h>
+#include "gelf.h"
+#include "libeu.h"
 
 #include "system.h"
 #include "arlib.h"

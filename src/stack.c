@@ -25,11 +25,12 @@
 #include <string.h>
 #include <locale.h>
 #include <fcntl.h>
-#include ELFUTILS_HEADER(dwfl)
 
-#include <dwarf.h>
 #include <system.h>
 #include <printversion.h>
+
+#include "libdwfl.h"
+#include "dwarf.h"
 
 /* Name and version of program.  */
 ARGP_PROGRAM_VERSION_HOOK_DEF = print_version;

@@ -26,7 +26,6 @@
 #include <byteswap.h>
 #include <endian.h>
 #include <fcntl.h>
-#include <gelf.h>
 #include <inttypes.h>
 #include <locale.h>
 #include <stdbool.h>
@@ -35,8 +34,9 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#include <elf-knowledge.h>
-#include <libeu.h>
+#include "gelf.h"
+#include "elf-knowledge.h"
+#include "libeu.h"
 #include <system.h>
 #include <printversion.h>
 #include "../libelf/libelfP.h"

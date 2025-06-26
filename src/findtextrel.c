@@ -24,8 +24,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <gelf.h>
-#include <libdw.h>
 #include <locale.h>
 #include <search.h>
 #include <stdbool.h>
@@ -37,6 +35,8 @@
 #include <printversion.h>
 #include "libeu.h"
 #include "system.h"
+#include "gelf.h"
+#include "libdw.h"
 
 struct segments
 {

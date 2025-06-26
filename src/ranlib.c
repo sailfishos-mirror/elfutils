@@ -25,7 +25,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <gelf.h>
 #include <locale.h>
 #include <obstack.h>
 #include <stdlib.h>
@@ -38,6 +37,7 @@
 #include <system.h>
 #include <printversion.h>
 
+#include "gelf.h"
 #include "arlib.h"
 
 

@@ -22,13 +22,13 @@
 #include <argp.h>
 #include <byteswap.h>
 #include <endian.h>
-#include <libelf.h>
 #include <obstack.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
 
+#include "libelf.h"
 
 /* State of -D/-U flags.  */
 extern bool arlib_deterministic_output;

@@ -23,14 +23,10 @@
 #include <argp.h>
 #include <assert.h>
 #include <ctype.h>
-#include <dwarf.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <gelf.h>
 #include <inttypes.h>
 #include <langinfo.h>
-#include <libdw.h>
-#include <libdwfl.h>
 #include <locale.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -47,6 +43,11 @@
 #include <libeu.h>
 #include <system.h>
 #include <printversion.h>
+
+#include "dwarf.h"
+#include "gelf.h"
+#include "libdw.h"
+#include "libdwfl.h"
 #include "../libelf/libelfP.h"
 #include "../libelf/common.h"
 #include "../libebl/libeblP.h"

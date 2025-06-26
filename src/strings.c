@@ -26,7 +26,6 @@
 #include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <gelf.h>
 #include <inttypes.h>
 #include <locale.h>
 #include <stdbool.h>
@@ -38,9 +37,11 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-#include <libeu.h>
 #include <system.h>
 #include <printversion.h>
+
+#include "gelf.h"
+#include "libeu.h"
 
 #ifndef MAP_POPULATE
 # define MAP_POPULATE 0
