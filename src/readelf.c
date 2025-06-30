@@ -57,6 +57,18 @@
 
 #include "../libdw/known-dwarf.h"
 
+#ifdef USE_LOCKS
+#include "threadlib.h"
+#endif
+
+#ifdef HAVE_SCHED_H
+#include <sched.h>
+#endif
+
+#ifdef HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>
+#endif
+
 #ifdef __linux__
 #define CORE_SIGILL  SIGILL
 #define CORE_SIGBUS  SIGBUS
@@ -150,6 +162,10 @@ static const struct argp_option options[] =
     N_("Ignored for compatibility (lines always wide)"), 0 },
   { "decompress", 'z', NULL, 0,
     N_("Show compression information for compressed sections (when used with -S); decompress section before dumping data (when used with -p or -x)"), 0 },
+#ifdef USE_LOCKS
+  { "concurrency", 'C', "NUM", 0,
+    N_("Set maximum number of threads. Defaults to the number of CPUs."), 0 },
+#endif
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -248,6 +264,11 @@ static bool print_decompress = false;
 
 /* True if we want to show split compile units for debug_info skeletons.  */
 static bool show_split_units = false;
+
+#if USE_LOCKS
+/* Maximum number of threads.  */
+static int max_threads = 0;
+#endif
 
 /* Select printing of debugging sections.  */
 static enum section_e
@@ -380,6 +401,43 @@ cleanup_list (struct section_argument *list)
     }
 }
 
+#ifdef USE_LOCKS
+/* Estimate the maximum number of threads. This is normally
+   #CPU.  Return value is guaranteed to be at least 1.  */
+static int
+default_concurrency (void)
+{
+  unsigned aff = 0;
+#ifdef HAVE_SCHED_GETAFFINITY
+  {
+    int ret;
+    cpu_set_t mask;
+    CPU_ZERO (&mask);
+    ret = sched_getaffinity (0, sizeof(mask), &mask);
+    if (ret == 0)
+      aff = CPU_COUNT (&mask);
+  }
+#endif
+
+  unsigned fn = 0;
+#ifdef HAVE_GETRLIMIT
+  {
+    struct rlimit rlim;
+    int rc = getrlimit (RLIMIT_NOFILE, &rlim);
+    if (rc == 0)
+      fn = MAX ((rlim_t) 1, (rlim.rlim_cur - 100) / 2);
+    /* Conservatively estimate that at least 2 fds are used
+       by each thread.  */
+  }
+#endif
+
+  unsigned d = MIN (MAX (aff, 2U),
+		    MAX (fn, 2U));
+
+  return d;
+}
+#endif
+
 int
 main (int argc, char *argv[])
 {
@@ -402,6 +460,12 @@ main (int argc, char *argv[])
 
   /* Before we start tell the ELF library which version we are using.  */
   elf_version (EV_CURRENT);
+
+#ifdef USE_LOCKS
+  /* If concurrency wasn't set by argp_parse, then set a default value.  */
+  if (max_threads == 0)
+    max_threads = default_concurrency ();
+#endif
 
   /* Now process all the files given at the command line.  */
   bool only_one = remaining + 1 == argc;
@@ -527,6 +591,19 @@ parse_opt (int key, char *arg,
     case 'c':
       print_archive_index = true;
       break;
+#if USE_LOCKS
+    case 'C':
+      if (arg != NULL)
+	{
+	  max_threads = atoi (arg);
+	  if (max_threads < 1)
+	    {
+	      argp_error (state, _("-C NUM minimum 1"));
+	      return EINVAL;
+	    }
+	}
+      break;
+#endif
     case 'w':
       if (arg == NULL)
 	{
@@ -5496,7 +5573,7 @@ listptr_base (struct listptr *p)
 }
 
 /* To store the name used in compare_listptr */
-static const char *sort_listptr_name;
+_Thread_local const char *sort_listptr_name;
 
 static int
 compare_listptr (const void *a, const void *b)
@@ -11997,6 +12074,65 @@ getone_dwflmod (Dwfl_Module *dwflmod,
   return DWARF_CB_OK;
 }
 
+typedef struct {
+  Dwfl_Module *dwflmod;
+  Ebl *ebl;
+  GElf_Ehdr *ehdr;
+  Elf_Scn scn;
+  GElf_Shdr shdr;
+  Dwarf *dbg;
+  FILE *out;
+  void (*fp) (Dwfl_Module *, Ebl *, GElf_Ehdr *,
+              Elf_Scn *, GElf_Shdr *, Dwarf *, FILE *);
+} job_data;
+
+#ifdef USE_LOCKS
+
+/* Thread entry point.  */
+static void *
+do_job (void *data, FILE *out)
+{
+  job_data *d = (job_data *) data;
+  d->fp (d->dwflmod, d->ebl, d->ehdr, &d->scn, &d->shdr, d->dbg, out);
+  return NULL;
+}
+#endif
+
+/* If readelf is built with thread safety, then set up JDATA at index IDX
+   and add it to the job queue.
+
+   If thread safety is not supported or the maximum number of threads is set
+   to 1, then immediately call START_ROUTINE with the given arguments.  */
+static void
+schedule_job (job_data jdata[], size_t idx,
+	      void (*start_routine) (Dwfl_Module *, Ebl *, GElf_Ehdr *,
+				     Elf_Scn *, GElf_Shdr *, Dwarf *, FILE *),
+	      Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr, Elf_Scn *scn,
+	      GElf_Shdr *shdr, Dwarf *dbg)
+{
+#ifdef USE_LOCKS
+  if (max_threads > 1)
+    {
+      /* Add to the job queue.  */
+      jdata[idx].dwflmod = dwflmod;
+      jdata[idx].ebl = ebl;
+      jdata[idx].ehdr = ehdr;
+      jdata[idx].scn = *scn;
+      jdata[idx].shdr = *shdr;
+      jdata[idx].dbg = dbg;
+      jdata[idx].fp = start_routine;
+
+      add_job (do_job, (void *) &jdata[idx]);
+    }
+  else
+    start_routine (dwflmod, ebl, ehdr, scn, shdr, dbg, stdout);
+#else
+  (void) jdata; (void) idx;
+
+  start_routine (dwflmod, ebl, ehdr, scn, shdr, dbg, stdout);
+#endif
+}
+
 static void
 print_debug (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr)
 {
@@ -12169,6 +12305,9 @@ print_debug (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr)
   if (unlikely (elf_getshdrstrndx (ebl->elf, &shstrndx) < 0))
     error_exit (0, _("cannot get section header string table index"));
 
+  size_t num_jobs = 0;
+  job_data *jdata = NULL;
+
   /* If the .debug_info section is listed as implicitly required then
      we must make sure to handle it before handling any other debug
      section.  Various other sections depend on the CU DIEs being
@@ -12266,6 +12405,13 @@ print_debug (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr)
 	  if (name == NULL)
 	    continue;
 
+	  if (jdata == NULL)
+	    {
+	      jdata = calloc (ndebug_sections, sizeof (*jdata));
+	      if (jdata == NULL)
+		error_exit (0, _("failed to allocate job data"));
+	    }
+
 	  int n;
 	  for (n = 0; n < ndebug_sections; ++n)
 	    {
@@ -12287,17 +12433,27 @@ print_debug (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr)
 		      && strcmp (&name[14], debug_sections[n].name) == 0)
 )
 		{
-		  if ((print_debug_sections | implicit_debug_sections)
-		      & debug_sections[n].bitmask)
-		    debug_sections[n].fp (dwflmod, ebl, ehdr, scn, shdr, dbg, stdout);
+		  if (((print_debug_sections | implicit_debug_sections)
+		       & debug_sections[n].bitmask))
+		    schedule_job (jdata, num_jobs++, debug_sections[n].fp,
+				  dwflmod, ebl, ehdr, scn, shdr, dbg);
+
+		  assert (num_jobs <= ndebug_sections);
 		  break;
 		}
 	    }
 	}
     }
 
+#ifdef USE_LOCKS
+  /* If max_threads <= 1, then jobs were immediately run in schedule_job.  */
+  if (max_threads > 1)
+    run_jobs (max_threads);
+#endif
+
   dwfl_end (skel_dwfl);
   free (skel_name);
+  free (jdata);
 
   /* Turn implicit and/or explicit back on in case we go over another file.  */
   if (implicit_info)
