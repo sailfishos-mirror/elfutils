@@ -438,6 +438,24 @@ default_concurrency (void)
 }
 #endif
 
+#include <stdatomic.h>
+
+/* Cache the result of a call to the _() macro at the callsite.  */
+#define __(str)						     \
+  ({							     \
+    static _Atomic char *__p;				     \
+    (char *) atomic_load (&__p)				     \
+      ?: (atomic_store (&__p, (_Atomic char *) _(str)),	     \
+          (char *) atomic_load (&__p));			     \
+  })
+
+#define IGNORE_FMT_NONLITERAL_BEGIN			     \
+  _Pragma("GCC diagnostic push")			     \
+  _Pragma("GCC diagnostic ignored \"-Wformat-nonliteral\"")
+
+#define IGNORE_FMT_NONLITERAL_END			     \
+  _Pragma ("GCC diagnostic pop")
+
 int
 main (int argc, char *argv[])
 {
@@ -4942,7 +4960,9 @@ print_block (size_t n, const void *block, FILE *out)
     fputs (_("empty block\n"), out);
   else
     {
-      fprintf (out, _("%zu byte block:"), n);
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __("%zu byte block:"), n);
+      IGNORE_FMT_NONLITERAL_END
       const unsigned char *data = block;
       do
 	fprintf (out, " %02x", *data++);
@@ -5866,11 +5886,13 @@ print_debug_abbrev_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	  unsigned int tag = dwarf_getabbrevtag (&abbrev);
 	  int has_children = dwarf_abbrevhaschildren (&abbrev);
 
+	  IGNORE_FMT_NONLITERAL_BEGIN
 	  fprintf (out, _(" [%5u] offset: %" PRId64
 			   ", children: %s, tag: %s\n"),
 		   code, (int64_t) offset,
 		   has_children ? yes_str : no_str,
 		   dwarf_tag_name (tag));
+	  IGNORE_FMT_NONLITERAL_END
 
 	  size_t cnt = 0;
 	  unsigned int name;
@@ -6210,7 +6232,10 @@ print_debug_aranges_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
       const unsigned char *hdrstart = readp;
       size_t start_offset = hdrstart - (const unsigned char *) data->d_buf;
 
-      fprintf (out, _("\nTable at offset %zu:\n"), start_offset);
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __("\nTable at offset %zu:\n"), start_offset);
+      IGNORE_FMT_NONLITERAL_END
+
       if (readp + 4 > readendp)
 	{
 	invalid_data:
@@ -6230,8 +6255,11 @@ print_debug_aranges_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	}
 
       const unsigned char *nexthdr = readp + length;
-      fprintf (out, _("\n Length:        %6" PRIu64 "\n"),
+
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __("\n Length:        %6" PRIu64 "\n"),
 	       (uint64_t) length);
+      IGNORE_FMT_NONLITERAL_END
 
       if (unlikely (length > (size_t) (readendp - readp)))
 	goto invalid_data;
@@ -6242,8 +6270,12 @@ print_debug_aranges_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
       if (readp + 2 > readendp)
 	goto invalid_data;
       uint_fast16_t version = read_2ubyte_unaligned_inc (dbg, readp);
-      fprintf (out, _(" DWARF version: %6" PRIuFAST16 "\n"),
+
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __(" DWARF version: %6" PRIuFAST16 "\n"),
 	       version);
+      IGNORE_FMT_NONLITERAL_END
+
       if (version != 2)
 	{
 	  error (0, 0, _("unsupported aranges version"));
@@ -6257,14 +6289,21 @@ print_debug_aranges_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	offset = read_8ubyte_unaligned_inc (dbg, readp);
       else
 	offset = read_4ubyte_unaligned_inc (dbg, readp);
-      fprintf (out, _(" CU offset:     %6" PRIx64 "\n"),
+
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __(" CU offset:     %6" PRIx64 "\n"),
 	       (uint64_t) offset);
+      IGNORE_FMT_NONLITERAL_END
 
       if (readp + 1 > readendp)
 	goto invalid_data;
       unsigned int address_size = *readp++;
-      fprintf (out, _(" Address size:  %6" PRIu64 "\n"),
+
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __(" Address size:  %6" PRIu64 "\n"),
 	       (uint64_t) address_size);
+      IGNORE_FMT_NONLITERAL_END
+
       if (address_size != 4 && address_size != 8)
 	{
 	  error (0, 0, _("unsupported address size"));
@@ -6273,9 +6312,13 @@ print_debug_aranges_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 
       if (readp + 1 > readendp)
 	goto invalid_data;
+
       unsigned int segment_size = *readp++;
-      fprintf (out, _(" Segment size:  %6" PRIu64 "\n\n"),
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __(" Segment size:  %6" PRIu64 "\n\n"),
 	       (uint64_t) segment_size);
+      IGNORE_FMT_NONLITERAL_END
+
       if (segment_size != 0 && segment_size != 4 && segment_size != 8)
 	{
 	  error (0, 0, _("unsupported segment size"));
@@ -6392,8 +6435,10 @@ print_debug_rnglists_section (Dwfl_Module *dwflmod,
 	}
 
       ptrdiff_t offset = readp - (unsigned char *) data->d_buf;
-      fprintf (out, _("Table at Offset 0x%" PRIx64 ":\n\n"),
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __("Table at Offset 0x%" PRIx64 ":\n\n"),
 	       (uint64_t) offset);
+      IGNORE_FMT_NONLITERAL_END
 
       uint64_t unit_length = read_4ubyte_unaligned_inc (dbg, readp);
       unsigned int offset_size = 4;
@@ -6405,7 +6450,9 @@ print_debug_rnglists_section (Dwfl_Module *dwflmod,
 	  unit_length = read_8ubyte_unaligned_inc (dbg, readp);
 	  offset_size = 8;
 	}
-      fprintf (out, _(" Length:         %8" PRIu64 "\n"), unit_length);
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __(" Length:         %8" PRIu64 "\n"), unit_length);
+      IGNORE_FMT_NONLITERAL_END
 
       /* We need at least 2-bytes + 1-byte + 1-byte + 4-bytes = 8
 	 bytes to complete the header.  And this unit cannot go beyond
@@ -6418,7 +6465,9 @@ print_debug_rnglists_section (Dwfl_Module *dwflmod,
       const unsigned char *nexthdr = readp + unit_length;
 
       uint16_t version = read_2ubyte_unaligned_inc (dbg, readp);
-      fprintf (out, _(" DWARF version:  %8" PRIu16 "\n"), version);
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __(" DWARF version:  %8" PRIu16 "\n"), version);
+      IGNORE_FMT_NONLITERAL_END
 
       if (version != 5)
 	{
@@ -6427,8 +6476,10 @@ print_debug_rnglists_section (Dwfl_Module *dwflmod,
 	}
 
       uint8_t address_size = *readp++;
-      fprintf (out, _(" Address size:   %8" PRIu64 "\n"),
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __(" Address size:   %8" PRIu64 "\n"),
 	       (uint64_t) address_size);
+      IGNORE_FMT_NONLITERAL_END
 
       if (address_size != 4 && address_size != 8)
 	{
@@ -6447,8 +6498,10 @@ print_debug_rnglists_section (Dwfl_Module *dwflmod,
         }
 
       uint32_t offset_entry_count = read_4ubyte_unaligned_inc (dbg, readp);
-      fprintf (out, _(" Offset entries: %8" PRIu64 "\n"),
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __(" Offset entries: %8" PRIu64 "\n"),
 	       (uint64_t) offset_entry_count);
+      IGNORE_FMT_NONLITERAL_END
 
       /* We need the CU that uses this unit to get the initial base address. */
       Dwarf_Addr cu_base = 0;
@@ -6463,10 +6516,14 @@ print_debug_rnglists_section (Dwfl_Module *dwflmod,
 	  if (dwarf_cu_die (cu, &cudie,
 			    NULL, NULL, NULL, NULL,
 			    NULL, NULL) == NULL)
-	    fprintf (out, _(" Unknown CU base: "));
+	    fputs (__(" Unknown CU base: "), out);
 	  else
-	    fprintf (out, _(" CU [%6" PRIx64 "] base: "),
-		     dwarf_dieoffset (&cudie));
+	    {
+	      IGNORE_FMT_NONLITERAL_BEGIN
+	      fprintf (out, __(" CU [%6" PRIx64 "] base: "),
+		       dwarf_dieoffset (&cudie));
+	      IGNORE_FMT_NONLITERAL_END
+	    }
 	  print_dwarf_addr (dwflmod, address_size, cu_base, cu_base, out);
 	  fprintf (out, "\n");
 	}
@@ -8556,7 +8613,8 @@ print_debug_units (Dwfl_Module *dwflmod,
 	  dieoffset = dwarf_dieoffset (dwarf_offdie_types (dbg, cu->start
 							   + subdie_off,
 							   &typedie));
-	  fprintf (out, _(" Type unit at offset %" PRIu64 ":\n"
+	  IGNORE_FMT_NONLITERAL_BEGIN;
+	  fprintf (out, __(" Type unit at offset %" PRIu64 ":\n"
 			    " Version: %" PRIu16
 			    ", Abbreviation section offset: %" PRIu64
 			    ", Address size: %" PRIu8
@@ -8565,26 +8623,36 @@ print_debug_units (Dwfl_Module *dwflmod,
 			    ", Type offset: %#" PRIx64 " [%" PRIx64 "]\n"),
 		   (uint64_t) offset, version, abbroffset, addrsize, offsize,
 		   unit_id, (uint64_t) subdie_off, dieoffset);
+	  IGNORE_FMT_NONLITERAL_END;
 	}
       else
 	{
-	  fprintf (out, _(" Compilation unit at offset %" PRIu64 ":\n"
+	  IGNORE_FMT_NONLITERAL_BEGIN;
+	  fprintf (out, __(" Compilation unit at offset %" PRIu64 ":\n"
 			    " Version: %" PRIu16
 			    ", Abbreviation section offset: %" PRIu64
 			    ", Address size: %" PRIu8
 			    ", Offset size: %" PRIu8 "\n"),
 		   (uint64_t) offset, version, abbroffset, addrsize, offsize);
+	  IGNORE_FMT_NONLITERAL_END;
 
 	  if (version >= 5 || (unit_type != DW_UT_compile
 			       && unit_type != DW_UT_partial))
 	    {
-	      fprintf (out, _(" Unit type: %s (%" PRIu8 ")"),
+
+	      IGNORE_FMT_NONLITERAL_BEGIN;
+	      fprintf (out, __(" Unit type: %s (%" PRIu8 ")"),
 			        dwarf_unit_name (unit_type), unit_type);
+	      IGNORE_FMT_NONLITERAL_END;
 	      if (unit_type == DW_UT_type
 		  || unit_type == DW_UT_skeleton
 		  || unit_type == DW_UT_split_compile
 		  || unit_type == DW_UT_split_type)
-		fprintf (out, ", Unit id: 0x%.16" PRIx64 "", unit_id);
+		{
+		  IGNORE_FMT_NONLITERAL_BEGIN;
+		  fprintf (out, __(", Unit id: 0x%.16" PRIx64 ""), unit_id);
+		  IGNORE_FMT_NONLITERAL_END;
+		}
 	      if (unit_type == DW_UT_type
 		  || unit_type == DW_UT_split_type)
 		{
@@ -8593,8 +8661,10 @@ print_debug_units (Dwfl_Module *dwflmod,
 		  dwarf_cu_info (cu, NULL, NULL, NULL, &typedie,
 				 NULL, NULL, NULL);
 		  dieoffset = dwarf_dieoffset (&typedie);
-		  fprintf (out, ", Unit DIE off: %#" PRIx64 " [%" PRIx64 "]",
+		  IGNORE_FMT_NONLITERAL_BEGIN;
+		  fprintf (out, __(", Unit DIE off: %#" PRIx64 " [%" PRIx64 "]"),
 			   subdie_off, dieoffset);
+		  IGNORE_FMT_NONLITERAL_END;
 		}
 	      fprintf (out, "\n");
 	    }
@@ -9179,7 +9249,9 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
     {
       size_t start_offset = linep - (const unsigned char *) data->d_buf;
 
-      fprintf (out, _("\nTable at offset %zu:\n"), start_offset);
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __("\nTable at offset %zu:\n"), start_offset);
+      IGNORE_FMT_NONLITERAL_END
 
       if (unlikely (linep + 4 > lineendp))
 	goto invalid_data;
@@ -9270,7 +9342,8 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
       uint_fast8_t opcode_base = *linep++;
 
       /* Print what we got so far.  */
-      fprintf (out, _("\n"
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __("\n"
 		        " Length:                         %" PRIu64 "\n"
 		        " DWARF version:                  %" PRIuFAST16 "\n"
 		        " Prologue length:                %" PRIu64 "\n"
@@ -9289,6 +9362,7 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 	       minimum_instr_len, max_ops_per_instr,
 	       default_is_stmt, line_base,
 	       line_range, opcode_base);
+      IGNORE_FMT_NONLITERAL_END
 
       if (version < 2 || version > 5)
 	{
@@ -9344,13 +9418,13 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 
       Dwarf_Off str_offsets_base = str_offsets_base_off (dbg, NULL);
 
-      fputs (_("\nDirectory table:\n"), out);
+      fputs (__("\nDirectory table:\n"), out);
       if (version > 4)
 	{
 	  struct encpair { uint16_t desc; uint16_t form; };
 	  struct encpair enc[256];
 
-	  fprintf (out, _("      ["));
+	  fprintf (out, "      [");
 	  if ((size_t) (lineendp - linep) < 1)
 	    goto invalid_data;
 	  unsigned char directory_entry_format_count = *linep++;
@@ -9421,13 +9495,13 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
       if (unlikely (linep >= lineendp))
 	goto invalid_unit;
 
-      fputs (_("\nFile name table:\n"), out);
+      fputs (__("\nFile name table:\n"), out);
       if (version > 4)
 	{
 	  struct encpair { uint16_t desc; uint16_t form; };
 	  struct encpair enc[256];
 
-	  fprintf (out, _("      ["));
+	  fprintf (out, "      [");
 	  if ((size_t) (lineendp - linep) < 1)
 	    goto invalid_data;
 	  unsigned char file_name_format_count = *linep++;
@@ -9528,11 +9602,11 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 
       if (linep == lineendp)
 	{
-	  fputs (_("\nNo line number statements.\n"), out);
+	  fputs (__("\nNo line number statements.\n"), out);
 	  continue;
 	}
 
-      fputs (_("\nLine number statements:\n"), out);
+      fputs (__("\nLine number statements:\n"), out);
       Dwarf_Word address = 0;
       unsigned int op_index = 0;
       size_t line = 1;
@@ -9581,15 +9655,25 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 	      line += line_increment;
 	      advance_pc ((opcode - opcode_base) / line_range);
 
-	      fprintf (out, _(" special opcode %u: address+%u = "),
+	      IGNORE_FMT_NONLITERAL_BEGIN
+	      fprintf (out, __(" special opcode %u: address+%u = "),
 		       opcode, op_addr_advance);
+	      IGNORE_FMT_NONLITERAL_END
 	      print_dwarf_addr (dwflmod, 0, address, address, out);
 	      if (op_index > 0)
-		fprintf (out, _(", op_index = %u, line%+d = %zu\n"),
-			 op_index, line_increment, line);
+		{
+		  IGNORE_FMT_NONLITERAL_BEGIN
+		  fprintf (out, __(", op_index = %u, line%+d = %zu\n"),
+			   op_index, line_increment, line);
+		  IGNORE_FMT_NONLITERAL_END
+		}
 	      else
-		fprintf (out, _(", line%+d = %zu\n"),
-			 line_increment, line);
+		{
+		  IGNORE_FMT_NONLITERAL_BEGIN
+		  fprintf (out, __(", line%+d = %zu\n"),
+			   line_increment, line);
+		  IGNORE_FMT_NONLITERAL_END
+		}
 	    }
 	  else if (opcode == 0)
 	    {
@@ -9606,12 +9690,14 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 	      /* The sub-opcode.  */
 	      opcode = *linep++;
 
-	      fprintf (out, _(" extended opcode %u: "), opcode);
+	      IGNORE_FMT_NONLITERAL_BEGIN
+	      fprintf (out, __(" extended opcode %u: "), opcode);
+	      IGNORE_FMT_NONLITERAL_END
 
 	      switch (opcode)
 		{
 		case DW_LNE_end_sequence:
-		  fputs (_(" end of sequence\n"), out);
+		  fputs (__(" end of sequence\n"), out);
 
 		  /* Reset the registers we care about.  */
 		  address = 0;
@@ -9629,7 +9715,7 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		  else
 		    address = read_8ubyte_unaligned_inc (dbg, linep);
 		  {
-		    fprintf (out, _(" set address to "));
+		    fputs (__(" set address to "), out);
 		    print_dwarf_addr (dwflmod, 0, address, address, out);
 		    fprintf (out, "\n");
 		  }
@@ -9671,7 +9757,9 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		    goto invalid_unit;
 
 		  get_uleb128 (u128, linep, lineendp);
-		  fprintf (out, _(" set discriminator to %u\n"), u128);
+		  IGNORE_FMT_NONLITERAL_BEGIN
+		  fprintf (out, __(" set discriminator to %u\n"), u128);
+		  IGNORE_FMT_NONLITERAL_END
 		  break;
 
 		case DW_LNE_NVIDIA_inlined_call:
@@ -9741,7 +9829,7 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		{
 		case DW_LNS_copy:
 		  /* Takes no argument.  */
-		  fputs (_(" copy\n"), out);
+		  fputs (__(" copy\n"), out);
 		  break;
 
 		case DW_LNS_advance_pc:
@@ -9752,8 +9840,10 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		  get_uleb128 (u128, linep, lineendp);
 		  advance_pc (u128);
 		  {
-		    fprintf (out, _(" advance address by %u to "),
+		    IGNORE_FMT_NONLITERAL_BEGIN
+		    fprintf (out, __(" advance address by %u to "),
 			     op_addr_advance);
+		    IGNORE_FMT_NONLITERAL_END
 		    print_dwarf_addr (dwflmod, 0, address, address, out);
 		    if (op_index > 0)
 		      fprintf (out, _(", op_index to %u"), op_index);
@@ -9768,9 +9858,11 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		    goto invalid_unit;
 		  get_sleb128 (s128, linep, lineendp);
 		  line += s128;
-		  fprintf (out, _("\
+		  IGNORE_FMT_NONLITERAL_BEGIN
+		  fprintf (out, __("\
  advance line by constant %d to %" PRId64 "\n"),
 			   s128, (int64_t) line);
+		  IGNORE_FMT_NONLITERAL_END
 		  break;
 
 		case DW_LNS_set_file:
@@ -9778,8 +9870,10 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		  if (lineendp - linep < 1)
 		    goto invalid_unit;
 		  get_uleb128 (u128, linep, lineendp);
-		  fprintf (out, _(" set file to %" PRIu64 "\n"),
+		  IGNORE_FMT_NONLITERAL_BEGIN
+		  fprintf (out, __(" set file to %" PRIu64 "\n"),
 			   (uint64_t) u128);
+		  IGNORE_FMT_NONLITERAL_END
 		  break;
 
 		case DW_LNS_set_column:
@@ -9789,15 +9883,19 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		    goto invalid_unit;
 
 		  get_uleb128 (u128, linep, lineendp);
-		  fprintf (out, _(" set column to %" PRIu64 "\n"),
+		  IGNORE_FMT_NONLITERAL_BEGIN
+		  fprintf (out, __(" set column to %" PRIu64 "\n"),
 			   (uint64_t) u128);
+		  IGNORE_FMT_NONLITERAL_END
 		  break;
 
 		case DW_LNS_negate_stmt:
 		  /* Takes no argument.  */
 		  is_stmt = 1 - is_stmt;
-		  fprintf (out, _(" set '%s' to %" PRIuFAST8 "\n"),
+		  IGNORE_FMT_NONLITERAL_BEGIN
+		  fprintf (out, __(" set '%s' to %" PRIuFAST8 "\n"),
 			   "is_stmt", is_stmt);
+		  IGNORE_FMT_NONLITERAL_END
 		  break;
 
 		case DW_LNS_set_basic_block:
@@ -9813,8 +9911,10 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 
 		  advance_pc ((255 - opcode_base) / line_range);
 		  {
-		    fprintf (out, _(" advance address by constant %u to "),
+		    IGNORE_FMT_NONLITERAL_BEGIN
+		    fprintf (out, __(" advance address by constant %u to "),
 			     op_addr_advance);
+		    IGNORE_FMT_NONLITERAL_END
 		    print_dwarf_addr (dwflmod, 0, address, address, out);
 		    if (op_index > 0)
 		      fprintf (out, _(", op_index to %u"), op_index);
@@ -9926,8 +10026,10 @@ print_debug_loclists_section (Dwfl_Module *dwflmod,
 	}
 
       ptrdiff_t offset = readp - (unsigned char *) data->d_buf;
-      fprintf (out, _("Table at Offset 0x%" PRIx64 ":\n\n"),
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __("Table at Offset 0x%" PRIx64 ":\n\n"),
 	       (uint64_t) offset);
+      IGNORE_FMT_NONLITERAL_END
 
       uint64_t unit_length = read_4ubyte_unaligned_inc (dbg, readp);
       unsigned int offset_size = 4;
@@ -9939,7 +10041,9 @@ print_debug_loclists_section (Dwfl_Module *dwflmod,
 	  unit_length = read_8ubyte_unaligned_inc (dbg, readp);
 	  offset_size = 8;
 	}
-      fprintf (out, _(" Length:         %8" PRIu64 "\n"), unit_length);
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __(" Length:         %8" PRIu64 "\n"), unit_length);
+      IGNORE_FMT_NONLITERAL_END
 
       /* We need at least 2-bytes + 1-byte + 1-byte + 4-bytes = 8
 	 bytes to complete the header.  And this unit cannot go beyond
@@ -9952,7 +10056,9 @@ print_debug_loclists_section (Dwfl_Module *dwflmod,
       const unsigned char *nexthdr = readp + unit_length;
 
       uint16_t version = read_2ubyte_unaligned_inc (dbg, readp);
-      fprintf (out, _(" DWARF version:  %8" PRIu16 "\n"), version);
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __(" DWARF version:  %8" PRIu16 "\n"), version);
+      IGNORE_FMT_NONLITERAL_END
 
       if (version != 5)
 	{
@@ -9961,8 +10067,10 @@ print_debug_loclists_section (Dwfl_Module *dwflmod,
 	}
 
       uint8_t address_size = *readp++;
-      fprintf (out, _(" Address size:   %8" PRIu64 "\n"),
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __(" Address size:   %8" PRIu64 "\n"),
 	       (uint64_t) address_size);
+      IGNORE_FMT_NONLITERAL_END
 
       if (address_size != 4 && address_size != 8)
 	{
@@ -9971,8 +10079,10 @@ print_debug_loclists_section (Dwfl_Module *dwflmod,
 	}
 
       uint8_t segment_size = *readp++;
-      fprintf (out, _(" Segment size:   %8" PRIu64 "\n"),
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __(" Segment size:   %8" PRIu64 "\n"),
 	       (uint64_t) segment_size);
+      IGNORE_FMT_NONLITERAL_END
 
       if (segment_size != 0)
         {
@@ -9981,8 +10091,10 @@ print_debug_loclists_section (Dwfl_Module *dwflmod,
         }
 
       uint32_t offset_entry_count = read_4ubyte_unaligned_inc (dbg, readp);
-      fprintf (out, _(" Offset entries: %8" PRIu64 "\n"),
+      IGNORE_FMT_NONLITERAL_BEGIN
+      fprintf (out, __(" Offset entries: %8" PRIu64 "\n"),
 	       (uint64_t) offset_entry_count);
+      IGNORE_FMT_NONLITERAL_END
 
       /* We need the CU that uses this unit to get the initial base address. */
       Dwarf_Addr cu_base = 0;
@@ -9997,10 +10109,14 @@ print_debug_loclists_section (Dwfl_Module *dwflmod,
 	  if (dwarf_cu_die (cu, &cudie,
 			    NULL, NULL, NULL, NULL,
 			    NULL, NULL) == NULL)
-	    fprintf (out, _(" Unknown CU base: "));
+	    fputs (__(" Unknown CU base: "), out);
 	  else
-	    fprintf (out, _(" CU [%6" PRIx64 "] base: "),
-		     dwarf_dieoffset (&cudie));
+	    {
+	      IGNORE_FMT_NONLITERAL_BEGIN
+	      fprintf (out, __(" CU [%6" PRIx64 "] base: "),
+		       dwarf_dieoffset (&cudie));
+	      IGNORE_FMT_NONLITERAL_END
+	    }
 	  print_dwarf_addr (dwflmod, address_size, cu_base, cu_base, out);
 	  fprintf (out, "\n");
 	}
