@@ -455,10 +455,6 @@ struct Dwarf_CU
      Don't access directly, call __libdw_cu_locs_base.  */
   Dwarf_Off locs_base;
 
-  /* Synchronize access to the abbrev member of a Dwarf_Die that
-     refers to this Dwarf_CU.  Covers __libdw_die_abbrev. */
-  rwlock_define(, abbrev_lock);
-
   /* Synchronize access to the split member of this Dwarf_CU.
      Covers __libdw_find_split_unit.  */
   rwlock_define(, split_lock);
@@ -598,23 +594,6 @@ __libdw_first_die_off_from_cu (struct Dwarf_CU *cu)
 					  cu->version,
 					  cu->unit_type);
 }
-
-#define CUDIE(fromcu)							      \
-  ((Dwarf_Die)								      \
-   {									      \
-     .cu = (fromcu),							      \
-     .addr = ((char *) (fromcu)->dbg->sectiondata[cu_sec_idx (fromcu)]->d_buf \
-	      + __libdw_first_die_off_from_cu (fromcu))			      \
-   })
-
-#define SUBDIE(fromcu)							      \
-  ((Dwarf_Die)								      \
-   {									      \
-     .cu = (fromcu),							      \
-     .addr = ((char *) (fromcu)->dbg->sectiondata[cu_sec_idx (fromcu)]->d_buf \
-	      + (fromcu)->start + (fromcu)->subdie_offset)		      \
-   })
-
 
 /* Prototype of a single .debug_macro operator.  */
 typedef struct
@@ -824,12 +803,7 @@ __nonnull_attribute__ (1)
 __libdw_dieabbrev (Dwarf_Die *die, const unsigned char **readp)
 {
   if (unlikely (die->cu == NULL))
-    {
-      die->abbrev = DWARF_END_ABBREV;
-      return DWARF_END_ABBREV;
-    }
-
-  rwlock_wrlock (die->cu->abbrev_lock);
+    return DWARF_END_ABBREV;
 
   /* Do we need to get the abbreviation, or need to read after the code?  */
   if (die->abbrev == NULL || readp != NULL)
@@ -839,25 +813,20 @@ __libdw_dieabbrev (Dwarf_Die *die, const unsigned char **readp)
       const unsigned char *addr = die->addr;
 
       if (addr >= (const unsigned char *) die->cu->endp)
-	{
-	  die->abbrev = DWARF_END_ABBREV;
-	  rwlock_unlock (die->cu->abbrev_lock);
-	  return DWARF_END_ABBREV;
-	}
+	return DWARF_END_ABBREV;
 
       get_uleb128 (code, addr, die->cu->endp);
       if (readp != NULL)
 	*readp = addr;
 
-      /* Find the abbreviation.  */
+      /* Find the abbreviation.  To improve performance, this write is not
+	 protected by a lock.  It should only be reachable by a single thread
+	 when initializing the DIE.  */
       if (die->abbrev == NULL)
 	die->abbrev = __libdw_findabbrev (die->cu, code);
     }
 
-  Dwarf_Abbrev *result = die->abbrev;
-  rwlock_unlock (die->cu->abbrev_lock);
-
-  return result;
+  return die->abbrev;
 }
 
 /* Helper functions for form handling.  */
@@ -1115,6 +1084,28 @@ static inline size_t
 cu_sec_idx (struct Dwarf_CU *cu)
 {
   return cu->sec_idx;
+}
+
+static inline Dwarf_Die
+CUDIE (Dwarf_CU *fromcu)
+{
+  Dwarf_Die res = {0};
+  res.cu = fromcu;
+  res.addr = ((char *) (fromcu)->dbg->sectiondata[cu_sec_idx (fromcu)]->d_buf
+              + __libdw_first_die_off_from_cu (fromcu));
+  (void) dwarf_tag (&res);  /* Set .abbrev  */
+  return res;
+}
+
+static inline Dwarf_Die
+SUBDIE (Dwarf_CU *fromcu)
+{
+  Dwarf_Die res = {0};
+  res.cu = fromcu;
+  res.addr = ((char *) (fromcu)->dbg->sectiondata[cu_sec_idx (fromcu)]->d_buf
+	      + (fromcu)->start + (fromcu)->subdie_offset);
+  (void) dwarf_tag (&res);  /* Set .abbrev  */
+  return res;
 }
 
 static inline bool

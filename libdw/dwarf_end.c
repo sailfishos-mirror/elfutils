@@ -63,7 +63,6 @@ cu_free (void *arg)
   struct Dwarf_CU *p = (struct Dwarf_CU *) arg;
 
   eu_search_tree_fini (&p->locs_tree, noop_free);
-  rwlock_fini (p->abbrev_lock);
   rwlock_fini (p->split_lock);
   mutex_fini (p->src_lock);
   mutex_fini (p->str_off_base_lock);
