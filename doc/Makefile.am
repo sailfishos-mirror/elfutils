@@ -64,6 +64,7 @@ notrans_dist_man3_MANS= elf32_checksum.3 \
 			elf_ndxscn.3 \
 			elf_nextscn.3 \
 			elf_rawfile.3 \
+			elf_scnshndx.3 \
 			elf_update.3 \
 			elf_version.3 \
 			libelf.3
