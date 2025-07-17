@@ -51,6 +51,7 @@ notrans_dist_man3_MANS= elf32_checksum.3 \
 			elf64_xlatetom.3 \
 			elf_begin.3 \
 			elf_clone.3 \
+			elf_cntl.3 \
 			elf_end.3 \
 			elf_errmsg.3 \
 			elf_errno.3 \
