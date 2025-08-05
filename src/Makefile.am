@@ -52,6 +52,19 @@ libar.manifest: $(libar_a_OBJECTS)
 MOSTLYCLEANFILES = *.gconv
 CLEANFILES = $(bin_SCRIPTS) $(EXTRA_libar_a_DEPENDENCIES)
 
+if USE_LOCKS
+noinst_LIBRARIES += libthread.a
+noinst_HEADERS = threadlib.h
+libthread_a_SOURCES = threadlib.c
+EXTRA_DIST += threadlib.h
+EXTRA_libthread_a_DEPENDENCIES = libthread.manifest
+
+libthread.manifest: $(libthread_a_OBJECTS)
+	$(AM_V_GEN)echo $^ > $@
+
+CLEANFILES += $(EXTRA_libthread_a_DEPENDENCIES)
+endif
+
 if BUILD_STATIC
 libasm = ../libasm/libasm.a
 libdw = ../libdw/libdw.a -lz $(zip_LIBS) $(libelf) -ldl -lpthread
@@ -91,6 +104,9 @@ ar_no_Wstack_usage = yes
 unstrip_no_Wstack_usage = yes
 
 readelf_LDADD = $(libdw) $(libebl) $(libelf) $(libeu) $(argp_LDADD)
+if USE_LOCKS
+readelf_LDADD += libthread.a
+endif
 nm_LDADD = $(libdw) $(libebl) $(libelf) $(libeu) $(argp_LDADD) $(obstack_LIBS) \
 	   $(demanglelib)
 size_LDADD = $(libelf) $(libeu) $(argp_LDADD)
