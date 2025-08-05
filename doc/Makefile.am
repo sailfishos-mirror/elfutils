@@ -61,6 +61,7 @@ notrans_dist_man3_MANS= elf32_checksum.3 \
 			elf_getarsym.3 \
 			elf_getbase.3 \
 			elf_getdata.3 \
+			elf_getdata_rawchunk.3 \
 			elf_getscn.3 \
 			elf_hash.3 \
 			elf_kind.3 \
