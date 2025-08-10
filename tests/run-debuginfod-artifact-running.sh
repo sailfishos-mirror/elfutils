@@ -105,10 +105,10 @@ cmp $filename F/prog2
 grep -q Progress vlog
 grep -q Downloaded.from vlog
 tempfiles vlog
-filename=`testrun env DEBUGINFOD_PROGRESS=1 ${abs_top_builddir}/debuginfod/debuginfod-find executable $BUILDID2 2>vlog2`
+filename=`testrun env DEBUGINFOD_PROGRESS=1 ${abs_top_builddir}/debuginfod/debuginfod-find -v executable $BUILDID2 2>vlog2`
 cmp $filename F/prog2
-grep -q 'Downloading.*http' vlog2
 tempfiles vlog2
+grep -q 'Progress' vlog2
 filename=`testrun ${abs_top_builddir}/debuginfod/debuginfod-find source $BUILDID2 ${PWD}/prog2.c`
 cmp $filename ${PWD}/prog2.c
 

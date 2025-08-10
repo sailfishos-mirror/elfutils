@@ -30,6 +30,7 @@
 #include <fcntl.h>
 #include <gelf.h>
 #include <libdwelf.h>
+#include <signal.h>
 #ifndef DUMMY_LIBDEBUGINFOD
 #include <json-c/json.h>
 #endif
@@ -66,10 +67,22 @@ static const struct argp_option options[] =
 /* debuginfod connection handle.  */
 static debuginfod_client *client;
 static int verbose;
+static volatile sig_atomic_t interrupted;
+
+static void
+handle_sigint(int signo __attribute__((__unused__)))
+{
+  interrupted = 1;
+}
 
 int progressfn(debuginfod_client *c __attribute__((__unused__)),
 	       long a, long b)
 {
+  if (interrupted)
+    return 1;
+  if (verbose < 1)
+    return 0;
+
   static bool first = true;
   static struct timespec last;
   struct timespec now;
@@ -103,7 +116,6 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
   switch (key)
     {
     case 'v': verbose++;
-      debuginfod_set_progressfn (client, & progressfn);
       if (verbose > 1)
         debuginfod_set_verbose_fd (client, STDERR_FILENO);
       break;
@@ -132,6 +144,16 @@ main(int argc, char** argv)
       fprintf(stderr, "Couldn't create debuginfod client context\n");
       return 1;
     }
+
+  /* Set SIGINT handler and progressfn so that temp files can be cleaned
+     up when a download is cancelled.  */
+  struct sigaction sa;
+  sigemptyset (&sa.sa_mask);
+  sa.sa_flags = 0;
+  sa.sa_handler = handle_sigint;
+  sigaction (SIGINT, &sa, NULL);
+
+  debuginfod_set_progressfn (client, & progressfn);
 
   /* Exercise user data pointer, to support testing only. */
   debuginfod_set_user_data (client, (void *)"Progress");
@@ -291,7 +313,11 @@ main(int argc, char** argv)
 
   if (rc < 0)
     {
-      fprintf(stderr, "Server query failed: %s\n", strerror(-rc));
+      if (interrupted != 0)
+        fputs ("Server query cancelled\n", stderr);
+      else
+        fprintf(stderr, "Server query failed: %s\n", strerror(-rc));
+
       return 1;
     }
   else
