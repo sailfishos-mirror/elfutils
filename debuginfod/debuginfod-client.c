@@ -1182,7 +1182,10 @@ perform_queries(CURLM *curlm, CURL **target_handle, struct handle_data *data, de
                 }
               
               if ((*c->progressfn) (c, pa, dl_size == -1 ? 0 : dl_size))
-                break;
+		{
+		  c->progressfn_cancel = true;
+		  break;
+		}
             }
         }
       /* Check to see if we are downloading something which exceeds maxsize, if set.*/
@@ -2734,6 +2737,8 @@ int debuginfod_find_metadata (debuginfod_client *client,
   int rc = 0, r;
   int vfd = client->verbose_fd;
   struct handle_data *data = NULL;
+
+  client->progressfn_cancel = false;
   
   json_object *json_metadata = json_object_new_object();
   json_bool json_metadata_complete = true;
