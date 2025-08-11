@@ -323,6 +323,7 @@ struct Elf
 				   read from the file.  */
       search_tree rawchunk_tree;  /* Tree and lock for elf_getdata_rawchunk
 				     results.  */
+      Elf_Arhdr elf_ar_hdr;     /* Structure returned by 'elf_getarhdr'.  */
       unsigned int scnincr;	/* Number of sections allocate the last
 				   time.  */
       int ehdr_flags;		/* Flags (dirty) for ELF header.  */
@@ -343,6 +344,7 @@ struct Elf
 				   read from the file.  */
       search_tree rawchunk_tree;  /* Tree and lock for
 				     elf_getdata_rawchunk results.  */
+      Elf_Arhdr elf_ar_hdr;     /* Structure returned by 'elf_getarhdr'.  */
       unsigned int scnincr;	/* Number of sections allocate the last
 				   time.  */
       int ehdr_flags;		/* Flags (dirty) for ELF header.  */
@@ -369,6 +371,7 @@ struct Elf
 				   read from the file.  */
       search_tree rawchunk_tree;  /* Tree and lock for
 				     elf_getdata_rawchunk results.  */
+      Elf_Arhdr elf_ar_hdr;     /* Structure returned by 'elf_getarhdr'.  */
       unsigned int scnincr;	/* Number of sections allocate the last
 				   time.  */
       int ehdr_flags;		/* Flags (dirty) for ELF header.  */
@@ -394,7 +397,8 @@ struct Elf
       int64_t offset;		/* Offset in file we are currently at.
 				   elf_next() advances this to the next
 				   member of the archive.  */
-      Elf_Arhdr elf_ar_hdr;	/* Structure returned by 'elf_getarhdr'.  */
+      Elf_Arhdr elf_ar_hdr;     /* Copy of current archive member's structure
+				   returned by 'elf_getarhdr'.  */
       struct ar_hdr ar_hdr;	/* Header read from file.  */
       char ar_name[16];		/* NUL terminated ar_name of elf_ar_hdr.  */
       char raw_name[17];	/* This is a buffer for the NUL terminated

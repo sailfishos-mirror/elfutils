@@ -815,6 +815,53 @@ read_long_names (Elf *elf)
 }
 
 
+/* Copy archive header from parent archive ref to member descriptor elf.  */
+static int
+copy_arhdr (Elf_Arhdr *dest, Elf *ref)
+{
+  Elf_Arhdr *hdr;
+
+  if (ref->kind == ELF_K_AR)
+    hdr = &ref->state.ar.elf_ar_hdr;
+  else
+    hdr = &ref->state.elf.elf_ar_hdr;
+
+  char *ar_name = hdr->ar_name;
+  char *ar_rawname = hdr->ar_rawname;
+  if (ar_name == NULL || ar_rawname == NULL)
+    {
+      /* ref doesn't have an Elf_Arhdr or it was marked as unusable.  */
+      return 0;
+    }
+
+  /* Allocate copies of ar_name and ar_rawname.  */
+  size_t name_len = strlen (ar_name) + 1;
+  char *name_copy = malloc (MAX (name_len, 16));
+  if (name_copy == NULL)
+    {
+      __libelf_seterrno (ELF_E_NOMEM);
+      return -1;
+    }
+  memcpy (name_copy, ar_name, name_len);
+
+  size_t rawname_len = strlen (ar_rawname) + 1;
+  char *rawname_copy = malloc (MAX (rawname_len, 17));
+  if (rawname_copy == NULL)
+    {
+      free (name_copy);
+      __libelf_seterrno (ELF_E_NOMEM);
+      return -1;
+    }
+  memcpy (rawname_copy, ar_rawname, rawname_len);
+
+  *dest = *hdr;
+  dest->ar_name = name_copy;
+  dest->ar_rawname = rawname_copy;
+
+  return 0;
+}
+
+
 /* Read the next archive header.  */
 int
 internal_function
@@ -1060,16 +1107,27 @@ dup_elf (int fildes, Elf_Cmd cmd, Elf *ref)
     /* Something went wrong.  Maybe there is no member left.  */
     return NULL;
 
+  Elf_Arhdr ar_hdr = {0};
+  if (copy_arhdr (&ar_hdr, ref) != 0)
+    /* Out of memory.  */
+    return NULL;
+
   /* We have all the information we need about the next archive member.
      Now create a descriptor for it.  */
   result = read_file (fildes, ref->state.ar.offset + sizeof (struct ar_hdr),
 		      ref->state.ar.elf_ar_hdr.ar_size, cmd, ref);
 
-  /* Enlist this new descriptor in the list of children.  */
   if (result != NULL)
     {
+      /* Enlist this new descriptor in the list of children.  */
       result->next = ref->state.ar.children;
+      result->state.elf.elf_ar_hdr = ar_hdr;
       ref->state.ar.children = result;
+    }
+  else
+    {
+      free (ar_hdr.ar_name);
+      free (ar_hdr.ar_rawname);
     }
 
   return result;
