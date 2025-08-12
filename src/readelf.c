@@ -12305,7 +12305,7 @@ print_debug (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr)
   if (unlikely (elf_getshdrstrndx (ebl->elf, &shstrndx) < 0))
     error_exit (0, _("cannot get section header string table index"));
 
-  size_t num_jobs = 0;
+  ssize_t num_jobs = 0;
   job_data *jdata = NULL;
 
   /* If the .debug_info section is listed as implicitly required then
