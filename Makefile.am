@@ -70,7 +70,7 @@ coverage: $(COVERAGE_OUTPUT_INDEX_HTML)
 if LCOV_OLD
 ignore_errors =
 else
-ignore_errors = --ignore-errors empty,negative
+ignore_errors = --ignore-errors empty,negative,inconsistent,corrupt
 endif
 
 $(COVERAGE_OUTPUT_INDEX_HTML): $(COVERAGE_OUTPUT_FILE)
