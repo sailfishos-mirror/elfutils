@@ -325,3 +325,30 @@ testrun ${abs_top_builddir}/src/elfclassify --debug-only $debug_files
 testrun_compare ${abs_top_builddir}/src/elfclassify --debug-only --print $debug_files <<EOF
 $(echo $debug_files | sed -e "s/ /\n/g")
 EOF
+
+testfiles testarchive64.a test-ar-duplicates.a
+
+echo "any-ar-member unstripped"
+# Both archives contain object files with symtabs
+testrun_compare ${abs_top_builddir}/src/elfclassify --any-ar-member --unstripped --print testarchive64.a test-ar-duplicates.a <<EOF
+testarchive64.a
+test-ar-duplicates.a
+EOF
+
+echo "any-ar-member not-unstripped"
+# Empty (opposite of above)
+testrun_compare ${abs_top_builddir}/src/elfclassify --any-ar-member --not-unstripped --print testarchive64.a test-ar-duplicates.a <<EOF
+EOF
+
+echo "any-ar-member executable"
+# Only test-ar-duplicates.a contains executables
+testrun_compare ${abs_top_builddir}/src/elfclassify --any-ar-member --executable --print testarchive64.a test-ar-duplicates.a <<EOF
+test-ar-duplicates.a
+EOF
+
+echo "any-ar-member not-executable"
+# All members in test-ar-duplicates.a are executables
+# So only testarchive64.a has no-executable member(s)
+testrun_compare ${abs_top_builddir}/src/elfclassify --any-ar-member --not-executable --print testarchive64.a test-ar-duplicates.a <<EOF
+testarchive64.a
+EOF
