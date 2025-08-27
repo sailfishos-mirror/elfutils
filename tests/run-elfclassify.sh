@@ -254,6 +254,12 @@ testrun_compare ${abs_top_builddir}/src/elfclassify --unstripped --print $kmod_f
 $(echo $kmod_files | sed -e "s/ /\n/g")
 EOF
 
+echo "kmods are have debug sections"
+testrun ${abs_top_builddir}/src/elfclassify --has-debug-sections $kmod_files
+testrun_compare ${abs_top_builddir}/src/elfclassify --has-debug-sections --print $kmod_files <<EOF
+$(echo $kmod_files | sed -e "s/ /\n/g")
+EOF
+
 echo "kmods are not debug-only"
 testrun ${abs_top_builddir}/src/elfclassify --not-debug-only $kmod_files
 testrun_compare ${abs_top_builddir}/src/elfclassify --not-debug-only --print $kmod_files <<EOF
@@ -296,6 +302,12 @@ EOF
 echo "debug-only files are unstripped"
 testrun ${abs_top_builddir}/src/elfclassify --unstripped $debug_files
 testrun_compare ${abs_top_builddir}/src/elfclassify --unstripped --print $debug_files <<EOF
+$(echo $debug_files | sed -e "s/ /\n/g")
+EOF
+
+echo "debug-only files have debug sections"
+testrun ${abs_top_builddir}/src/elfclassify --has-debug-sections $debug_files
+testrun_compare ${abs_top_builddir}/src/elfclassify --has-debug-sections --print $debug_files <<EOF
 $(echo $debug_files | sed -e "s/ /\n/g")
 EOF
 
@@ -351,4 +363,17 @@ echo "any-ar-member not-executable"
 # So only testarchive64.a has no-executable member(s)
 testrun_compare ${abs_top_builddir}/src/elfclassify --any-ar-member --not-executable --print testarchive64.a test-ar-duplicates.a <<EOF
 testarchive64.a
+EOF
+
+echo "any-ar-member has-debug-sections"
+# Neither has members with actual debug sections.  They both do have
+# members that have symtab so are unstripped (see above).
+testrun_compare ${abs_top_builddir}/src/elfclassify --any-ar-member --has-debug-sections --print testarchive64.a test-ar-duplicates.a <<EOF
+EOF
+
+echo "any-ar-member not-has-debug-sections"
+# Noth match (opposite of above)
+testrun_compare ${abs_top_builddir}/src/elfclassify --any-ar-member --not-has-debug-sections --print testarchive64.a test-ar-duplicates.a <<EOF
+testarchive64.a
+test-ar-duplicates.a
 EOF

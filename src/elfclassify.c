@@ -472,6 +472,16 @@ is_unstripped (void)
     && (has_symtab || has_debug_sections);
 }
 
+/* Return true if the file is an ELF file which has .debug_* sections
+   (note that a symtab is not considered a debug section).  */
+static bool
+is_has_debug_sections (void)
+{
+  return elf_kind (elf) != ELF_K_NONE
+    && (elf_type == ET_REL || elf_type == ET_EXEC || elf_type == ET_DYN)
+    && has_debug_sections;
+}
+
 /* Return true if the file contains only debuginfo, but no loadable
    program bits.  Then it is most likely a separate .debug file, a dwz
    multi-file or a .dwo file.  Note that it can still be loadable,
@@ -625,6 +635,7 @@ enum classify_check
   classify_elf_archive,
   classify_core,
   classify_unstripped,
+  classify_has_debug_sections,
   classify_executable,
   classify_program,
   classify_shared,
@@ -753,6 +764,7 @@ check_checks ()
       [classify_elf_archive] = is_elf_archive (),
       [classify_core] = is_core (),
       [classify_unstripped] = is_unstripped (),
+      [classify_has_debug_sections] = is_has_debug_sections (),
       [classify_executable] = is_executable (),
       [classify_program] = is_program (),
       [classify_shared] = is_shared (),
@@ -774,6 +786,8 @@ check_checks ()
 	fprintf (stderr, "debug: %s: core\n", current_path);
       if (checks[classify_unstripped])
 	fprintf (stderr, "debug: %s: unstripped\n", current_path);
+      if (checks[classify_has_debug_sections])
+	fprintf (stderr, "debug: %s: has_debug_sections\n", current_path);
       if (checks[classify_executable])
 	fprintf (stderr, "debug: %s: executable\n", current_path);
       if (checks[classify_program])
@@ -991,6 +1005,8 @@ main (int argc, char **argv)
       { "unstripped", classify_check_offset + classify_unstripped, NULL, 0,
         N_("File is an ELF file with symbol table or .debug_* sections \
 and can be stripped further"), 1 },
+      { "has-debug-sections", classify_check_offset + classify_has_debug_sections, NULL, 0,
+        N_("File is an ELF file with .debug_* sections"), 1 },
       { "executable", classify_check_offset + classify_executable, NULL, 0,
         N_("File is (primarily) an ELF program executable \
 (not primarily a DSO)"), 1 },
@@ -1022,6 +1038,8 @@ and can be stripped further"), 1 },
       { "not-core", classify_check_not_offset + classify_core,
         NULL, OPTION_HIDDEN, NULL, 1 },
       { "not-unstripped", classify_check_not_offset + classify_unstripped,
+        NULL, OPTION_HIDDEN, NULL, 1 },
+      { "not-has-debug-sections", classify_check_not_offset + classify_has_debug_sections,
         NULL, OPTION_HIDDEN, NULL, 1 },
       { "not-executable", classify_check_not_offset + classify_executable,
         NULL, OPTION_HIDDEN, NULL, 1 },
@@ -1104,6 +1122,13 @@ or library) use --loadable.  Note that files that only contain \
 (separate) debug information (--debug-only) are never --loadable (even \
 though they might contain program headers).  Linux kernel modules are \
 also not --loadable (in the normal sense).\
+\n\n\
+Detecting whether an ELF file can be stripped, because it has .[z]debug_* \
+sections and/or a symbol table (.symtab) is done with --unstripped. \
+To detect whether an ELF file just has .[z]debug_* sections use \
+--has-debug-section. Use --debug-only to detect ELF files that contain \
+only debuginfo (possibly just a .symtab), but no loadable program bits \
+(like separate .debug files, dwz multi-files or .dwo files).\
 \n\n\
 Without any of the --print options, the program exits with status 0 \
 if the requested checks pass for all input files, with 1 if a check \
