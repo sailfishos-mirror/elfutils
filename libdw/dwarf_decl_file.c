@@ -50,7 +50,8 @@ dwarf_decl_file (Dwarf_Die *die)
 
   Dwarf_Files *files;
   size_t nfiles;
-  if (INTUSE(dwarf_getsrcfiles) (&CUDIE (attr_mem.cu), &files, &nfiles) != 0)
+  Dwarf_Die cudie = CUDIE (attr_mem.cu);
+  if (INTUSE(dwarf_getsrcfiles) (&cudie, &files, &nfiles) != 0)
     return NULL;
 
   if (idx >= nfiles)
