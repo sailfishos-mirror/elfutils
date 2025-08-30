@@ -110,7 +110,7 @@ libdw_so_LIBS = ../libebl/libebl_pic.a ../backends/libebl_backends_pic.a \
 		../libdwfl/libdwfl_pic.a ../libdwfl_stacktrace/libdwfl_stacktrace_pic.a
 libdw_so_DEPS = ../lib/libeu.a ../libelf/libelf.so
 libdw_so_LDLIBS = $(libdw_so_DEPS) -ldl -lz $(argp_LDADD) $(fts_LIBS) \
-		  $(obstack_LIBS) $(zip_LIBS) -pthread -latomic
+		  $(obstack_LIBS) $(zip_LIBS) -pthread
 libdw.so: $(srcdir)/libdw.map $(libdw_so_LIBS) $(libdw_so_DEPS)
 	$(AM_V_CCLD)$(LINK) $(dso_LDFLAGS) -o $@ \
 		-Wl,--soname,$@.$(VERSION),--enable-new-dtags \

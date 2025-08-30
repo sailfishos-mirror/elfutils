@@ -40,8 +40,7 @@
 static int
 getfiles (Dwarf_Die *die, Dwarf_Files **files)
 {
-  Dwarf_Die cudie = CUDIE (die->cu);
-  return INTUSE(dwarf_getsrcfiles) (&cudie, files, NULL);
+  return INTUSE(dwarf_getsrcfiles) (&CUDIE (die->cu), files, NULL);
 }
 
 /* Fetch an attribute that should have a constant integer form.  */
