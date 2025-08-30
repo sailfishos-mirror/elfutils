@@ -754,7 +754,7 @@ parse_opt (int key, char *arg __attribute__ ((unused)),
 }
 
 static bool
-check_checks ()
+check_checks (void)
 {
   bool checks_passed = true;
   bool checks[] =
@@ -824,7 +824,7 @@ check_checks ()
 }
 
 static bool
-check_ar_members ()
+check_ar_members (void)
 {
   char *ar_path = current_path;
   Elf *ar_elf = elf;
