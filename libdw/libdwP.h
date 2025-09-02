@@ -455,13 +455,13 @@ struct Dwarf_CU
      Don't access directly, call __libdw_cu_locs_base.  */
   Dwarf_Off locs_base;
 
-  /* Synchronize access to the abbrev member of a Dwarf_Die that
-     refers to this Dwarf_CU.  Covers __libdw_die_abbrev. */
-  rwlock_define(, abbrev_lock);
-
   /* Synchronize access to the split member of this Dwarf_CU.
      Covers __libdw_find_split_unit.  */
   rwlock_define(, split_lock);
+
+  /* Synchronize access to the last_abbrev_offset member of a Dwarf_Die
+     that refers to this Dwarf_CU.  */
+  mutex_define(, abbrev_lock);
 
   /* Synchronize access to the lines and files members.
      Covers dwarf_getsrclines and dwarf_getsrcfiles.  */
@@ -823,41 +823,49 @@ static inline Dwarf_Abbrev *
 __nonnull_attribute__ (1)
 __libdw_dieabbrev (Dwarf_Die *die, const unsigned char **readp)
 {
+  Dwarf_Abbrev *end_abbrev = DWARF_END_ABBREV;
+  Dwarf_Abbrev *expected = (Dwarf_Abbrev *) NULL;
+
   if (unlikely (die->cu == NULL))
     {
-      die->abbrev = DWARF_END_ABBREV;
-      return DWARF_END_ABBREV;
+      /* __atomic_* compiler builtin functions are used instead of <stdatomic.h>
+	 because the builtins can operate on non-_Atomic types.
+	 Dwarf_Die.abbrev cannot be made _Atomic without possibly breaking ABI
+	 compatibility.  */
+      __atomic_compare_exchange_n (&die->abbrev, &expected, end_abbrev, false,
+				   __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
+      return end_abbrev;
     }
 
-  rwlock_wrlock (die->cu->abbrev_lock);
-
-  /* Do we need to get the abbreviation, or need to read after the code?  */
-  if (die->abbrev == NULL || readp != NULL)
+  Dwarf_Abbrev *abbrev = __atomic_load_n (&die->abbrev, __ATOMIC_ACQUIRE);
+  if (abbrev == NULL || readp != NULL)
     {
-      /* Get the abbreviation code.  */
+      /* We need to get the abbreviation or need to read after the code.  */
       unsigned int code;
       const unsigned char *addr = die->addr;
-
       if (addr >= (const unsigned char *) die->cu->endp)
 	{
-	  die->abbrev = DWARF_END_ABBREV;
-	  rwlock_unlock (die->cu->abbrev_lock);
-	  return DWARF_END_ABBREV;
+	  __atomic_compare_exchange_n (&die->abbrev, &expected,
+				       end_abbrev, false,
+				       __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
+	  return end_abbrev;
 	}
 
+      /* Get the abbreviation code.  */
       get_uleb128 (code, addr, die->cu->endp);
       if (readp != NULL)
 	*readp = addr;
 
       /* Find the abbreviation.  */
-      if (die->abbrev == NULL)
-	die->abbrev = __libdw_findabbrev (die->cu, code);
+      if (abbrev == NULL)
+	{
+	  abbrev = __libdw_findabbrev (die->cu, code);
+	  __atomic_compare_exchange_n (&die->abbrev, &expected, abbrev, false,
+				       __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
+	}
     }
 
-  Dwarf_Abbrev *result = die->abbrev;
-  rwlock_unlock (die->cu->abbrev_lock);
-
-  return result;
+  return abbrev;
 }
 
 /* Helper functions for form handling.  */

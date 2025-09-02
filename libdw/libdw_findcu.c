@@ -177,8 +177,8 @@ __libdw_intern_next_unit (Dwarf *dbg, bool debug_types)
   newp->startp = data->d_buf + newp->start;
   newp->endp = data->d_buf + newp->end;
   eu_search_tree_init (&newp->locs_tree);
-  rwlock_init (newp->abbrev_lock);
   rwlock_init (newp->split_lock);
+  mutex_init (newp->abbrev_lock);
   mutex_init (newp->src_lock);
   mutex_init (newp->str_off_base_lock);
   mutex_init (newp->intern_lock);
