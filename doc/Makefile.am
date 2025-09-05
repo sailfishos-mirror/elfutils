@@ -73,6 +73,7 @@ notrans_dist_man3_MANS= elf32_checksum.3 \
 			elf_gnu_hash.3 \
 			elf_kind.3 \
 			elf_ndxscn.3 \
+			elf_newdata.3 \
 			elf_nextscn.3 \
 			elf_rawfile.3 \
 			elf_scnshndx.3 \
