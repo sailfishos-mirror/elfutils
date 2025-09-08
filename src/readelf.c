@@ -978,6 +978,7 @@ create_dwfl (int fd, const char *fname)
 	error (0, 0, _("failed reading '%s': %s"),
 	       fname, dwfl_errmsg (-1));
       close (dwfl_fd);		/* Consumed on success, not on failure.  */
+      dwfl_end (dwfl);
       dwfl = NULL;
     }
   else
