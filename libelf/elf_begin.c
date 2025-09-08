@@ -1107,22 +1107,24 @@ dup_elf (int fildes, Elf_Cmd cmd, Elf *ref)
     /* Something went wrong.  Maybe there is no member left.  */
     return NULL;
 
+  /* We have all the information we need about the next archive member.
+     Now create a descriptor for it. Check parent size can contain member.  */
+  if (ref->state.ar.offset < ref->start_offset)
+    return NULL;
+  size_t max_size = ref->maximum_size;
+  size_t offset = (size_t) (ref->state.ar.offset - ref->start_offset);
+  size_t hdr_size = sizeof (struct ar_hdr);
+  size_t ar_size = (size_t) ref->state.ar.elf_ar_hdr.ar_size;
+  if (max_size < hdr_size || max_size - hdr_size < offset)
+    return NULL;
+
   Elf_Arhdr ar_hdr = {0};
   if (copy_arhdr (&ar_hdr, ref) != 0)
     /* Out of memory.  */
     return NULL;
 
-  /* We have all the information we need about the next archive member.
-     Now create a descriptor for it. Check parent size can contain member.  */
-  size_t max_size = ref->maximum_size;
-  size_t offset = (size_t) ref->state.ar.offset;
-  size_t hdr_size = sizeof (struct ar_hdr);
-  size_t ar_size = (size_t) ref->state.ar.elf_ar_hdr.ar_size;
-  if (max_size - hdr_size < offset)
-    return NULL;
-  else
-    result = read_file (fildes, ref->state.ar.offset + sizeof (struct ar_hdr),
-			MIN (max_size - hdr_size - offset, ar_size), cmd, ref);
+  result = read_file (fildes, ref->state.ar.offset + sizeof (struct ar_hdr),
+		      MIN (max_size - hdr_size - offset, ar_size), cmd, ref);
 
   if (result != NULL)
     {
