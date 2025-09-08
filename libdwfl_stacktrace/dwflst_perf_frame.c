@@ -32,6 +32,13 @@
 
 #if defined(__linux__)
 # include <linux/perf_event.h>
+#else
+/* XXX required by copy_word() below */
+enum perf_sample_regs_abi {
+    PERF_SAMPLE_REGS_ABI_NONE       = 0,
+    PERF_SAMPLE_REGS_ABI_32         = 1,
+    PERF_SAMPLE_REGS_ABI_64         = 2,
+};
 #endif
 
 #include "libdwfl_stacktraceP.h"
