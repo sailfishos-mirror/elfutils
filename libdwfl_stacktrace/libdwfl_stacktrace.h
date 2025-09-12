@@ -113,14 +113,31 @@ extern int dwflst_tracker_linux_proc_find_elf (Dwfl_Module *mod, void **userdata
 					       const char *module_name, Dwarf_Addr base,
 					       char **file_name, Elf **);
 
-
 /* Like dwfl_thread_getframes, but iterates through the frames for a
-   linux perf_events stack sample rather than a live thread.  Calls
-   dwfl_attach_state on DWFL, with architecture specified by ELF, ELF
-   must remain valid during Dwfl lifetime.  Returns zero if all frames
-   have been processed by the callback, returns -1 on error, or the
-   value of the callback when not DWARF_CB_OK.  -1 returned on error
-   will set dwfl_errno ().  */
+   stack sample rather than a live thread.  Register file for the stack
+   sample is specified by REGS and N_REGS.  For each item in REGS, the
+   REGS_MAPPING array specifies its position in the full register file
+   expected by the DWARF infrastructure.  Calls dwfl_attach_state on
+   DWFL, with architecture specified by ELF, ELF must remain vaild
+   during Dwfl lifetime.  Returns zero if all frames have been
+   processed by the callback, returns -1 on error, or the value of the
+   callback when not DWARF_CB_OK. -1 returned on error will set
+   dwfl_errno (). */
+int dwflst_sample_getframes (Dwfl *dwfl, Elf *elf, pid_t pid, pid_t tid,
+				  const void *stack, size_t stack_size,
+				  const Dwarf_Word *regs, uint32_t n_regs,
+				  const int *regs_mapping, size_t n_regs_mapping,
+				  int (*callback) (Dwfl_Frame *state, void *arg),
+				  void *arg)
+    __nonnull_attribute__ (1, 5, 7, 9, 11);
+
+/* Adapts dwflst_sample_getframes to linux perf_events stack sample
+   and register file data format.  Calls dwfl_attach_state on DWFL,
+   with architecture specified by ELF, ELF must remain valid during
+   Dwfl lifetime.  Returns zero if all frames have been processed by
+   the callback, returns -1 on error, or the value of the callback
+   when not DWARF_CB_OK. -1 returned on error will set dwfl_errno
+   (). */
 int dwflst_perf_sample_getframes (Dwfl *dwfl, Elf *elf, pid_t pid, pid_t tid,
 				  const void *stack, size_t stack_size,
 				  const Dwarf_Word *regs, uint32_t n_regs,

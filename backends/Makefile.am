@@ -121,7 +121,7 @@ am_libebl_backends_pic_a_OBJECTS = $(libebl_backends_a_SOURCES:.c=.os)
 
 noinst_HEADERS = libebl_CPU.h libebl_PERF_FLAGS.h common-reloc.c \
 	    linux-core-note.c x86_corenote.c \
-	    linux-perf-regs.c x86_initreg_sample.c
+	    x86_initreg_sample.c
 
 EXTRA_DIST = $(modules:=_reloc.def)
 

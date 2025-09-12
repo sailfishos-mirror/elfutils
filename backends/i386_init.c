@@ -60,10 +60,13 @@ i386_init (Elf *elf __attribute__ ((unused)),
      (Likely an artifact of reusing that header between i386/x86_64.)  */
   eh->frame_nregs = 9;
   HOOK (eh, set_initial_registers_tid);
-  HOOK (eh, set_initial_registers_sample);
-  HOOK (eh, sample_base_addr);
-  HOOK (eh, sample_pc);
+  /* set_initial_registers_sample is default ver */
+  HOOK (eh, sample_sp_pc);
+  HOOK (eh, sample_perf_regs_mapping);
   eh->perf_frame_regs_mask = PERF_FRAME_REGISTERS_I386;
+  eh->cached_perf_regs_mask = 0;
+  eh->cached_regs_mapping = NULL;
+  eh->cached_n_regs_mapping = -1;
   HOOK (eh, unwind);
 
   return eh;

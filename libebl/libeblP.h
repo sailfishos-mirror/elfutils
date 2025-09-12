@@ -65,6 +65,13 @@ struct ebl
      perf_events sample data iff PERF_FRAME_REGS_MASK > 0.  */
   uint64_t perf_frame_regs_mask;
 
+  /* A cached mapping from a specified linux perf_events regs_mask to
+     the corresponding regs_mapping array, to reduce
+     ebl_sample_perf_regs_mapping() recomputations.  */
+  uint64_t cached_perf_regs_mask;
+  int *cached_regs_mapping;
+  size_t cached_n_regs_mapping;
+
   /* Offset to apply to the value of the return_address_register, as
      fetched from a Dwarf CFI.  This is used by some backends, where
      the return_address_register actually contains the call
