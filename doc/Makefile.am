@@ -56,6 +56,12 @@ notrans_dist_man3_MANS= elf32_checksum.3 \
 			elf_errmsg.3 \
 			elf_errno.3 \
 			elf_fill.3 \
+			elf_flagelf.3 \
+			elf_flagehdr.3 \
+			elf_flagphdr.3 \
+			elf_flagscn.3 \
+			elf_flagdata.3 \
+			elf_flagshdr.3 \
 			elf_getarhdr.3 \
 			elf_getaroff.3 \
 			elf_getarsym.3 \
