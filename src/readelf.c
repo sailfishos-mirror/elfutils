@@ -389,6 +389,125 @@ static void find_offsets (Elf *elf, GElf_Addr main_bias, size_t n,
 /* Looked up once with gettext in main.  */
 static char *yes_str;
 static char *no_str;
+static char *empty_block_str;
+static char *byte_block_str;
+static char *offset_str;
+static char *children_str;
+static char *tag_str;
+static char *length_str;
+static char *dwarf_ver_str;
+static char *cu_offset_str;
+static char *seg_size_str;
+static char *table_offset_lower_str;
+static char *table_offset_upper_str;
+static char *addr_size_str;
+static char *offset_ent_str;
+static char *cu_str;
+static char *base_str;
+static char *type_unit_str;
+static char *version_str;
+static char *abbrev_offset_str;
+static char *addr_size_str;
+static char *offset_size_str;
+static char *type_sig_str;
+static char *type_offset_str;
+static char *cu_offset_at_str;
+static char *unit_type_str;
+static char *unit_id_str;
+static char *unit_die_off_str;
+static char *prologue_len_str;
+static char *seg_selector_str;
+static char *min_inst_len_str;
+static char *max_op_per_inst_str;
+static char *initial_value_if_str;
+static char *line_base_str;
+static char *line_range_str;
+static char *opcodes_base_str;
+static char *opcodes_str;
+static char *special_opcode_str;
+static char *address_str;
+static char *line_str;
+static char *ext_opcode_str;
+static char *set_disc_str;
+static char *adv_addr_str;
+static char *to_str;
+static char *set_file_str;
+static char *set_col_str;
+static char *set_str;
+static char *adv_line_by_str;
+static char *adv_addr_by_str;
+static char *unknown_base_str;
+static char *unknown_base_str;
+static char *dir_table_str;
+static char *file_table_str;
+static char *no_line_num_stmts_str;
+static char *line_num_stmts_str;
+static char *end_of_seq_str;
+static char *set_addr_to_str;
+static char *copy_str;
+
+
+static void
+init_gettext_strs (void)
+{
+  yes_str = _("yes");
+  no_str = _("no");
+  empty_block_str = _("empty block");
+  byte_block_str = _("byte block");
+  offset_str = _("offset");
+  children_str = _("children");
+  tag_str = _("tag");
+  table_offset_lower_str = _("Table at offset");
+  table_offset_upper_str = _("Table at Offset");
+  length_str = _("Length");
+  dwarf_ver_str = _("DWARF version");
+  cu_offset_str = _("CU offset");
+  addr_size_str = _("Address size");
+  seg_size_str = _("Segment size");
+  offset_ent_str = _("Offset entries");
+  cu_str = _("CU");
+  base_str = _("base");
+  type_unit_str = _("Type unit at offset");
+  version_str = _("Version");
+  abbrev_offset_str = _("Abbreviation section offset");
+  offset_size_str = _("Offset size");
+  type_sig_str = _("Type signature");
+  type_offset_str = _("Type offset");
+  cu_offset_at_str = _("Compilation unit at offset");
+  unit_type_str = _("Unit type");
+  unit_id_str = _("Unit id");
+  unit_die_off_str = _("Unit DIE off");
+  prologue_len_str = _("Prologue length");
+  seg_selector_str = _("Segment selector size");
+  min_inst_len_str = _("Min instruction length");
+  max_op_per_inst_str = _("Max operations per instruction");
+  initial_value_if_str = _("Initial value if");
+  line_base_str = _("Line base");
+  line_range_str = _("Line range");
+  opcodes_base_str = _("Opcode base");
+  opcodes_str = _("Opcodes");
+  special_opcode_str = _("special opcode");
+  address_str = _("address");
+  line_str = _("line");
+  ext_opcode_str = _("extended opcode");
+  set_disc_str = _("set discriminator to");
+  adv_addr_str = _("advance address by");
+  to_str = _("to");
+  set_file_str = _("set file to");
+  set_col_str = _("set column to");
+  set_str = _("set");
+  adv_addr_by_str = _("advance address by constant");
+  adv_line_by_str = _("advance line by constant");
+  unknown_base_str = _("Unknown CU base");
+  dir_table_str = _("Directory table");
+  file_table_str = _("File name table");
+  no_line_num_stmts_str = _("No line number statements");
+  line_num_stmts_str = _("Line number statements");
+  end_of_seq_str = _("end of sequence");
+  set_addr_to_str = _("set address to");
+  copy_str = _("copy");
+}
+
 
 static void
 cleanup_list (struct section_argument *list)
@@ -451,8 +570,7 @@ main (int argc, char *argv[])
   textdomain (PACKAGE_TARNAME);
 
   /* Look up once.  */
-  yes_str = _("yes");
-  no_str = _("no");
+  init_gettext_strs ();
 
   /* Parse and process arguments.  */
   int remaining;
@@ -4940,10 +5058,10 @@ static void
 print_block (size_t n, const void *block, FILE *out)
 {
   if (n == 0)
-    fputs (_("empty block\n"), out);
+    fputs (empty_block_str, out);
   else
     {
-      fprintf (out, _("%zu byte block:"), n);
+      fprintf (out, "%zu %s:", n, byte_block_str);
       const unsigned char *data = block;
       do
 	fprintf (out, " %02x", *data++);
@@ -5867,11 +5985,11 @@ print_debug_abbrev_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	  unsigned int tag = dwarf_getabbrevtag (&abbrev);
 	  int has_children = dwarf_abbrevhaschildren (&abbrev);
 
-	  fprintf (out, _(" [%5u] offset: %" PRId64
-			   ", children: %s, tag: %s\n"),
-		   code, (int64_t) offset,
-		   has_children ? yes_str : no_str,
-		   dwarf_tag_name (tag));
+	  fprintf (out, " [%5u] %s: %" PRId64
+			 ", %s: %s, %s: %s\n",
+		   code, offset_str, (int64_t) offset,
+		   children_str, has_children ? yes_str : no_str,
+		   tag_str, dwarf_tag_name (tag));
 
 	  size_t cnt = 0;
 	  unsigned int name;
@@ -6211,7 +6329,7 @@ print_debug_aranges_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
       const unsigned char *hdrstart = readp;
       size_t start_offset = hdrstart - (const unsigned char *) data->d_buf;
 
-      fprintf (out, _("\nTable at offset %zu:\n"), start_offset);
+      fprintf (out, "\n%s %zu:\n", table_offset_lower_str, start_offset);
       if (readp + 4 > readendp)
 	{
 	invalid_data:
@@ -6231,8 +6349,8 @@ print_debug_aranges_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	}
 
       const unsigned char *nexthdr = readp + length;
-      fprintf (out, _("\n Length:        %6" PRIu64 "\n"),
-	       (uint64_t) length);
+      fprintf (out, "\n %s:        %6" PRIu64 "\n",
+	       length_str, (uint64_t) length);
 
       if (unlikely (length > (size_t) (readendp - readp)))
 	goto invalid_data;
@@ -6243,8 +6361,8 @@ print_debug_aranges_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
       if (readp + 2 > readendp)
 	goto invalid_data;
       uint_fast16_t version = read_2ubyte_unaligned_inc (dbg, readp);
-      fprintf (out, _(" DWARF version: %6" PRIuFAST16 "\n"),
-	       version);
+      fprintf (out, " %s: %6" PRIuFAST16 "\n",
+	       dwarf_ver_str, version);
       if (version != 2)
 	{
 	  error (0, 0, _("unsupported aranges version"));
@@ -6258,14 +6376,14 @@ print_debug_aranges_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	offset = read_8ubyte_unaligned_inc (dbg, readp);
       else
 	offset = read_4ubyte_unaligned_inc (dbg, readp);
-      fprintf (out, _(" CU offset:     %6" PRIx64 "\n"),
-	       (uint64_t) offset);
+      fprintf (out, " %s:     %6" PRIx64 "\n",
+	       cu_offset_str, (uint64_t) offset);
 
       if (readp + 1 > readendp)
 	goto invalid_data;
       unsigned int address_size = *readp++;
-      fprintf (out, _(" Address size:  %6" PRIu64 "\n"),
-	       (uint64_t) address_size);
+      fprintf (out, " %s:  %6" PRIu64 "\n",
+	       addr_size_str, (uint64_t) address_size);
       if (address_size != 4 && address_size != 8)
 	{
 	  error (0, 0, _("unsupported address size"));
@@ -6275,8 +6393,8 @@ print_debug_aranges_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
       if (readp + 1 > readendp)
 	goto invalid_data;
       unsigned int segment_size = *readp++;
-      fprintf (out, _(" Segment size:  %6" PRIu64 "\n\n"),
-	       (uint64_t) segment_size);
+      fprintf (out, " %s:  %6" PRIu64 "\n\n",
+	       seg_size_str, (uint64_t) segment_size);
       if (segment_size != 0 && segment_size != 4 && segment_size != 8)
 	{
 	  error (0, 0, _("unsupported segment size"));
@@ -6393,8 +6511,8 @@ print_debug_rnglists_section (Dwfl_Module *dwflmod,
 	}
 
       ptrdiff_t offset = readp - (unsigned char *) data->d_buf;
-      fprintf (out, _("Table at Offset 0x%" PRIx64 ":\n\n"),
-	       (uint64_t) offset);
+      fprintf (out, "%s 0x%" PRIx64 ":\n\n",
+	       table_offset_upper_str, (uint64_t) offset);
 
       uint64_t unit_length = read_4ubyte_unaligned_inc (dbg, readp);
       unsigned int offset_size = 4;
@@ -6406,7 +6524,7 @@ print_debug_rnglists_section (Dwfl_Module *dwflmod,
 	  unit_length = read_8ubyte_unaligned_inc (dbg, readp);
 	  offset_size = 8;
 	}
-      fprintf (out, _(" Length:         %8" PRIu64 "\n"), unit_length);
+      fprintf (out, " %s:         %8" PRIu64 "\n", length_str, unit_length);
 
       /* We need at least 2-bytes + 1-byte + 1-byte + 4-bytes = 8
 	 bytes to complete the header.  And this unit cannot go beyond
@@ -6419,7 +6537,7 @@ print_debug_rnglists_section (Dwfl_Module *dwflmod,
       const unsigned char *nexthdr = readp + unit_length;
 
       uint16_t version = read_2ubyte_unaligned_inc (dbg, readp);
-      fprintf (out, _(" DWARF version:  %8" PRIu16 "\n"), version);
+      fprintf (out, " %s:  %8" PRIu16 "\n", dwarf_ver_str, version);
 
       if (version != 5)
 	{
@@ -6428,8 +6546,8 @@ print_debug_rnglists_section (Dwfl_Module *dwflmod,
 	}
 
       uint8_t address_size = *readp++;
-      fprintf (out, _(" Address size:   %8" PRIu64 "\n"),
-	       (uint64_t) address_size);
+      fprintf (out, " %s:   %8" PRIu64 "\n",
+	       addr_size_str, (uint64_t) address_size);
 
       if (address_size != 4 && address_size != 8)
 	{
@@ -6448,8 +6566,8 @@ print_debug_rnglists_section (Dwfl_Module *dwflmod,
         }
 
       uint32_t offset_entry_count = read_4ubyte_unaligned_inc (dbg, readp);
-      fprintf (out, _(" Offset entries: %8" PRIu64 "\n"),
-	       (uint64_t) offset_entry_count);
+      fprintf (out, " %s: %8" PRIu64 "\n",
+	       offset_ent_str, (uint64_t) offset_entry_count);
 
       /* We need the CU that uses this unit to get the initial base address. */
       Dwarf_Addr cu_base = 0;
@@ -6464,10 +6582,10 @@ print_debug_rnglists_section (Dwfl_Module *dwflmod,
 	  if (dwarf_cu_die (cu, &cudie,
 			    NULL, NULL, NULL, NULL,
 			    NULL, NULL) == NULL)
-	    fprintf (out, _(" Unknown CU base: "));
+	    fprintf (out, " %s: ", unknown_base_str);
 	  else
-	    fprintf (out, _(" CU [%6" PRIx64 "] base: "),
-		     dwarf_dieoffset (&cudie));
+	    fprintf (out, " %s [%6" PRIx64 "] %s: ",
+		     cu_str, dwarf_dieoffset (&cudie), base_str);
 	  print_dwarf_addr (dwflmod, address_size, cu_base, cu_base, out);
 	  fprintf (out, "\n");
 	}
@@ -8557,35 +8675,39 @@ print_debug_units (Dwfl_Module *dwflmod,
 	  dieoffset = dwarf_dieoffset (dwarf_offdie_types (dbg, cu->start
 							   + subdie_off,
 							   &typedie));
-	  fprintf (out, _(" Type unit at offset %" PRIu64 ":\n"
-			    " Version: %" PRIu16
-			    ", Abbreviation section offset: %" PRIu64
-			    ", Address size: %" PRIu8
-			    ", Offset size: %" PRIu8
-			    "\n Type signature: %#" PRIx64
-			    ", Type offset: %#" PRIx64 " [%" PRIx64 "]\n"),
-		   (uint64_t) offset, version, abbroffset, addrsize, offsize,
-		   unit_id, (uint64_t) subdie_off, dieoffset);
+	  fprintf (out, " %s %" PRIu64 ":\n"
+			 " %s: %" PRIu16
+			 ", %s: %" PRIu64
+			 ", %s: %" PRIu8
+			 ", %s: %" PRIu8
+			 "\n %s: %#" PRIx64
+			 ", %s: %#" PRIx64 " [%" PRIx64 "]\n",
+		   type_unit_str, (uint64_t) offset, version_str, version,
+		   abbrev_offset_str, abbroffset, addr_size_str, addrsize,
+		   offset_size_str, offsize, type_sig_str, unit_id,
+		   type_offset_str, (uint64_t) subdie_off, dieoffset);
 	}
       else
 	{
-	  fprintf (out, _(" Compilation unit at offset %" PRIu64 ":\n"
-			    " Version: %" PRIu16
-			    ", Abbreviation section offset: %" PRIu64
-			    ", Address size: %" PRIu8
-			    ", Offset size: %" PRIu8 "\n"),
-		   (uint64_t) offset, version, abbroffset, addrsize, offsize);
+	  fprintf (out, " %s %" PRIu64 ":\n"
+			 " %s: %" PRIu16
+			 ", %s: %" PRIu64
+			 ", %s: %" PRIu8
+			 ", %s: %" PRIu8 "\n",
+		   cu_offset_at_str, (uint64_t) offset, version_str, version,
+		   abbrev_offset_str, abbroffset, addr_size_str, addrsize,
+		   offset_size_str, offsize);
 
 	  if (version >= 5 || (unit_type != DW_UT_compile
 			       && unit_type != DW_UT_partial))
 	    {
-	      fprintf (out, _(" Unit type: %s (%" PRIu8 ")"),
-			        dwarf_unit_name (unit_type), unit_type);
+	      fprintf (out, " %s: %s (%" PRIu8 ")",
+		       unit_type_str, dwarf_unit_name (unit_type), unit_type);
 	      if (unit_type == DW_UT_type
 		  || unit_type == DW_UT_skeleton
 		  || unit_type == DW_UT_split_compile
 		  || unit_type == DW_UT_split_type)
-		fprintf (out, ", Unit id: 0x%.16" PRIx64 "", unit_id);
+		fprintf (out, ", %s: 0x%.16" PRIx64 "", unit_id_str, unit_id);
 	      if (unit_type == DW_UT_type
 		  || unit_type == DW_UT_split_type)
 		{
@@ -8594,8 +8716,8 @@ print_debug_units (Dwfl_Module *dwflmod,
 		  dwarf_cu_info (cu, NULL, NULL, NULL, &typedie,
 				 NULL, NULL, NULL);
 		  dieoffset = dwarf_dieoffset (&typedie);
-		  fprintf (out, ", Unit DIE off: %#" PRIx64 " [%" PRIx64 "]",
-			   subdie_off, dieoffset);
+		  fprintf (out, ", %s: %#" PRIx64 " [%" PRIx64 "]",
+			   unit_die_off_str, subdie_off, dieoffset);
 		}
 	      fprintf (out, "\n");
 	    }
@@ -9180,7 +9302,8 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
     {
       size_t start_offset = linep - (const unsigned char *) data->d_buf;
 
-      fprintf (out, _("\nTable at offset %zu:\n"), start_offset);
+      fprintf (out, "\n%s %zu:\n",
+	       table_offset_lower_str, start_offset);
 
       if (unlikely (linep + 4 > lineendp))
 	goto invalid_data;
@@ -9271,25 +9394,27 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
       uint_fast8_t opcode_base = *linep++;
 
       /* Print what we got so far.  */
-      fprintf (out, _("\n"
-		        " Length:                         %" PRIu64 "\n"
-		        " DWARF version:                  %" PRIuFAST16 "\n"
-		        " Prologue length:                %" PRIu64 "\n"
-		        " Address size:                   %zd\n"
-		        " Segment selector size:          %zd\n"
-		        " Min instruction length:         %" PRIuFAST8 "\n"
-		        " Max operations per instruction: %" PRIuFAST8 "\n"
-		        " Initial value if 'is_stmt':     %" PRIuFAST8 "\n"
-		        " Line base:                      %" PRIdFAST8 "\n"
-		        " Line range:                     %" PRIuFAST8 "\n"
-		        " Opcode base:                    %" PRIuFAST8 "\n"
-		        "\n"
-		        "Opcodes:\n"),
-	       (uint64_t) unit_length, version, (uint64_t) header_length,
-	       address_size, (size_t) segment_selector_size,
-	       minimum_instr_len, max_ops_per_instr,
-	       default_is_stmt, line_base,
-	       line_range, opcode_base);
+      fprintf (out, "\n"
+		     " %s:                         %" PRIu64 "\n"
+		     " %s:                  %" PRIuFAST16 "\n"
+		     " %s:                %" PRIu64 "\n"
+		     " %s:                   %zd\n"
+		     " %s:          %zd\n"
+		     " %s:         %" PRIuFAST8 "\n"
+		     " %s: %" PRIuFAST8 "\n"
+		     " %s 'is_stmt':     %" PRIuFAST8 "\n"
+		     " %s:                      %" PRIdFAST8 "\n"
+		     " %s:                     %" PRIuFAST8 "\n"
+		     " %s:                    %" PRIuFAST8 "\n"
+		     "\n"
+		     "%s:\n",
+	       length_str, (uint64_t) unit_length, dwarf_ver_str, version,
+	       prologue_len_str, (uint64_t) header_length, addr_size_str,
+	       address_size, seg_selector_str, (size_t) segment_selector_size,
+	       min_inst_len_str, minimum_instr_len, max_op_per_inst_str,
+	       max_ops_per_instr, initial_value_if_str, default_is_stmt,
+	       line_base_str, line_base, line_range_str, line_range,
+	       opcodes_base_str, opcode_base, opcodes_str);
 
       if (version < 2 || version > 5)
 	{
@@ -9345,13 +9470,13 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 
       Dwarf_Off str_offsets_base = str_offsets_base_off (dbg, NULL);
 
-      fputs (_("\nDirectory table:\n"), out);
+      fprintf (out, "\n%s:\n", dir_table_str);
       if (version > 4)
 	{
 	  struct encpair { uint16_t desc; uint16_t form; };
 	  struct encpair enc[256];
 
-	  fprintf (out, _("      ["));
+	  fprintf (out, "      [");
 	  if ((size_t) (lineendp - linep) < 1)
 	    goto invalid_data;
 	  unsigned char directory_entry_format_count = *linep++;
@@ -9422,13 +9547,13 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
       if (unlikely (linep >= lineendp))
 	goto invalid_unit;
 
-      fputs (_("\nFile name table:\n"), out);
+      fprintf (out, "\n%s:\n", file_table_str);
       if (version > 4)
 	{
 	  struct encpair { uint16_t desc; uint16_t form; };
 	  struct encpair enc[256];
 
-	  fprintf (out, _("      ["));
+	  fprintf (out, "      [");
 	  if ((size_t) (lineendp - linep) < 1)
 	    goto invalid_data;
 	  unsigned char file_name_format_count = *linep++;
@@ -9529,11 +9654,11 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 
       if (linep == lineendp)
 	{
-	  fputs (_("\nNo line number statements.\n"), out);
+	  fprintf (out, "\n%s.\n", no_line_num_stmts_str);
 	  continue;
 	}
 
-      fputs (_("\nLine number statements:\n"), out);
+      fprintf (out, "\n%s:\n", line_num_stmts_str);
       Dwarf_Word address = 0;
       unsigned int op_index = 0;
       size_t line = 1;
@@ -9582,15 +9707,15 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 	      line += line_increment;
 	      advance_pc ((opcode - opcode_base) / line_range);
 
-	      fprintf (out, _(" special opcode %u: address+%u = "),
-		       opcode, op_addr_advance);
+	      fprintf (out, " %s %u: %s+%u = ",
+		       special_opcode_str, opcode, address_str, op_addr_advance);
 	      print_dwarf_addr (dwflmod, 0, address, address, out);
 	      if (op_index > 0)
-		fprintf (out, _(", op_index = %u, line%+d = %zu\n"),
-			 op_index, line_increment, line);
+		fprintf (out, ", op_index = %u, %s%+d = %zu\n",
+			 op_index, line_str, line_increment, line);
 	      else
-		fprintf (out, _(", line%+d = %zu\n"),
-			 line_increment, line);
+		fprintf (out, ", %s%+d = %zu\n",
+			 line_str, line_increment, line);
 	    }
 	  else if (opcode == 0)
 	    {
@@ -9607,12 +9732,12 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 	      /* The sub-opcode.  */
 	      opcode = *linep++;
 
-	      fprintf (out, _(" extended opcode %u: "), opcode);
+	      fprintf (out, " %s %u: ", ext_opcode_str, opcode);
 
 	      switch (opcode)
 		{
 		case DW_LNE_end_sequence:
-		  fputs (_(" end of sequence\n"), out);
+		  fprintf (out, " %s\n", end_of_seq_str);
 
 		  /* Reset the registers we care about.  */
 		  address = 0;
@@ -9630,7 +9755,7 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		  else
 		    address = read_8ubyte_unaligned_inc (dbg, linep);
 		  {
-		    fprintf (out, _(" set address to "));
+		    fprintf (out, " %s ", set_addr_to_str);
 		    print_dwarf_addr (dwflmod, 0, address, address, out);
 		    fprintf (out, "\n");
 		  }
@@ -9672,7 +9797,7 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		    goto invalid_unit;
 
 		  get_uleb128 (u128, linep, lineendp);
-		  fprintf (out, _(" set discriminator to %u\n"), u128);
+		  fprintf (out, " %s %u\n", set_disc_str, u128);
 		  break;
 
 		case DW_LNE_NVIDIA_inlined_call:
@@ -9742,7 +9867,7 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		{
 		case DW_LNS_copy:
 		  /* Takes no argument.  */
-		  fputs (_(" copy\n"), out);
+		  fprintf (out, " %s\n", copy_str);
 		  break;
 
 		case DW_LNS_advance_pc:
@@ -9753,11 +9878,11 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		  get_uleb128 (u128, linep, lineendp);
 		  advance_pc (u128);
 		  {
-		    fprintf (out, _(" advance address by %u to "),
-			     op_addr_advance);
+		    fprintf (out, " %s %u %s ",
+			     adv_addr_str, op_addr_advance, to_str);
 		    print_dwarf_addr (dwflmod, 0, address, address, out);
 		    if (op_index > 0)
-		      fprintf (out, _(", op_index to %u"), op_index);
+		      fprintf (out, ", op_index %s %u", to_str, op_index);
 		    fprintf (out, "\n");
 		  }
 		  break;
@@ -9769,9 +9894,9 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		    goto invalid_unit;
 		  get_sleb128 (s128, linep, lineendp);
 		  line += s128;
-		  fprintf (out, _("\
- advance line by constant %d to %" PRId64 "\n"),
-			   s128, (int64_t) line);
+		  fprintf (out, "\
+ %s %d to %" PRId64 "\n",
+			   adv_line_by_str, s128, (int64_t) line);
 		  break;
 
 		case DW_LNS_set_file:
@@ -9779,8 +9904,8 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		  if (lineendp - linep < 1)
 		    goto invalid_unit;
 		  get_uleb128 (u128, linep, lineendp);
-		  fprintf (out, _(" set file to %" PRIu64 "\n"),
-			   (uint64_t) u128);
+		  fprintf (out, " %s %" PRIu64 "\n",
+			   set_file_str, (uint64_t) u128);
 		  break;
 
 		case DW_LNS_set_column:
@@ -9790,15 +9915,15 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		    goto invalid_unit;
 
 		  get_uleb128 (u128, linep, lineendp);
-		  fprintf (out, _(" set column to %" PRIu64 "\n"),
-			   (uint64_t) u128);
+		  fprintf (out, " %s %" PRIu64 "\n",
+			   set_col_str, (uint64_t) u128);
 		  break;
 
 		case DW_LNS_negate_stmt:
 		  /* Takes no argument.  */
 		  is_stmt = 1 - is_stmt;
-		  fprintf (out, _(" set '%s' to %" PRIuFAST8 "\n"),
-			   "is_stmt", is_stmt);
+		  fprintf (out, " %s '%s' %s %" PRIuFAST8 "\n",
+			   set_str, "is_stmt", to_str, is_stmt);
 		  break;
 
 		case DW_LNS_set_basic_block:
@@ -9814,8 +9939,8 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 
 		  advance_pc ((255 - opcode_base) / line_range);
 		  {
-		    fprintf (out, _(" advance address by constant %u to "),
-			     op_addr_advance);
+		    fprintf (out, " %s %u to ",
+			     adv_addr_by_str, op_addr_advance);
 		    print_dwarf_addr (dwflmod, 0, address, address, out);
 		    if (op_index > 0)
 		      fprintf (out, _(", op_index to %u"), op_index);
@@ -9927,8 +10052,8 @@ print_debug_loclists_section (Dwfl_Module *dwflmod,
 	}
 
       ptrdiff_t offset = readp - (unsigned char *) data->d_buf;
-      fprintf (out, _("Table at Offset 0x%" PRIx64 ":\n\n"),
-	       (uint64_t) offset);
+      fprintf (out, "%s 0x%" PRIx64 ":\n\n",
+	       table_offset_upper_str, (uint64_t) offset);
 
       uint64_t unit_length = read_4ubyte_unaligned_inc (dbg, readp);
       unsigned int offset_size = 4;
@@ -9940,7 +10065,7 @@ print_debug_loclists_section (Dwfl_Module *dwflmod,
 	  unit_length = read_8ubyte_unaligned_inc (dbg, readp);
 	  offset_size = 8;
 	}
-      fprintf (out, _(" Length:         %8" PRIu64 "\n"), unit_length);
+      fprintf (out, " %s:         %8" PRIu64 "\n", length_str, unit_length);
 
       /* We need at least 2-bytes + 1-byte + 1-byte + 4-bytes = 8
 	 bytes to complete the header.  And this unit cannot go beyond
@@ -9953,7 +10078,7 @@ print_debug_loclists_section (Dwfl_Module *dwflmod,
       const unsigned char *nexthdr = readp + unit_length;
 
       uint16_t version = read_2ubyte_unaligned_inc (dbg, readp);
-      fprintf (out, _(" DWARF version:  %8" PRIu16 "\n"), version);
+      fprintf (out, " %s:  %8" PRIu16 "\n", dwarf_ver_str, version);
 
       if (version != 5)
 	{
@@ -9962,8 +10087,8 @@ print_debug_loclists_section (Dwfl_Module *dwflmod,
 	}
 
       uint8_t address_size = *readp++;
-      fprintf (out, _(" Address size:   %8" PRIu64 "\n"),
-	       (uint64_t) address_size);
+      fprintf (out, " %s:   %8" PRIu64 "\n",
+	       addr_size_str, (uint64_t) address_size);
 
       if (address_size != 4 && address_size != 8)
 	{
@@ -9972,8 +10097,8 @@ print_debug_loclists_section (Dwfl_Module *dwflmod,
 	}
 
       uint8_t segment_size = *readp++;
-      fprintf (out, _(" Segment size:   %8" PRIu64 "\n"),
-	       (uint64_t) segment_size);
+      fprintf (out, " %s:   %8" PRIu64 "\n",
+	       seg_size_str, (uint64_t) segment_size);
 
       if (segment_size != 0)
         {
@@ -9982,8 +10107,8 @@ print_debug_loclists_section (Dwfl_Module *dwflmod,
         }
 
       uint32_t offset_entry_count = read_4ubyte_unaligned_inc (dbg, readp);
-      fprintf (out, _(" Offset entries: %8" PRIu64 "\n"),
-	       (uint64_t) offset_entry_count);
+      fprintf (out, " %s: %8" PRIu64 "\n",
+	       offset_ent_str, (uint64_t) offset_entry_count);
 
       /* We need the CU that uses this unit to get the initial base address. */
       Dwarf_Addr cu_base = 0;
@@ -9998,10 +10123,10 @@ print_debug_loclists_section (Dwfl_Module *dwflmod,
 	  if (dwarf_cu_die (cu, &cudie,
 			    NULL, NULL, NULL, NULL,
 			    NULL, NULL) == NULL)
-	    fprintf (out, _(" Unknown CU base: "));
+	    fprintf (out, " %s: ", unknown_base_str);
 	  else
-	    fprintf (out, _(" CU [%6" PRIx64 "] base: "),
-		     dwarf_dieoffset (&cudie));
+	    fprintf (out, " %s [%6" PRIx64 "] %s: ",
+		     cu_str, dwarf_dieoffset (&cudie), base_str);
 	  print_dwarf_addr (dwflmod, address_size, cu_base, cu_base, out);
 	  fprintf (out, "\n");
 	}
