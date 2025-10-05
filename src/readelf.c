@@ -448,7 +448,7 @@ static char *copy_str;
 
 
 static void
-init_gettext_strs ()
+init_gettext_strs (void)
 {
   yes_str = _("yes");
   no_str = _("no");
