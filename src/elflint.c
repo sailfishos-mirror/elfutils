@@ -4368,41 +4368,47 @@ check_note_data (Ebl *ebl, const GElf_Ehdr *ehdr,
     {
       last_offset = offset;
 
-      /* Make sure it is one of the note types we know about.  */
-      if (ehdr->e_type == ET_CORE)
-	switch (nhdr.n_type)
-	  {
-	  case NT_PRSTATUS:
-	  case NT_FPREGSET:
-	  case NT_PRPSINFO:
-	  case NT_TASKSTRUCT:		/* NT_PRXREG on Solaris.  */
-	  case NT_PLATFORM:
-	  case NT_AUXV:
-	  case NT_GWINDOWS:
-	  case NT_ASRS:
-	  case NT_PSTATUS:
-	  case NT_PSINFO:
-	  case NT_PRCRED:
-	  case NT_UTSNAME:
-	  case NT_LWPSTATUS:
-	  case NT_LWPSINFO:
-	  case NT_PRFPXREG:
-	    /* Known type.  */
-	    break;
+      /* gelf_getnote verified that this note is aligned and does not extend
+	 outside of DATA.  Now check that the note name is null-terminated
+	 if present.  */
+      if (name_offset != 0
+	  && nhdr.n_namesz > 0
+	  && *((char *) data->d_buf + name_offset + nhdr.n_namesz - 1) != '\0')
+	{
+	  if (ehdr->e_type == ET_CORE)
+	    {
+	      if (shndx == 0)
+		ERROR (_("\
+phdr[%d]: name missing null terminator for core file note with type %" PRIu32
+			    " at offset %" PRIu64 "\n"),
+		       phndx, (uint32_t) nhdr.n_type, start + offset);
+	      else
+		ERROR (_("\
+section [%2d] '%s': name missing null terminator for core file note with "
+			    "type %" PRIu32 " at offset %zu\n"),
+		       shndx, section_name (ebl, shndx),
+		       (uint32_t) nhdr.n_type, offset);
+	    }
+	  else
+	    {
+	      if (shndx == 0)
+		ERROR (_("\
+phdr[%d]: name missing null terminator for object file note with type %" PRIu32
+			    " at offset %zu\n"),
+		       phndx, (uint32_t) nhdr.n_type, offset);
+	      else
+		ERROR (_("\
+section [%2d] '%s': name missing null terminator for object file note with "
+			    "type %" PRIu32 " at offset %zu\n"),
+		       shndx, section_name (ebl, shndx),
+		       (uint32_t) nhdr.n_type, offset);
+	    }
 
-	  default:
-	    if (shndx == 0)
-	      ERROR (_("\
-phdr[%d]: unknown core file note type %" PRIu32 " at offset %" PRIu64 "\n"),
-		     phndx, (uint32_t) nhdr.n_type, start + offset);
-	    else
-	      ERROR (_("\
-section [%2d] '%s': unknown core file note type %" PRIu32
-			      " at offset %zu\n"),
-		     shndx, section_name (ebl, shndx),
-		     (uint32_t) nhdr.n_type, offset);
-	  }
-      else
+	  continue;
+	}
+
+      /* Perform type-specific checks.  */
+      if (ehdr->e_type != ET_CORE)
 	switch (nhdr.n_type)
 	  {
 	  case NT_GNU_ABI_TAG:
@@ -4412,15 +4418,15 @@ section [%2d] '%s': unknown core file note type %" PRIu32
 	  case NT_GNU_PROPERTY_TYPE_0:
 	    if (nhdr.n_namesz == sizeof ELF_NOTE_GNU
 		&& strcmp (data->d_buf + name_offset, ELF_NOTE_GNU) == 0)
-	      break;
+	      continue;
 	    else
 	      {
 		/* NT_VERSION is 1, same as NT_GNU_ABI_TAG.  It has no
 		   descriptor and (ab)uses the name as version string.  */
 		if (nhdr.n_descsz == 0 && nhdr.n_type == NT_VERSION)
-		  break;
+		  continue;
 	      }
-	      goto unknown_note;
+	      goto malformed_note;
 
 	  case NT_GNU_BUILD_ATTRIBUTE_OPEN:
 	  case NT_GNU_BUILD_ATTRIBUTE_FUNC:
@@ -4431,39 +4437,43 @@ section [%2d] '%s': unknown core file note type %" PRIu32
 		&& strncmp (data->d_buf + name_offset,
 			    ELF_NOTE_GNU_BUILD_ATTRIBUTE_PREFIX,
 			    strlen (ELF_NOTE_GNU_BUILD_ATTRIBUTE_PREFIX)) == 0)
-	      break;
+	      continue;
 	    else
-	      goto unknown_note;
+	      goto malformed_note;
 
 	  case NT_FDO_PACKAGING_METADATA:
 	    if (nhdr.n_namesz == sizeof ELF_NOTE_FDO
 		&& strcmp (data->d_buf + name_offset, ELF_NOTE_FDO) == 0)
-	      break;
+	      continue;
 	    else
-	      goto unknown_note;
+	      goto malformed_note;
 
 	  case 0:
 	    /* Linux vDSOs use a type 0 note for the kernel version word.  */
 	    if (nhdr.n_namesz == sizeof "Linux"
 		&& !memcmp (data->d_buf + name_offset, "Linux", sizeof "Linux"))
-	      break;
-	    FALLTHROUGH;
+	      continue;
+	    else
+	      goto malformed_note;
 	  default:
-	    {
-	    unknown_note:
+	    /* n_type not recognized, but no errors found regarding alignment,
+	       overflow or name null terminator.  */
+	    continue;
+
+malformed_note:
 	    if (shndx == 0)
 	      ERROR (_("\
-phdr[%d]: unknown object file note type %" PRIu32 " with owner name '%s' at offset %zu\n"),
+phdr[%d]: malformed object file note type %" PRIu32 " with owner name '%s' "
+			      "at offset %zu\n"),
 		     phndx, (uint32_t) nhdr.n_type,
 		     (char *) data->d_buf + name_offset, offset);
 	    else
 	      ERROR (_("\
-section [%2d] '%s': unknown object file note type %" PRIu32
+section [%2d] '%s': malformed object file note type %" PRIu32
 			      " with owner name '%s' at offset %zu\n"),
 		     shndx, section_name (ebl, shndx),
 		     (uint32_t) nhdr.n_type,
 		     (char *) data->d_buf + name_offset, offset);
-	    }
 	  }
     }
 
