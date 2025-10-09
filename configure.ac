@@ -892,7 +892,21 @@ fi
 PKG_CHECK_MODULES([libmicrohttpd],[libmicrohttpd >= 0.9.33],[],[enable_debuginfod=no])
 PKG_CHECK_MODULES([oldlibmicrohttpd],[libmicrohttpd < 0.9.51],[old_libmicrohttpd=yes],[old_libmicrohttpd=no])
 PKG_CHECK_MODULES([sqlite3],[sqlite3 >= 3.7.17],[have_sqlite3=yes],[have_sqlite3=no])
-PKG_CHECK_MODULES([libarchive],[libarchive >= 3.1.2],[have_libarchive=yes],[have_libarchive=no])
+#
+# Check for libarchive unless its usage is disabled.
+AC_ARG_WITH([libarchive],
+  [AS_HELP_STRING([--with-libarchive],
+                  [use libarchive])],
+  [], [with_libarchive=auto])
+have_libarchive=no
+AS_IF([test "x$with_libarchive" != "xno"], [
+  PKG_CHECK_MODULES([libarchive], [libarchive >= 3.1.2],
+    [have_libarchive=yes],
+    [have_libarchive=no])
+])
+AS_IF([test "x$with_libarchive" = "xyes" -a "x$have_libarchive" != "xyes"], [
+  AC_MSG_ERROR([--with-libarchive was given, but libarchive >= 3.1.2 not found])
+])
 #
 # pronounce judgement on ability to build server, overridden by =yes/=no
 if test "x$enable_debuginfod" = "xno"; then
