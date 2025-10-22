@@ -1377,13 +1377,13 @@ print_ehdr (Ebl *ebl, GElf_Ehdr *ehdr)
   printf (_("  Flags:                             %s\n"),
 	  ebl_machine_flag_name (ebl, ehdr->e_flags, buf, sizeof (buf)));
 
-  printf (_("  Size of this header:               %" PRId16 " %s\n"),
+  printf (_("  Size of this header:               %" PRIu16 " %s\n"),
 	  ehdr->e_ehsize, _("(bytes)"));
 
-  printf (_("  Size of program header entries:    %" PRId16 " %s\n"),
+  printf (_("  Size of program header entries:    %" PRIu16 " %s\n"),
 	  ehdr->e_phentsize, _("(bytes)"));
 
-  printf (_("  Number of program headers entries: %" PRId16),
+  printf (_("  Number of program headers entries: %" PRIu16),
 	  ehdr->e_phnum);
   if (ehdr->e_phnum == PN_XNUM)
     {
@@ -1397,10 +1397,10 @@ print_ehdr (Ebl *ebl, GElf_Ehdr *ehdr)
     }
   fputc ('\n', stdout);
 
-  printf (_("  Size of section header entries:    %" PRId16 " %s\n"),
+  printf (_("  Size of section header entries:    %" PRIu16 " %s\n"),
 	  ehdr->e_shentsize, _("(bytes)"));
 
-  printf (_("  Number of section headers entries: %" PRId16),
+  printf (_("  Number of section headers entries: %" PRIu16),
 	  ehdr->e_shnum);
   if (ehdr->e_shnum == 0)
     {
@@ -1432,7 +1432,7 @@ print_ehdr (Ebl *ebl, GElf_Ehdr *ehdr)
 	      buf);
     }
   else
-    printf (_("  Section header string table index: %" PRId16 "\n\n"),
+    printf (_("  Section header string table index: %" PRIu16 "\n\n"),
 	    ehdr->e_shstrndx);
 }
 
