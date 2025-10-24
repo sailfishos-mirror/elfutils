@@ -56,6 +56,12 @@ x86_64_sample_sp_pc (const Dwarf_Word *regs, uint32_t n_regs,
 			   sp, 7 /* index of sp in dwarf_regs */,
 			   pc, 16 /* index of pc in dwarf_regs */);
 #else
+  (void) regs;
+  (void) n_regs;
+  (void) regs_mapping;
+  (void) n_regs_mapping;
+  (void) sp;
+  (void) pc;
   return false;
 #endif
 }
@@ -70,6 +76,11 @@ x86_64_sample_perf_regs_mapping (Ebl *ebl,
   return x86_sample_perf_regs_mapping (ebl, perf_regs_mask, abi,
 				       regs_mapping, n_regs_mapping);
 #else
+  (void) ebl;
+  (void) perf_regs_mask;
+  (void) abi;
+  (void) regs_mapping;
+  (void) n_regs_mapping;
   return false;
 #endif
 }
