@@ -42,6 +42,7 @@
 #include "libebl_PERF_FLAGS.h"
 #if defined(__x86_64__) && defined(__linux__)
 # include "x86_initreg_sample.c"
+# define HAVE_X86_INITREG_SAMPLE
 #endif
 
 bool
@@ -49,10 +50,20 @@ x86_64_sample_sp_pc (const Dwarf_Word *regs, uint32_t n_regs,
 		     const int *regs_mapping, uint32_t n_regs_mapping,
 		     Dwarf_Word *sp, Dwarf_Word *pc)
 {
+#ifdef HAVE_X86_INITREG_SAMPLE
   /* XXX for dwarf_regs indices, compare x86_64_initreg.c */
   return x86_sample_sp_pc (regs, n_regs, regs_mapping, n_regs_mapping,
 			   sp, 7 /* index of sp in dwarf_regs */,
 			   pc, 16 /* index of pc in dwarf_regs */);
+#else
+  (void) regs;
+  (void) n_regs;
+  (void) regs_mapping;
+  (void) n_regs_mapping;
+  (void) sp;
+  (void) pc;
+  return false;
+#endif
 }
 
 bool
@@ -61,6 +72,15 @@ x86_64_sample_perf_regs_mapping (Ebl *ebl,
 				 const int **regs_mapping,
 				 size_t *n_regs_mapping)
 {
+#ifdef HAVE_X86_INITREG_SAMPLE
   return x86_sample_perf_regs_mapping (ebl, perf_regs_mask, abi,
 				       regs_mapping, n_regs_mapping);
+#else
+  (void) ebl;
+  (void) perf_regs_mask;
+  (void) abi;
+  (void) regs_mapping;
+  (void) n_regs_mapping;
+  return false;
+#endif
 }
