@@ -66,7 +66,7 @@ EOF
 # Compile the source files.
 for src in *.c; do
   obj=$(echo "$src" | sed 's/\.c$/.o/')
-  gcc -O0 -c "$src" -o "$obj"
+  gcc -O0 -fno-pic -fno-pie -fno-plt -c "$src" -o "$obj"
 done
 
 echo Create nested archives.
