@@ -45,7 +45,7 @@ libdwfl_stacktrace_a_SOURCES = dwflst_process_tracker.c \
 			       dwflst_tracker_elftab.c \
 			       dwflst_tracker_dwfltab.c \
 			       libdwfl_stacktrace_next_prime.c \
-			       dwflst_perf_frame.c
+			       dwflst_sample_frame.c
 
 libdwfl_stacktrace = $(libdw)
 libdw = ../libdw/libdw.so

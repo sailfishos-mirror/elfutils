@@ -34,34 +34,59 @@
 #include <libeblP.h>
 #include <assert.h>
 
-Dwarf_Word
-ebl_sample_base_addr (Ebl *ebl,
-                      const Dwarf_Word *regs, uint32_t n_regs,
-		      uint64_t regs_mask, uint32_t abi)
+bool
+ebl_sample_sp_pc (Ebl *ebl,
+		  const Dwarf_Word *regs, uint32_t n_regs,
+		  const int *regs_mapping, size_t n_regs_mapping,
+		  Dwarf_Word *sp, Dwarf_Word *pc)
 {
-  assert (ebl->sample_base_addr != NULL);
-  return ebl->sample_base_addr (regs, n_regs, regs_mask, abi);
-}
-
-Dwarf_Word
-ebl_sample_pc (Ebl *ebl,
-	       const Dwarf_Word *regs, uint32_t n_regs,
-	       uint64_t regs_mask, uint32_t abi)
-{
-  assert (ebl->sample_pc != NULL);
-  return ebl->sample_pc (regs, n_regs, regs_mask, abi);
+  assert (ebl->sample_sp_pc != NULL);
+  return ebl->sample_sp_pc (regs, n_regs,
+			    regs_mapping, n_regs_mapping,
+			    sp, pc);
 }
 
 bool
 ebl_set_initial_registers_sample (Ebl *ebl,
 				  const Dwarf_Word *regs, uint32_t n_regs,
-				  uint64_t regs_mask, uint32_t abi,
+				  const int *regs_mapping, size_t n_regs_mapping,
 				  ebl_tid_registers_t *setfunc,
 				  void *arg)
 {
-  /* If set_initial_registers_sample is unsupported then PERF_FRAME_REGS_MASK is zero.  */
-  assert (ebl->set_initial_registers_sample != NULL);
-  return ebl->set_initial_registers_sample (regs, n_regs, regs_mask, abi, setfunc, arg);
+  /* If set_initial_registers_sample is defined for this arch, use it.  */
+  if (ebl->set_initial_registers_sample != NULL)
+      return ebl->set_initial_registers_sample (regs, n_regs,
+						regs_mapping, n_regs_mapping,
+						setfunc, arg);
+
+  /* If set_initial_registers_sample is unspecified, then it is safe
+     to use the following generic code to populate a contiguous array
+     of dwarf_regs:  */
+  Dwarf_Word dwarf_regs[64];
+  assert (ebl->frame_nregs < 64);
+  size_t i;
+  for (i = 0; i < ebl->frame_nregs; i++)
+    dwarf_regs[i] = 0x0;
+  for (i = 0; i < n_regs; i++)
+    {
+      if (i > n_regs_mapping)
+	break;
+      if (regs_mapping[i] < 0 || regs_mapping[i] >= (int)ebl->frame_nregs)
+	continue;
+      dwarf_regs[regs_mapping[i]] = regs[i];
+    }
+  return setfunc (0, ebl->frame_nregs, dwarf_regs, arg);
+}
+
+bool
+ebl_sample_perf_regs_mapping (Ebl *ebl,
+			      uint64_t perf_regs_mask, uint32_t abi,
+			      const int **regs_mapping, size_t *n_regs_mapping)
+{
+  /* If sample_perf_regs_mapping is unsupported then PERF_FRAME_REGS_MASK is zero.  */
+  assert (ebl->sample_perf_regs_mapping != NULL);
+  return ebl->sample_perf_regs_mapping (ebl, perf_regs_mask, abi,
+					regs_mapping, n_regs_mapping);
 }
 
 uint64_t

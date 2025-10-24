@@ -396,7 +396,6 @@ ELFUTILS_0.193 {
 ELFUTILS_0.193_EXPERIMENTAL {
   global:
     dwflst_perf_sample_preferred_regs_mask;
-    dwflst_perf_sample_preferred_regs_mask;
     dwflst_tracker_begin;
     dwflst_tracker_dwfl_begin;
     dwflst_tracker_end;
@@ -407,3 +406,8 @@ ELFUTILS_0.193_EXPERIMENTAL {
     dwflst_tracker_find_pid;
     dwflst_perf_sample_getframes;
 };
+
+ELFUTILS_0.194_EXPERIMENTAL {
+  global:
+    dwflst_sample_getframes;
+} ELFUTILS_0.193_EXPERIMENTAL;
