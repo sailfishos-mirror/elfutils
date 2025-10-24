@@ -39,6 +39,10 @@ x86_sample_sp_pc (const Dwarf_Word *regs, uint32_t n_regs,
   (void)n_regs;
   (void)regs_mapping;
   (void)n_regs_mapping;
+  (void)sp;
+  (void)sp_index;
+  (void)pc;
+  (void)pc_index;
   return false;
 #else /* __x86_64__ */
   /* TODO: Register locations could be cached and rechecked on a
