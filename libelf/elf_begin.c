@@ -62,7 +62,7 @@ file_read_ar (int fildes, void *map_address, off_t offset, size_t maxsize,
 	 happen on demand.  */
       elf->state.ar.offset = offset + SARMAG;
 
-      elf->state.ar.elf_ar_hdr.ar_rawname = elf->state.ar.raw_name;
+      elf->state.ar.cur_ar_hdr.ar_rawname = elf->state.ar.raw_name;
     }
 
   return elf;
@@ -821,10 +821,7 @@ copy_arhdr (Elf_Arhdr *dest, Elf *ref)
 {
   Elf_Arhdr *hdr;
 
-  if (ref->kind == ELF_K_AR)
-    hdr = &ref->state.ar.elf_ar_hdr;
-  else
-    hdr = &ref->state.elf.elf_ar_hdr;
+  hdr = &ref->state.ar.cur_ar_hdr;
 
   char *ar_name = hdr->ar_name;
   char *ar_rawname = hdr->ar_rawname;
@@ -909,7 +906,7 @@ __libelf_next_arhdr_wrlock (Elf *elf)
   /* Copy the raw name over to a NUL terminated buffer.  */
   *((char *) mempcpy (elf->state.ar.raw_name, ar_hdr->ar_name, 16)) = '\0';
 
-  elf_ar_hdr = &elf->state.ar.elf_ar_hdr;
+  elf_ar_hdr = &elf->state.ar.cur_ar_hdr;
 
   /* Now convert the `struct ar_hdr' into `Elf_Arhdr'.
      Determine whether this is a special entry.  */
@@ -1102,7 +1099,7 @@ dup_elf (int fildes, Elf_Cmd cmd, Elf *ref)
      member the internal pointer of the archive file descriptor is
      pointing to.  First read the header of the next member if this
      has not happened already.  */
-  if (ref->state.ar.elf_ar_hdr.ar_name == NULL
+  if (ref->state.ar.cur_ar_hdr.ar_name == NULL
       && __libelf_next_arhdr_wrlock (ref) != 0)
     /* Something went wrong.  Maybe there is no member left.  */
     return NULL;
@@ -1114,7 +1111,7 @@ dup_elf (int fildes, Elf_Cmd cmd, Elf *ref)
   size_t max_size = ref->maximum_size;
   size_t offset = (size_t) (ref->state.ar.offset - ref->start_offset);
   size_t hdr_size = sizeof (struct ar_hdr);
-  size_t ar_size = (size_t) ref->state.ar.elf_ar_hdr.ar_size;
+  size_t ar_size = (size_t) ref->state.ar.cur_ar_hdr.ar_size;
   if (max_size < hdr_size || max_size - hdr_size < offset)
     return NULL;
 
@@ -1130,8 +1127,9 @@ dup_elf (int fildes, Elf_Cmd cmd, Elf *ref)
     {
       /* Enlist this new descriptor in the list of children.  */
       result->next = ref->state.ar.children;
-      result->state.elf.elf_ar_hdr = ar_hdr;
       ref->state.ar.children = result;
+
+      result->elf_ar_hdr = ar_hdr;
     }
   else
     {

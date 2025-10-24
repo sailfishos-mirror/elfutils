@@ -68,6 +68,7 @@ check_PROGRAMS = arextract arsymtest newfile saridx scnnames sectiondump \
 		  cu-dwp-section-info declfiles test-manyfuncs \
 		  eu_search_cfi eu_search_macros \
 		  eu_search_lines eu_search_die \
+		  ar-extract-ar \
 		  $(asm_TESTS)
 
 asm_TESTS = asm-tst1 asm-tst2 asm-tst3 asm-tst4 asm-tst5 \
@@ -774,6 +775,7 @@ libeu = ../lib/libeu.a
 
 arextract_LDADD = $(libelf)
 arsymtest_LDADD = $(libelf)
+ar_extract_ar_LDADD = $(libelf)
 newfile_LDADD = $(libelf)
 saridx_LDADD = $(libeu) $(libelf)
 scnnames_LDADD = $(libelf)

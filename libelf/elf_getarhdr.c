@@ -51,5 +51,5 @@ elf_getarhdr (Elf *elf)
       return NULL;
     }
 
-  return &elf->state.elf.elf_ar_hdr;
+  return &elf->elf_ar_hdr;
 }
