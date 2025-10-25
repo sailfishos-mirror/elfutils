@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl Configure input file for elfutils.                     -*-autoconf-*-
 dnl
-dnl Copyright (C) 1996-2019, 2024 Red Hat, Inc.
+dnl Copyright (C) 1996-2019, 2025 Red Hat, Inc.
 dnl Copyright (C) 2022, 2023 Mark J. Wielaard <mark@klomp.org>
 dnl
 dnl This file is part of elfutils.
@@ -18,7 +18,7 @@ dnl  GNU General Public License for more details.
 dnl
 dnl  You should have received a copy of the GNU General Public License
 dnl  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-AC_INIT([elfutils],[0.193],[https://sourceware.org/bugzilla],[elfutils],[http://elfutils.org/])
+AC_INIT([elfutils],[0.194],[https://sourceware.org/bugzilla],[elfutils],[http://elfutils.org/])
 
 LIBDEBUGINFOD_SONAME=libdebuginfod.so.1
 AC_SUBST([LIBDEBUGINFOD_SONAME])

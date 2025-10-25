@@ -1,3 +1,22 @@
+Version 0.194 "Manual Labour"
+
+debuginfod-find: Fixed caching bug preventing user-cancelled downloads
+                 from being re-downloaded at a later time.
+
+elfclassify: New options --has-debug-sections and --any-ar-member.
+
+elflint: Presence of vendor- and application-specific ELF note types no
+         longer triggers compliance errors.
+
+libdwfl_stacktrace: New function dwflst_sample_getframes.  The
+                    libdwfl_stacktrace library interface is experimental
+                    and may be subject to API/ABI changes.
+
+libelf: Manual pages have been added for many libelf library functions.
+        Additional manual pages are planned for future releases.
+
+readelf: Up to 13% faster when using the -N option.
+
 Version 0.193 "Bugs erased, stacks traced"
 
 debuginfod: Add CORS (webapp access) support to webapi and --cors option.
