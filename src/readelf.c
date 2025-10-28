@@ -12200,7 +12200,8 @@ getone_dwflmod (Dwfl_Module *dwflmod,
   return DWARF_CB_OK;
 }
 
-typedef struct {
+typedef struct Job_Data {
+  struct Job_Data *next;
   Dwfl_Module *dwflmod;
   Ebl *ebl;
   GElf_Ehdr *ehdr;
@@ -12230,7 +12231,7 @@ do_job (void *data, FILE *out)
    If thread safety is not supported or the maximum number of threads is set
    to 1, then immediately call START_ROUTINE with the given arguments.  */
 static void
-schedule_job (job_data jdata[], size_t idx,
+schedule_job (job_data **jdatalist,
 	      void (*start_routine) (Dwfl_Module *, Ebl *, GElf_Ehdr *,
 				     Elf_Scn *, GElf_Shdr *, Dwarf *, FILE *),
 	      Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr, Elf_Scn *scn,
@@ -12239,21 +12240,24 @@ schedule_job (job_data jdata[], size_t idx,
 #ifdef USE_LOCKS
   if (max_threads > 1)
     {
-      /* Add to the job queue.  */
-      jdata[idx].dwflmod = dwflmod;
-      jdata[idx].ebl = ebl;
-      jdata[idx].ehdr = ehdr;
-      jdata[idx].scn = *scn;
-      jdata[idx].shdr = *shdr;
-      jdata[idx].dbg = dbg;
-      jdata[idx].fp = start_routine;
+      job_data *jdata = xmalloc (sizeof (job_data));
 
-      add_job (do_job, (void *) &jdata[idx]);
+      jdata->dwflmod = dwflmod;
+      jdata->ebl = ebl;
+      jdata->ehdr = ehdr;
+      jdata->scn = *scn;
+      jdata->shdr = *shdr;
+      jdata->dbg = dbg;
+      jdata->fp = start_routine;
+      jdata->next = *jdatalist;
+      *jdatalist = jdata;
+
+      add_job (do_job, (void *) jdata);
     }
   else
     start_routine (dwflmod, ebl, ehdr, scn, shdr, dbg, stdout);
 #else
-  (void) jdata; (void) idx;
+  (void) jdatalist;
 
   start_routine (dwflmod, ebl, ehdr, scn, shdr, dbg, stdout);
 #endif
@@ -12431,8 +12435,7 @@ print_debug (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr)
   if (unlikely (elf_getshdrstrndx (ebl->elf, &shstrndx) < 0))
     error_exit (0, _("cannot get section header string table index"));
 
-  ssize_t num_jobs = 0;
-  job_data *jdata = NULL;
+  job_data *jdatalist = NULL;
 
   /* If the .debug_info section is listed as implicitly required then
      we must make sure to handle it before handling any other debug
@@ -12531,13 +12534,6 @@ print_debug (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr)
 	  if (name == NULL)
 	    continue;
 
-	  if (jdata == NULL)
-	    {
-	      jdata = calloc (ndebug_sections, sizeof (*jdata));
-	      if (jdata == NULL)
-		error_exit (0, _("failed to allocate job data"));
-	    }
-
 	  int n;
 	  for (n = 0; n < ndebug_sections; ++n)
 	    {
@@ -12561,10 +12557,9 @@ print_debug (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr)
 		{
 		  if (((print_debug_sections | implicit_debug_sections)
 		       & debug_sections[n].bitmask))
-		    schedule_job (jdata, num_jobs++, debug_sections[n].fp,
+		    schedule_job (&jdatalist, debug_sections[n].fp,
 				  dwflmod, ebl, ehdr, scn, shdr, dbg);
 
-		  assert (num_jobs <= ndebug_sections);
 		  break;
 		}
 	    }
@@ -12579,7 +12574,13 @@ print_debug (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr)
 
   dwfl_end (skel_dwfl);
   free (skel_name);
-  free (jdata);
+
+  while (jdatalist != NULL)
+    {
+      job_data *jdata = jdatalist;
+      jdatalist = jdatalist->next;
+      free (jdata);
+    }
 
   /* Turn implicit and/or explicit back on in case we go over another file.  */
   if (implicit_info)
