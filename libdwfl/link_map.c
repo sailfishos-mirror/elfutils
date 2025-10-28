@@ -431,12 +431,14 @@ report_r_debug (uint_fast8_t elfclass, uint_fast8_t elfdata,
 
 	  if (sysroot && !name_in_sysroot)
 	    {
-	      const char *n = NULL;
-
 	      if (asprintf (&sysroot_name, "%s%s", sysroot, name) < 0)
 		return release_buffer (&memory_closure, &buffer, &buffer_available, -1);
 
-	      n = name;
+#ifdef HAVE_OPENAT2_RESOLVE_IN_ROOT
+	      /* The original name does not contain the sysroot as a prefix.
+		 Save this for use with openat2.  */
+	      const char *name_no_sysroot = name;
+#endif
 	      name = sysroot_name;
 
 #ifdef HAVE_OPENAT2_RESOLVE_IN_ROOT
@@ -451,7 +453,8 @@ report_r_debug (uint_fast8_t elfclass, uint_fast8_t elfdata,
 	      if (sysrootfd < 0)
 		return -1;
 
-	      fd = syscall (SYS_openat2, sysrootfd, n, &how, sizeof(how));
+	      fd = syscall (SYS_openat2, sysrootfd, name_no_sysroot,
+			    &how, sizeof(how));
 	      err = fd < 0 ? -errno : 0;
 
 	      close (sysrootfd);
