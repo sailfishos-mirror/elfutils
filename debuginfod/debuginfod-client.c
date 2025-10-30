@@ -847,7 +847,7 @@ metadata_callback (char * buffer, size_t size, size_t numitems, void * userdata)
  * 'metadata', corresponding to the query type. Returns 0 on success
  * and -Posix error on failure.
  */
-int
+static int
 init_server_urls(char* url_subdir, const char* type,
                  char *server_urls, char ***server_url_list, ima_policy_t **url_ima_policies,
                  int *num_urls, int vfd)
@@ -956,7 +956,7 @@ init_server_urls(char* url_subdir, const char* type,
  * Specifically the data[i] within an array of struct handle_data's.
  * Returns 0 on success and -Posix error on failure.
  */
-int
+static int
 init_handle(debuginfod_client *client,
   size_t (*w_callback)(char *buffer, size_t size, size_t nitems, void *userdata),
   size_t (*h_callback)(char *buffer, size_t size, size_t nitems, void *userdata),
@@ -1030,7 +1030,7 @@ init_handle(debuginfod_client *client,
  * once found. If positive maxtime and maxsize dictate the maximum allowed wait times
  * and download sizes respectively. Returns 0 on success and -Posix error on failure.
  */
-int
+static int
 perform_queries(CURLM *curlm, CURL **target_handle, struct handle_data *data, debuginfod_client *c,
                 int num_urls, long maxtime, long maxsize, bool only_one, int vfd, int *committed_to)
 {
