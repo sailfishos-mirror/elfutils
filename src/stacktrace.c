@@ -183,6 +183,7 @@ Ebl *default_ebl = NULL;
 #define OPT_DEBUG	0x100
 
 /* Diagnostic options. */
+static bool show_buildid = false;
 static bool show_frames = false;
 static bool show_samples = false;
 static bool show_failures = false;
@@ -190,7 +191,7 @@ static bool show_summary = true;
 
 /* Environment vars to drive diagnostic options: */
 #define ELFUTILS_STACKTRACE_VERBOSE_ENV_VAR "ELFUTILS_STACKTRACE_VERBOSE"
-/* Valid values that turn on diagnostics: 'true', 'verbose', 'debug', '1', '2'. */
+/* Valid values that turn on diagnostics: 'true', 'verbose', 'debug', 'buildid', '1', '2', '3'. */
 
 /* Enables even more diagnostics on modules: */
 /* #define DEBUG_MODULES */
@@ -692,9 +693,7 @@ struct sysprof_unwind_info
   uint64_t last_abi;
   Dwarf_Addr last_base; /* for diagnostic purposes */
   Dwarf_Addr last_sp; /* for diagnostic purposes */
-#ifdef DEBUG_MODULES
   Dwfl *last_dwfl; /* for diagnostic purposes */
-#endif
   pid_t last_pid; /* for diagnostic purposes, to provide access to dwfltab */
   Dwarf_Addr *addrs; /* allocate blocks of UNWIND_ADDR_INCREMENT */
   void *outbuf;
@@ -977,6 +976,18 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
 	fprintf(stderr, N_("* frame %d: pc_adjusted=%lx sp=%lx+(%lx) [dwfl_ent not found]\n"),
 		sui->n_addrs, pc_adjusted, sui->last_base, sp - sui->last_base);
     }
+  if (show_buildid)
+    {
+      Dwfl_Module *m = dwfl_addrmodule(sui->last_dwfl, pc);
+      const unsigned char *desc;
+      GElf_Addr vaddr;
+      int build_id_len = dwfl_module_build_id (m, &desc, &vaddr);
+      if (show_buildid)
+	fprintf(stderr, "* pid %d build_id ", sui->last_pid);
+      for (int i = 0; i < build_id_len; ++i)
+	fprintf(stderr, "%02" PRIx8, (uint8_t) desc[i]);
+      fprintf(stderr, "\n");
+    }
 
   if (sui->n_addrs > maxframes)
     {
@@ -1066,9 +1077,7 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
     }
   sui->n_addrs = 0;
   sui->last_abi = regs->abi;
-#ifdef DEBUG_MODULES
   sui->last_dwfl = dwfl;
-#endif
   sui->last_pid = frame->pid;
   uint64_t regs_mask = ebl_perf_frame_regs_mask (default_ebl);
   int rc = dwflst_perf_sample_getframes (dwfl, elf, frame->pid, ev->tid,
@@ -1194,6 +1203,9 @@ parse_opt (int key, char *arg __attribute__ ((unused)),
 	}
       break;
 
+    case 'w':
+      show_buildid = true;
+      FALLTHROUGH;
     case OPT_DEBUG:
       show_frames = true;
       FALLTHROUGH;
@@ -1247,6 +1259,8 @@ main (int argc, char **argv)
 	N_("Show additional information for each unwound sample"), 0 },
       { "debug", OPT_DEBUG, NULL, 0,
 	N_("Show additional information for each unwound frame"), 0 },
+      { "buildid", 'w', NULL, 0,
+	N_("Show build-id for each unwound frame"), 0 },
       /* TODO: Add a 'quiet' option suppressing summaries + errors.
          Perhaps also allow -v, -vv, -vvv in SystemTap style? */
       { "format", 'f', FORMAT_OPTS, 0,
@@ -1286,6 +1300,15 @@ https://sourceware.org/cgit/elfutils/tree/README.eu-stacktrace?h=users/serhei/eu
   else if (strcmp(env_verbose, "debug") == 0
 	   || strcmp(env_verbose, "2") == 0)
     {
+      show_frames = true;
+      show_samples = true;
+      show_failures = true;
+      show_summary = true;
+    }
+  else if (strcmp(env_verbose, "buildid") == 0
+	   || strcmp(env_verbose, "3") == 0)
+    {
+      show_buildid = true;
       show_frames = true;
       show_samples = true;
       show_failures = true;
