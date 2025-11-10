@@ -8,6 +8,7 @@ Elfutils library (\fBlibelf\fP, \fBlibelf.so\fP, \fB-lelf\fP)
 .SH SYNOPSIS
 .nf
 .B #include <libelf.h>
+.B #include <gelf.h>
 
 .SH DESCRIPTION
 The \fBlibelf\fP library provides an API for reading, writing, and manipulating
@@ -25,6 +26,19 @@ file descriptors representing ELF files, which can be read from, written to,
 or updated in-place. The \fBelf_begin\fP function initializes access to an
 ELF object, while additional functions like \fBelf_getscn\fP, \fBelf_getdata\fP,
 and \fBelf_ndxscn\fP provide access to specific parts of the ELF file.
+
+.SH GELF INTERFACE
+\fB<gelf.h>\fP provides a class-independent interface to \fBlibelf\fP that
+transparently handles both \fBELFCLASS32\fP and \fBELFCLASS64\fP binaries.
+This allows callers to avoid selecting \fBlibelf\fP functions that are
+specialized for working with a particular class of ELF binary.
+
+\fIGElf_\fP types defined in \fB<gelf.h>\fP are aliases for their \fIElf64_\fP
+equivalents. Any conversions to \fIElf32_\fP types are handled internally by
+\fBgelf_\fP functions. See \fBGELF DATA STRUCTURES\fP and \fBGELF MACROS\fP
+for more information. When using \fBgelf_\fP functions that modify data
+structure values for \fBELFCLASS32\fP binaries, the size of the value should
+not exceed the maximum size of the \fBELFCLASS32\fP equivalent.
 
 .SH FILE VS MEMORY REPRESENTATION
 
@@ -51,6 +65,11 @@ file and memory representations:
 .BR elf32_xlatetof ,
 and
 .BR elf64_xlatetof .
+\fB<gelf.h>\fP provides
+.B gelf_xlatetom
+and
+.B gelf_xlatetof
+for class-independent translation between file and memory representations.
 
 See
 .BR elf32_xlatetom (3)
@@ -102,7 +121,8 @@ error code that can be retrieved with
 Each thread maintains its own separate error code.  The meaning of
 each error code can be determined with
 .BR elf_errmsg,
-which returns a string describing the error.
+which returns a string describing the error. \fBlibelf\fP functions
+returning a pointer return NULL on failure.
 
 .SH MEMORY MANAGEMENT
 \fBlibelf\fP manages all of the memory it allocates and frees it with
@@ -112,8 +132,8 @@ The application must not call
 on any memory allocated by \fBlibelf\fP.
 
 .SH NAMESPACE
-\fBlibelf\fP uses the following prefix format. See \fBlibelf.h\fP for more
-information.
+\fBlibelf\fP uses the following prefix format. See \fBlibelf.h\fP and
+\fBgelf.h\fP for more information.
 
 .RS
 .TP
@@ -170,6 +190,18 @@ values representing the known types of ELF data such as
 or
 .B ELF_T_SYM
 (symbol record).
+
+.TP
+.B gelf_
+Class-independent functions.
+
+.TP
+.B GElf_
+Class-independent types.
+
+.TP
+.B GELF_
+Class-independent macros.
 .fi
 .PD
 .RE
@@ -358,6 +390,72 @@ Offset for this file in the archive.
 .TP
 .I as_hash
 Hash value of the name.
+
+.SH GELF DATA STRUCTURES
+
+\fIGElf_\fP types are aliases for their \fIElf64_\fP equivalents.
+See
+.B elf(5)
+for more information regarding the underlying types.
+
+.TS
+tab(:);
+lB lB
+l l.
+GElf type:Underlying 64-bit type
+_
+GElf_Half:Elf64_Half
+GElf_Word:Elf64_Word
+GElf_Sword:Elf64_Sword
+GElf_Xword:Elf64_Xword
+GElf_Sxword:Elf64_Sxword
+GElf_Addr:Elf64_Addr
+GElf_Off:Elf64_Off
+GElf_Ehdr:Elf64_Ehdr
+GElf_Shdr:Elf64_Shdr
+GElf_Section:Elf64_Section
+GElf_Sym:Elf64_Sym
+GElf_Syminfo:Elf64_Syminfo
+GElf_Rel:Elf64_Rel
+GElf_Rela:Elf64_Rela
+GElf_Relr:Elf64_Relr
+GElf_Phdr:Elf64_Phdr
+GElf_Chdr:Elf64_Chdr
+GElf_Dyn:Elf64_Dyn
+GElf_Verdef:Elf64_Verdef
+GElf_Verdaux:Elf64_Verdaux
+GElf_Verneed:Elf64_Verneed
+GElf_Vernaux:Elf64_Vernaux
+GElf_Versym:Elf64_Versym
+GElf_auxv_t:Elf64_auxv_t
+GElf_Nhdr:Elf64_Nhdr
+GElf_Move:Elf64_Move
+GElf_Lib:Elf64_Lib
+.TE
+
+.SH GELF MACROS
+All \fBGELF_\fP macros are aliases for their \fBELF64_\fP equivalents.
+See
+.B elf(5)
+for more information regarding the underlying macros.
+
+.TS
+tab(:);
+lB lB
+l l.
+GElf macro:Underlying 64-bit macro
+_
+GELF_ST_BIND:ELF64_ST_BIND
+GELF_ST_TYPE:ELF64_ST_TYPE
+GELF_ST_INFO:ELF64_ST_INFO
+GELF_ST_VISIBILITY:ELF64_ST_VISIBILITY
+GELF_M_INFO:ELF64_M_INFO
+GELF_M_SIZE:ELF64_M_SIZE
+GELF_M_SYM:ELF64_M_SYM
+GELF_R_INFO:ELF64_R_INFO
+GELF_R_TYPE:ELF64_R_TYPE
+GELF_R_SYM:ELF64_R_SYM
+.TE
 
 .SH REPORTING BUGS
 Report bugs to <elfutils-devel@sourceware.org> or https://sourceware.org/bugzilla/.
