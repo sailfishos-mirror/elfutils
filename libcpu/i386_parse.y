@@ -1242,8 +1242,7 @@ instrtable_out (void)
   fputs ("};\n", outfile);
 
   fputs ("static const uint8_t match_data[] =\n{\n", outfile);
-  size_t cnt = 0;
-  for (instr = instructions; instr != NULL; instr = instr->next, ++cnt)
+  for (instr = instructions; instr != NULL; instr = instr->next)
     {
       /* First count the number of bytes.  */
       size_t totalbits = 0;
