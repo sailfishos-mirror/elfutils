@@ -83,7 +83,9 @@
 
 #include <linux/perf_event.h>
 
-/* TODO: Need to generalize the code beyond x86 architectures. */
+/* TODO: Need to generalize the code beyond x86 architectures.
+   eu-stacktrace currently disabled by configury
+   unless _ASM_X86_PERF_REGS_H is detected. */
 #include <asm/perf_regs.h>
 #ifndef _ASM_X86_PERF_REGS_H
 #error "eu-stacktrace is currently limited to x86 architectures"

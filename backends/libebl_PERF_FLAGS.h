@@ -33,8 +33,7 @@
 
 #if defined(__linux__)
 /* XXX Need to exclude __linux__ arches without perf_regs.h. */
-#if defined(__x86_64__) || defined(__i386__)
-/* || defined(other_architecture)... */
+#if defined HAVE_PERF_REGS_H
 # include <asm/perf_regs.h>
 #endif
 #endif

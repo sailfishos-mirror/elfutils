@@ -971,6 +971,11 @@ AC_ARG_ENABLE(debuginfod-ima-cert-path,
 AC_SUBST(DEBUGINFOD_IMA_CERT_PATH, $default_debuginfod_ima_cert_path)
 AC_CONFIG_FILES([config/profile.sh config/profile.csh config/profile.fish])
 
+# check for asm/perf_regs.h, as it's completely absent on some architectures
+AH_TEMPLATE([HAVE_PERF_REGS_H], [Define to 1 if `asm/perf-regs.h` is provided by the system, 0 otherwise.])
+AC_CHECK_HEADER(asm/perf_regs.h,
+  [AC_DEFINE(HAVE_PERF_REGS_H)],[])
+
 # XXX Currently, eu-stacktrace can only work with sysprof/x86, hence:
 AC_ARG_ENABLE([stacktrace],AS_HELP_STRING([--enable-stacktrace], [Enable eu-stacktrace]))
 # check for x86, or more precisely _ASM_X86_PERF_REGS_H

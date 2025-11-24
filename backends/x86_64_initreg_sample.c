@@ -34,7 +34,9 @@
 #include <assert.h>
 #if defined(__x86_64__) && defined(__linux__)
 # include <linux/perf_event.h>
-# include <asm/perf_regs.h>
+# ifdef HAVE_PERF_REGS_H
+#  include <asm/perf_regs.h>
+# endif
 #endif
 
 #define BACKEND x86_64_
