@@ -8269,7 +8269,7 @@ attr_callback (Dwarf_Attribute *attrp, void *arg)
 		    valuestr = dwarf_filesrc (files, num, NULL, NULL);
 		    if (valuestr != NULL)
 		      {
-			char *filename = strrchr (valuestr, '/');
+			const char *filename = strrchr (valuestr, '/');
 			if (filename != NULL)
 			  valuestr = filename + 1;
 		      }
@@ -9033,7 +9033,7 @@ print_form_data (Dwarf *dbg, int form, const unsigned char *readp,
 		 Dwarf_Off str_offsets_base, FILE *out)
 {
   Dwarf_Word val;
-  unsigned char *endp;
+  const unsigned char *endp;
   Elf_Data *data;
   char *str;
   switch (form)
@@ -9530,7 +9530,7 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 	{
 	  while (linep < lineendp && *linep != 0)
 	    {
-	      unsigned char *endp = memchr (linep, '\0', lineendp - linep);
+	      const unsigned char *endp = memchr (linep, '\0', lineendp - linep);
 	      if (unlikely (endp == NULL))
 		goto invalid_unit;
 
@@ -9764,7 +9764,7 @@ print_debug_line_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 		case DW_LNE_define_file:
 		  {
 		    char *fname = (char *) linep;
-		    unsigned char *endp = memchr (linep, '\0',
+		    const unsigned char *endp = memchr (linep, '\0',
 						  lineendp - linep);
 		    if (unlikely (endp == NULL))
 		      goto invalid_unit;

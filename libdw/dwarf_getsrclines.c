@@ -364,7 +364,7 @@ read_srcfiles (Dwarf *dbg,
       const unsigned char *dirp = linep;
       while (dirp < lineendp && *dirp != 0)
 	{
-	  uint8_t *endp = memchr (dirp, '\0', lineendp - dirp);
+	  const uint8_t *endp = memchr (dirp, '\0', lineendp - dirp);
 	  if (endp == NULL)
 	    goto invalid_data;
 	  ++ndirs;
@@ -440,7 +440,7 @@ read_srcfiles (Dwarf *dbg,
       for (unsigned int n = 1; n < ndirlist; n++)
 	{
 	  dirarray[n].dir = (char *) linep;
-	  uint8_t *endp = memchr (linep, '\0', lineendp - linep);
+	  const uint8_t *endp = memchr (linep, '\0', lineendp - linep);
 	  assert (endp != NULL); // Checked above when calculating ndirlist.
 	  dirarray[n].len = endp - linep;
 	  linep = endp + 1;
@@ -927,7 +927,7 @@ read_srclines (Dwarf *dbg,
 	    case DW_LNE_define_file:
 	      {
 		char *fname = (char *) linep;
-		uint8_t *endp = memchr (linep, '\0', lineendp - linep);
+		const uint8_t *endp = memchr (linep, '\0', lineendp - linep);
 		if (endp == NULL)
 		  goto invalid_data;
 		size_t fnamelen = endp - linep;

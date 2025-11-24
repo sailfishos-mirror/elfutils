@@ -3104,7 +3104,7 @@ int debuginfod_add_http_header (debuginfod_client *client, const char* header)
   /* Sanity check header value is of the form Header: Value.
      It should contain at least one colon that isn't the first or
      last character.  */
-  char *colon = strchr (header, ':'); /* first colon */
+  const char *colon = strchr (header, ':'); /* first colon */
   if (colon == NULL /* present */
       || colon == header /* not at beginning - i.e., have a header name */
       || *(colon + 1) == '\0') /* not at end - i.e., have a value */
