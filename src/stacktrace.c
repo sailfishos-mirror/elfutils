@@ -81,6 +81,10 @@
 
 #include <system.h>
 
+/***********************************
+ * Includes: perf_events interface *
+ ***********************************/
+
 #include <linux/perf_event.h>
 
 /* TODO: Need to generalize the code beyond x86 architectures. */
@@ -88,6 +92,10 @@
 #ifndef _ASM_X86_PERF_REGS_H
 #error "eu-stacktrace is currently limited to x86 architectures"
 #endif
+
+#include <sys/syscall.h>
+#include <sys/ioctl.h>
+#include <poll.h>
 
 /*************************************
  * Includes: libdwfl data structures *
@@ -112,6 +120,10 @@
 #else
 #define HAVE_SYSPROF_HEADERS 0
 #endif
+
+/* tmp override to test perf_events */
+#undef HAVE_SYSPROF_HEADERS
+#define HAVE_SYSPROF_HEADERS 0
 
 #if HAVE_SYSPROF_HEADERS
 
@@ -155,26 +167,32 @@ SYSPROF_ALIGNED_END(1);
 
 /* TODO: Reduce repeated error messages in show_failures. */
 
+#if HAVE_SYSPROF_HEADERS
+/* TODO also use in perf_events backend */
 static int maxframes = 256;
+#endif
 
 static char *input_path = NULL;
-static int input_fd = -1;
 static char *output_path = NULL;
-static int output_fd = -1;
 
 static int signal_count = 0;
 
-#define MODE_OPTS "none/passthru/naive"
+#define MODE_OPTS "basic/passthru/none"
 #define MODE_NONE 0x0
 #define MODE_PASSTHRU 0x1
-#define MODE_NAIVE 0x2
-static int processing_mode = MODE_NAIVE;
+#define MODE_BASIC 0x2
+static int processing_mode = MODE_BASIC;
 
-#define FORMAT_OPTS "sysprof"
-#define FORMAT_PERF 0x1
-#define FORMAT_SYSPROF 0x2
-static int input_format;
-static int output_format = FORMAT_SYSPROF;
+#define SOURCE_OPTS "perf_events/sysprof"
+#define SOURCE_PERF_EVENTS 0x1
+#define SOURCE_SYSPROF 0x2
+static int input_format = SOURCE_PERF_EVENTS;
+
+#define DEST_OPTS "gmon_out/sysprof/none"
+#define DEST_NONE 0x0
+#define DEST_GMON_OUT 0x1
+#define DEST_SYSPROF 0x2
+static int output_format = DEST_GMON_OUT;
 
 /* XXX Used to decide regs_mask for dwflst_perf_sample_getframes. */
 Ebl *default_ebl = NULL;
@@ -210,9 +228,328 @@ static bool show_summary = true;
 #define EXIT_BAD    2
 #define EXIT_USAGE 64
 
-/**************************
- * Sysprof format support *
- **************************/
+/* Basic unwinder state structure; see also struct unwind_info below. */
+struct passthru_info
+{
+  void *input; /* SysprofReader* or PerfReader* */
+  void *output; /* SysprofOutput* or GmonOutput* */
+  void *last_frame; /* SysprofCaptureFrame* or PerfCaptureFrame* */
+};
+
+/*****************************
+ * perf_events input support *
+ *****************************/
+
+typedef struct
+{
+  int ncpus;
+  int ncpus_online;
+
+  uint64_t sample_regs_user;
+  int sample_regs_count;
+
+  /* Sized by number of CPUs: */
+  int *perf_fds;
+  struct perf_event_mmap_page **perf_headers;
+  bool *cpu_online;
+
+  int page_size;
+  int page_count;
+  int mmap_size;
+
+  int group_fd;
+
+  int n_samples; /* for diagnostic purposes */
+} PerfReader;
+
+/* forward decl */
+void perf_reader_end (PerfReader *reader);
+
+/* TODO: Consider including PERF_SAMPLE_IDENTIFIER. */
+#define EUS_PERF_SAMPLE_TYPE (PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME \
+			      | PERF_SAMPLE_REGS_USER | PERF_SAMPLE_STACK_USER)
+typedef struct
+{
+  struct perf_event_header header;
+  uint64_t ip;
+  uint32_t pid, tid;
+  uint64_t time;
+  uint64_t abi;
+  uint64_t *regs; /* XXX variable size */
+  /* uint64_t size; */
+  /* char *data; -- XXX variable size */
+} PerfSample;
+
+int
+count_mask (uint64_t perf_regs_mask)
+{
+  /* TODO: Generalize PERF_REG_X86_64_MAX to other arches. */
+  int k, count; uint64_t bit;
+  for (k = 0, count = 0, bit = 1;
+       k < PERF_REG_X86_64_MAX; k++, bit <<= 1)
+    if ((bit & perf_regs_mask))
+      count++;
+  return count;
+}
+
+uint64_t
+perf_sample_get_size (PerfReader *reader, PerfSample *sample)
+{
+  int nregs = reader->sample_regs_count;
+  return (uint64_t)(sample->regs + nregs * sizeof(uint64_t));
+}
+
+char *
+perf_sample_get_data (PerfReader *reader, PerfSample *sample)
+{
+  int nregs = reader->sample_regs_count;
+  return (char *)(sample->regs + (nregs + 1) * sizeof(uint64_t));
+}
+
+PerfReader *
+perf_reader_begin ()
+{
+  PerfReader *reader = calloc(1, sizeof(PerfReader));
+  if (reader == NULL)
+    return NULL;
+
+  reader->ncpus = sysconf(_SC_NPROCESSORS_CONF);
+  if (reader->ncpus < 0)
+    {
+      free(reader);
+      return NULL;
+    }
+
+  reader->perf_fds = calloc(reader->ncpus, sizeof(int));
+  reader->perf_headers = calloc(reader->ncpus, sizeof(struct perf_event_mmap_page *));
+  reader->cpu_online = calloc(reader->ncpus, sizeof(bool));
+  if (reader->perf_fds == NULL || reader->perf_headers == NULL || reader->cpu_online == NULL)
+    {
+      perf_reader_end(reader);
+      return NULL;
+    }
+
+  /* If perf_event_open() fails on any CPU, we will mark it as offline: */
+  reader->ncpus_online = reader->ncpus;
+  for (int i = 0; i < reader->ncpus; i++)
+    {
+      reader->cpu_online[i] = true;
+      reader->perf_fds[i] = -1;
+    }
+
+  reader->page_size = getpagesize();
+  reader->page_count = 64; /* TODO: Decide on a large-enough power-of-2. */
+  reader->mmap_size = reader->page_size * (reader->page_count + 1);
+
+  struct perf_event_attr attr;
+  memset(&attr, 0, sizeof(attr));
+  attr.size = sizeof(attr);
+  attr.type = PERF_TYPE_SOFTWARE;
+  attr.config = PERF_COUNT_SW_CPU_CLOCK;
+  attr.sample_freq = 1000;
+  attr.sample_type = EUS_PERF_SAMPLE_TYPE;
+  attr.disabled = 1;
+  /* TODO attr.mmap, attr.mmap2 */
+  /* TODO? attr.exclude_kernel = 1;
+     attr.exclude_hv = 1; */
+  /* TODO? attr.precise_ip = 0;
+     attr.wakeup_events = 1; */
+
+  reader->sample_regs_user = ebl_perf_frame_regs_mask (default_ebl);
+  reader->sample_regs_count = count_mask (reader->sample_regs_user);
+  attr.sample_regs_user = reader->sample_regs_user;
+  attr.sample_stack_user = 8192;
+  /* TODO? attr.sample_stack_user = 65536; */
+
+  int nheads = 0;
+  for (int cpu = 0; cpu < reader->ncpus; cpu++)
+    {
+      int fd = syscall(__NR_perf_event_open, &attr, -1, cpu, -1, 0);
+      if (fd < 0)
+	{
+	  fprintf(stderr, "DEBUG perf_event_open failed %d\n", cpu);
+	  reader->cpu_online[cpu] = false;
+	  reader->ncpus_online --;
+	  continue;
+	}
+      reader->perf_fds[cpu] = fd;
+
+      void *buf = mmap(NULL, reader->mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+      if (buf == MAP_FAILED)
+	{
+	  fprintf(stderr, "DEBUG mmap for perf_event_open failed %d\n", cpu);
+	  close(fd);
+	  reader->perf_fds[cpu] = -1;
+	  reader->cpu_online[cpu] = false;
+	}
+      reader->perf_headers[nheads] = buf;
+      nheads++;
+    }
+  if (reader->ncpus_online == 0)
+    {
+      fprintf(stderr, N_("WARNING: perf_event_open failed on all cpus\n"));
+      perf_reader_end(reader);
+      return NULL;
+    }
+
+  return reader;
+}
+
+static inline uint64_t
+ring_buffer_read_head(volatile struct perf_event_mmap_page *base)
+{
+  uint64_t head = base->data_head;
+  asm volatile("" ::: "memory"); // memory fence
+  return head;
+}
+
+static inline void
+ring_buffer_write_tail(volatile struct perf_event_mmap_page *base,
+		       uint64_t tail)
+{
+  asm volatile("" ::: "memory"); // memory fence
+  base->data_tail = tail;
+}
+
+int
+perf_event_read_simple (PerfReader *reader,
+			struct perf_event_mmap_page *header,
+			void **copy_mem, size_t *copy_size,
+			int (*callback) (void *), void *arg)
+{
+  size_t mmap_size = reader->page_count * reader->page_size;
+  uint64_t data_head = ring_buffer_read_head (header);
+  uint64_t data_tail = header->data_tail;
+  void *base = ((uint8_t *) header) + reader->page_size;
+  int ret = DWARF_CB_OK;
+  struct perf_event_header *ehdr;
+  size_t ehdr_size;
+
+  /* passthru_info prefixes all valid arg structs */
+  struct passthru_info *pi = (struct passthru_info *)arg;
+
+  while (data_head != data_tail)
+    {
+      ehdr = base + (data_tail & (mmap_size - 1));
+      ehdr_size = ehdr->size;
+
+      if (((void *)ehdr) + ehdr_size > base + mmap_size)
+	{
+	  void *copy_start = ehdr;
+	  size_t len_first = base + mmap_size - copy_start;
+	  size_t len_secnd = ehdr_size - len_first;
+
+	  if (*copy_size < ehdr_size)
+	    {
+	      free(*copy_mem);
+	      copy_mem = malloc(ehdr_size);
+	      if (!*copy_mem)
+		{
+		  *copy_size = 0;
+		  ret = DWARF_CB_ABORT;
+		  break;
+		}
+	      *copy_size = ehdr_size;
+	    }
+
+	  memcpy(*copy_mem, copy_start, len_first);
+	  memcpy(*copy_mem, copy_start, len_secnd);
+	  ehdr = *copy_mem; 
+	}
+
+      /* TODO also handle mmap events */
+      if (ehdr->type == PERF_RECORD_SAMPLE)
+	{
+	  pi->last_frame = (PerfSample *)ehdr;
+	  ret = callback(arg);
+	  reader->n_samples ++;
+	}
+      data_tail += ehdr_size;
+      if (ret != DWARF_CB_OK)
+	break;
+    }
+
+  ring_buffer_write_tail(header, data_tail);
+  return ret;
+}
+
+int
+perf_reader_getframes (PerfReader *reader,
+		       int (*callback) (void *),
+		       void *arg)
+{
+  int nfds = 0;
+  struct pollfd *fds = calloc(reader->ncpus, sizeof(struct pollfd));
+  if (fds == NULL)
+    return -1;
+
+  for (int cpu = 0; cpu < reader->ncpus; cpu++)
+    if (reader->cpu_online[cpu])
+      {
+	ioctl(reader->perf_fds[cpu], PERF_EVENT_IOC_ENABLE, 0);
+	fds[nfds].fd = reader->perf_fds[cpu];
+	fds[nfds].events = POLLIN;
+	nfds++;
+      }
+
+  int rc = 0;
+  reader->n_samples = 0;
+  void *copy_mem = NULL;
+  size_t copy_size = 0;
+  while (1)
+    {
+      int ready = poll(fds, nfds, -1);
+      if (ready < 0)
+	{
+	  /* TODO: handle EINTR properly */
+	  if (errno == EINTR)
+	    break;
+	  rc = -1;
+	  break;
+	}
+      for (int i = 0; i < nfds; i++)
+	if (fds[i].revents <= 0)
+	  continue;
+	else if (fds[i].revents & POLLIN)
+	  {
+	    int ok = perf_event_read_simple (reader,
+					     reader->perf_headers[i],
+					     &copy_mem, &copy_size,
+					     callback, arg);
+	    if (ok != DWARF_CB_OK)
+	      {
+		rc = 1;
+		break;
+	      }
+	  }
+    }
+  fprintf(stderr, "total %d samples\n", reader->n_samples);
+
+  free(fds);
+  return rc;
+}
+
+void
+perf_reader_end (PerfReader *reader)
+{
+  if (reader == NULL)
+    return;
+  if (reader->perf_fds != NULL)
+    {
+      for (int cpu = 0; cpu < reader->ncpus; cpu++)
+	if (reader->perf_fds[cpu] != -1)
+	  close(reader->perf_fds[cpu]);
+      free(reader->perf_fds);
+    }
+  if (reader->perf_headers != NULL)
+    free(reader->perf_headers);
+  if (reader->cpu_online != NULL)
+    free(reader->cpu_online);
+}
+
+/********************************
+ * Sysprof input/output support *
+ ********************************/
 
 /* TODO: elfutils (internal) libraries use libNN_set_errno and _E_WHATEVER;
    this code sets errno variable directly and uses standard EWHATEVER. */
@@ -234,12 +571,7 @@ static bool show_summary = true;
  - sysprof_reader_bswap_frame :: sysprof_capture_reader_bswap_frame
  */
 
-/* Callback results */
-enum
-{
-  SYSPROF_CB_OK = 0,
-  SYSPROF_CB_ABORT
-};
+/* Note DWARF_CB_* replaces SYSPROF_CB_*. */
 
 typedef struct
 {
@@ -253,6 +585,12 @@ typedef struct
   SysprofCaptureFileHeader header;
 } SysprofReader;
 
+typedef struct
+{
+  int fd;
+  int pos; /* for diagnostic purposes */
+} SysprofOutput;
+
 /* forward decls */
 SysprofReader *sysprof_reader_begin (int fd);
 void sysprof_reader_end (SysprofReader *reader);
@@ -262,10 +600,9 @@ void sysprof_reader_bswap_frame (SysprofReader *reader,
 				 SysprofCaptureFrame *frame);
 bool sysprof_reader_ensure_space_for (SysprofReader *reader, size_t len);
 SysprofCaptureFrame *sysprof_reader_next_frame (SysprofReader *reader);
-ptrdiff_t sysprof_reader_getframes (SysprofReader *reader,
-				    int (*callback) (SysprofCaptureFrame *frame,
-						     void *arg),
-				    void *arg);
+int sysprof_reader_getframes (SysprofReader *reader,
+			      int (*callback) (void *arg),
+			      void *arg);
 
 SysprofReader *
 sysprof_reader_begin (int fd)
@@ -448,20 +785,23 @@ sysprof_reader_next_frame (SysprofReader *reader)
   return frame;
 }
 
-ptrdiff_t
+int
 sysprof_reader_getframes (SysprofReader *reader,
-			  int (*callback) (SysprofCaptureFrame *,
-					   void *),
+			  int (*callback) (void *),
 			  void *arg)
 {
   SysprofCaptureFrame *frame;
+
+  /* passthru_info prefixes all valid arg structs: */
+  struct passthru_info *pi = (struct passthru_info *)arg;
 
   assert (reader != NULL);
 
   while ((frame = sysprof_reader_next_frame (reader)))
     {
-      int ok = callback (frame, arg);
-      if (ok != SYSPROF_CB_OK)
+      pi->last_frame = frame;
+      int ok = callback (arg);
+      if (ok != DWARF_CB_OK)
 	return -1;
     }
   return 0;
@@ -641,63 +981,130 @@ pid_store_dwfl (pid_t pid, Dwfl *dwfl)
   return;
 }
 
-/*****************************************************
- * Sysprof backend: basic none/passthrough callbacks *
- *****************************************************/
+/******************************************************
+ * unwinder state data and generic reader_getframes() *
+ ******************************************************/
+
+struct unwind_info
+{
+  void *input; /* SysprofReader* or PerfReader* */
+  void *output; /* SysprofOutput* or GmonOutput* */
+  void *last_frame; /* SysprofCaptureFrame* or PerfSample* */
+  /* TODO */
+};
+
+void
+unwind_info_init (struct unwind_info *ui)
+{
+  /* TODO */
+  (void)ui;
+}
+
+int
+reader_getframes (int (*callback) (void *), void *arg)
+{
+  /* passthru_info prefixes all valid arg structs: */
+  struct passthru_info *pi = (struct passthru_info *) arg;
+  int rc = 0;
+  if (input_format == SOURCE_PERF_EVENTS)
+    {
+      PerfReader *reader = (PerfReader *)pi->input;
+      rc = perf_reader_getframes (reader, callback, arg);
+    }
+#if HAVE_SYSPROF_HEADERS
+  else if (input_format == SOURCE_SYSPROF)
+    {
+      SysprofReader *reader = (SysprofReader *)pi->input;
+      rc = sysprof_reader_getframes (reader, callback, arg);
+    }
+#endif
+  else
+    rc = -1; /* TODO set errno? */
+  return rc;
+}
+
+/* forward decls */
+int sysprof_unwind_cb (void *arg);
+int perf_unwind_cb (void *arg);
+
+void
+choose_unwind_cb (int (**callback) (void *))
+{
+#if HAVE_SYSPROF_HEADERS
+  if (input_format == SOURCE_SYSPROF)
+    {
+      *callback = &sysprof_unwind_cb;
+    }
+#endif
+  if (input_format == SOURCE_PERF_EVENTS)
+    {
+      *callback = &perf_unwind_cb;
+      return;
+    }
+  *callback = NULL;
+}
+
+/************************************
+ * basic none/passthrough callbacks *
+ ************************************/
+
+int
+process_none_cb (void *arg __attribute__ ((unused)))
+{
+  return DWARF_CB_OK;
+}
 
 #if HAVE_SYSPROF_HEADERS
 
 int
-sysprof_none_cb (SysprofCaptureFrame *frame __attribute__ ((unused)),
-		 void *arg __attribute__ ((unused)))
+passthru_sysprof_cb (SysprofCaptureFrame *frame, void *arg)
 {
-  return SYSPROF_CB_OK;
-}
-
-struct sysprof_passthru_info
-{
-  int output_fd;
-  SysprofReader *reader;
-  int pos; /* for diagnostic purposes */
-};
-
-int
-sysprof_passthru_cb (SysprofCaptureFrame *frame, void *arg)
-{
-  struct sysprof_passthru_info *spi = (struct sysprof_passthru_info *)arg;
-  sysprof_reader_bswap_frame (spi->reader, frame); /* reverse the earlier bswap */
-  ssize_t n_write = write (spi->output_fd, frame, frame->len);
-  spi->pos += frame->len;
-  assert ((spi->pos % SYSPROF_CAPTURE_ALIGN) == 0);
+  struct passthru_info *pi = (struct passthru_info *)arg;
+  SysprofReader *reader = (SysprofReader *)pi->input;
+  SysprofOutput *output = (SysprofOutput *)pi->output;
+  sysprof_reader_bswap_frame (reader, frame); /* reverse the earlier bswap */
+  ssize_t n_write = write (output->fd, frame, frame->len);
+  output->pos += frame->len;
+  assert ((output->pos % SYSPROF_CAPTURE_ALIGN) == 0);
   if (n_write < 0)
     error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
-  return SYSPROF_CB_OK;
+  return DWARF_CB_OK;
+}
+
+int
+passthru_perf_to_sysprof_cb (PerfCaptureFrame *frame, void *arg)
+{
+  /* TODO */
 }
 
 #endif /* HAVE_SYSPROF_HEADERS */
 
-/****************************************
- * Sysprof backend: unwinding callbacks *
- ****************************************/
-
-#if HAVE_SYSPROF_HEADERS
-
-#define UNWIND_ADDR_INCREMENT 512
-struct sysprof_unwind_info
+void
+choose_passthru_cb (int (**callback) (void *))
 {
-  int output_fd;
-  SysprofReader *reader;
-  int pos; /* for diagnostic purposes */
-  int n_addrs;
-  int max_addrs; /* for diagnostic purposes */
-  uint64_t last_abi;
-  Dwarf_Addr last_base; /* for diagnostic purposes */
-  Dwarf_Addr last_sp; /* for diagnostic purposes */
-  Dwfl *last_dwfl; /* for diagnostic purposes */
-  pid_t last_pid; /* for diagnostic purposes, to provide access to dwfltab */
-  Dwarf_Addr *addrs; /* allocate blocks of UNWIND_ADDR_INCREMENT */
-  void *outbuf;
-};
+#if HAVE_SYSPROF_HEADERS
+  if (input_format == SOURCE_SYSPROF && output_format == DEST_SYSPROF)
+    {
+      *callback = &passthru_sysprof_cb;
+      return;
+    }
+  if (input_format == SOURCE_PERF_EVENTS && output_format == DEST_SYSPROF)
+    {
+      *callback = &passthru_perf_to_sysprof_cb;
+      return;
+    }
+#endif
+  if (output_format == DEST_NONE)
+    {
+      *callback = &process_none_cb;
+      return;
+    }
+  *callback = NULL;
+}
+
+/****************************
+ * find_debuginfo callbacks *
+ ****************************/
 
 #ifdef FIND_DEBUGINFO
 
@@ -736,6 +1143,45 @@ static const Dwfl_Callbacks sample_callbacks =
 };
 
 #endif /* FIND_DEBUGINFO */
+
+/********************************************
+ * perf_events backend: unwinding callbacks *
+ ********************************************/
+
+/* TODO */
+
+int
+perf_unwind_cb (void *arg)
+{
+  struct unwind_info *ui = (struct unwind_info *)arg;
+  PerfSample *sample = (PerfSample *)(ui->last_frame);
+  /* TODO handle sample */
+  fprintf(stderr, "DEBUG got pid=%d tid=%d ip=%lx\n", sample->pid, sample->tid, sample->ip);
+  return DWARF_CB_OK;
+}
+
+/****************************************
+ * Sysprof backend: unwinding callbacks *
+ ****************************************/
+
+#if HAVE_SYSPROF_HEADERS
+
+#define UNWIND_ADDR_INCREMENT 512
+struct sysprof_unwind_info
+{
+  int output_fd;
+  SysprofReader *reader;
+  int pos; /* for diagnostic purposes */
+  int n_addrs;
+  int max_addrs; /* for diagnostic purposes */
+  uint64_t last_abi;
+  Dwarf_Addr last_base; /* for diagnostic purposes */
+  Dwarf_Addr last_sp; /* for diagnostic purposes */
+  Dwfl *last_dwfl; /* for diagnostic purposes */
+  pid_t last_pid; /* for diagnostic purposes, to provide access to dwfltab */
+  Dwarf_Addr *addrs; /* allocate blocks of UNWIND_ADDR_INCREMENT */
+  void *outbuf;
+};
 
 /* TODO: Probably needs to be relocated to libdwfl/linux-pid-attach.c
    to remove a dependency on the private dwfl interface. */
@@ -1052,7 +1498,7 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
       assert ((sui->pos % SYSPROF_CAPTURE_ALIGN) == 0);
       if (n_write < 0)
 	error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
-      return SYSPROF_CB_OK;
+      return DWARF_CB_OK;
     }
   SysprofCaptureStackUser *ev = (SysprofCaptureStackUser *)frame;
   uint8_t *tail_ptr = (uint8_t *)ev;
@@ -1073,7 +1519,7 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
       if (show_failures)
 	fprintf(stderr, "sysprof_find_dwfl pid %lld (%s) (failed)\n",
 		(long long)frame->pid, comm);
-      return SYSPROF_CB_OK;
+      return DWARF_CB_OK;
     }
   sui->n_addrs = 0;
   sui->last_abi = regs->abi;
@@ -1118,7 +1564,7 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
       if (show_failures)
 	fprintf(stderr, N_("sysprof_unwind_cb frame size %ld is too large (max %d)\n"),
 		len, USHRT_MAX);
-      return SYSPROF_CB_OK;
+      return DWARF_CB_OK;
     }
   SysprofCaptureFrame *out_frame = (SysprofCaptureFrame *)ev_callchain;
   out_frame->len = len;
@@ -1134,7 +1580,7 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
   n_write = write (sui->output_fd, ev_callchain, len);
   if (n_write < 0)
     error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
-  return SYSPROF_CB_OK;
+  return DWARF_CB_OK;
 }
 
 #endif /* HAVE_SYSPROF_HEADERS */
@@ -1142,6 +1588,10 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
 /****************
  * Main program *
  ****************/
+
+/* TODO: eu-stacktrace --mode=sysprof --input=fifo --output=syscap */
+/* TODO: eu-stacktrace --mode=perf --target=pid --output=perf.data */
+/* TODO: cmdline for invoking eu-stacktrace with perf-tool? */
 
 /* Required to match our signal handling with that of a sysprof parent process. */
 static void sigint_handler (int /* signo */)
@@ -1182,9 +1632,9 @@ parse_opt (int key, char *arg __attribute__ ((unused)),
 	{
 	  processing_mode = MODE_PASSTHRU;
 	}
-      else if (strcmp (arg, "naive") == 0)
+      else if (strcmp (arg, "basic") == 0 || strcmp (arg, "naive") == 0)
 	{
-	  processing_mode = MODE_NAIVE;
+	  processing_mode = MODE_BASIC;
 	}
       else
 	{
@@ -1192,14 +1642,37 @@ parse_opt (int key, char *arg __attribute__ ((unused)),
 	}
       break;
 
-    case 'f':
-      if (strcmp (arg, "sysprof") == 0)
+    case 's':
+      if (strcmp (arg, "perf_events") == 0)
 	{
-	  input_format = FORMAT_SYSPROF;
+	  input_format = SOURCE_PERF_EVENTS;
+	}
+      else if (strcmp (arg, "sysprof") == 0)
+	{
+	  input_format = SOURCE_SYSPROF;
 	}
       else
 	{
-	  argp_error (state, N_("Unsupported -f '%s', should be " FORMAT_OPTS "."), arg);
+	  argp_error (state, N_("Unsupported -s '%s', should be " SOURCE_OPTS "."), arg);
+	}
+      break;
+
+    case 'd':
+      if (strcmp (arg, "gmon_out") == 0)
+	{
+	  output_format = DEST_GMON_OUT;
+	}
+      else if (strcmp (arg, "sysprof") == 0)
+	{
+	  output_format = DEST_SYSPROF;
+	}
+      else if (strcmp (arg, "none") == 0)
+	{
+	  output_format = DEST_NONE;
+	}
+      else
+	{
+	  argp_error (state, N_("Unsupported -d '%s', should be " DEST_OPTS "."), arg);
 	}
       break;
 
@@ -1216,17 +1689,27 @@ parse_opt (int key, char *arg __attribute__ ((unused)),
       break;
 
     case ARGP_KEY_END:
-      if (input_path == NULL)
-	input_path = "-"; /* default to stdin */
-
-      if (output_path == NULL)
-	output_path = "-"; /* default to stdout */
-
       if (processing_mode == 0)
-	processing_mode = MODE_NAIVE;
+	processing_mode = MODE_BASIC;
 
       if (input_format == 0)
-	input_format = FORMAT_SYSPROF;
+	input_format = SOURCE_PERF_EVENTS;
+
+      if (input_format == SOURCE_PERF_EVENTS && input_path != NULL)
+	argp_error (state, N_("-s 'perf_events' does not use an input file"));
+
+      if (input_format != SOURCE_PERF_EVENTS && input_path == NULL)
+	input_path = "-"; /* default to stdin */
+
+      if (output_format == DEST_NONE && output_path != NULL)
+	argp_error (state, N_("-d 'none' does not use an output file"));
+
+      if (output_format == DEST_GMON_OUT && output_path == NULL)
+	output_path = "."; /* default to cwd */
+
+      if (output_format != DEST_NONE && output_path == NULL)
+	output_path = "-"; /* default to stdout */
+
       break;
 
     default:
@@ -1244,17 +1727,21 @@ main (int argc, char **argv)
   const struct argp_option options[] =
     {
       { NULL, 0, NULL, 0, N_("Input and output selection options:"), 0 },
+      { "source", 's', SOURCE_OPTS, 0,
+	N_("Source data format, default 'perf_events'"), 0 },
+      { "dest", 'd', DEST_OPTS, 0,
+	N_("Destination data format, default 'gmon_out'"), 0 },
       { "input", 'i', "PATH", 0,
-	N_("File or FIFO to read stack samples from"), 0 },
-      /* TODO: Should also support taking an FD for fork/exec pipes. */
+	N_("Path to read stack samples from (file or FIFO; for 'sysprof' source only)"), 0 },
+      /* TODO: Could also support taking an FD for fork/exec pipes? */
       { "output", 'o', "PATH", 0,
-	N_("File or FIFO to send stack traces to"), 0 },
+	N_("Path to send stack traces to (file, directory or FIFO)"), 0 },
 
       { NULL, 0, NULL, 0, N_("Processing options:"), 0 },
       { "mode", 'm', MODE_OPTS, 0,
-	N_("Processing mode, default 'naive'"), 0 },
-      /* TODO: Should also support 'naive', 'caching'. */
-      /* TODO: Add an option to control stack-stitching. */
+	N_("Processing mode, default 'basic'"), 0 },
+      /* TODO: Should also support 'caching' mode. */
+      /* TODO: Add an option for stack-stitching. */
       { "verbose", 'v', NULL, 0,
 	N_("Show additional information for each unwound sample"), 0 },
       { "debug", OPT_DEBUG, NULL, 0,
@@ -1263,10 +1750,6 @@ main (int argc, char **argv)
 	N_("Show build-id for each unwound frame"), 0 },
       /* TODO: Add a 'quiet' option suppressing summaries + errors.
          Perhaps also allow -v, -vv, -vvv in SystemTap style? */
-      { "format", 'f', FORMAT_OPTS, 0,
-	N_("Input data format, default 'sysprof'"), 0 },
-      /* TODO: Add an option to control output data format separately,
-	 shift to I/O selection section. */
       { NULL, 0, NULL, 0, NULL, 0 }
     };
 
@@ -1274,6 +1757,7 @@ main (int argc, char **argv)
     {
       .options = options,
       .parser = parse_opt,
+      /* TODO: Update with standalone application info. */
       .doc = N_("Process a stream of stack samples into stack traces.\n\
 \n\
 Experimental tool, see README.eu-stacktrace in the development branch:\n\
@@ -1318,78 +1802,106 @@ https://sourceware.org/cgit/elfutils/tree/README.eu-stacktrace?h=users/serhei/eu
     fprintf (stderr, N_("WARNING: Unknown value '%s' in environment variable %s, ignoring\n"),
 	     env_verbose, ELFUTILS_STACKTRACE_VERBOSE_ENV_VAR);
 
-  /* TODO: Also handle common expansions e.g. ~/foo instead of /home/user/foo. */
-  if (strcmp (input_path, "-") == 0)
-    input_fd = STDIN_FILENO;
-  else
-    input_fd = open (input_path, O_RDONLY);
-  if (input_fd < 0)
-    error (EXIT_BAD, errno, N_("Cannot open input file or FIFO '%s'"), input_path);
-  if (strcmp (output_path, "-") == 0)
-    output_fd = STDOUT_FILENO;
-  else
-    output_fd = open (output_path, O_CREAT | O_WRONLY, 0640);
-  if (output_fd < 0)
-    error (EXIT_BAD, errno, N_("Cannot open output file or FIFO '%s'"), output_path);
+#if !(HAVE_SYSPROF_HEADERS)
+  if (input_format == SOURCE_SYSPROF || output_format == DEST_SYSPROF)
+    /* TODO: Should hide corresponding command line options when this is the case? */
+    error (EXIT_BAD, 0, N_("Sysprof support is not available in this version"));
+#endif
 
-  /* TODO: Only really needed if launched from sysprof and inheriting its signals. */
   if (signal (SIGINT, sigint_handler) == SIG_ERR)
     error (EXIT_BAD, errno, N_("Cannot set signal handler for SIGINT"));
+  /* TODO: sigint_handler cued for sysprof, SOURCE_PERF_EVENTS should use SIGINT to terminate cleanly? */
 
-#if !(HAVE_SYSPROF_HEADERS)
-  /* TODO: Should hide corresponding command line options when this is the case? */
-  error (EXIT_BAD, 0, N_("Sysprof support is not available in this version."));
-
-  /* XXX: The following are not specific to the Sysprof backend;
-     avoid unused-variable warnings while it is the only backend. */
-  (void)sample_thread_callbacks;
-  (void)output_format;
-  (void)maxframes;
-#else
   fprintf(stderr, "\n=== starting eu-stacktrace ===\n");
-  tracker = dwflst_tracker_begin (&sample_callbacks);
+  default_ebl = ebl_openbackend_machine(EM_X86_64);
 
-  /* TODO: For now, code the processing loop for sysprof only; generalize later. */
-  assert (input_format == FORMAT_SYSPROF);
-  assert (output_format == FORMAT_SYSPROF);
-  SysprofReader *reader = sysprof_reader_begin (input_fd);
-  ssize_t n_write = write (output_fd, &reader->header, sizeof reader->header);
-  if (n_write < 0)
-    error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
-  ptrdiff_t offset;
-  unsigned long int output_pos = 0;
+  int input_fd = -1;
+#if HAVE_SYSPROF_HEADERS
+  SysprofReader *sysprof_reader;
+  SysprofOutput sysprof_output;
+  sysprof_output.fd = -1;
+#endif
+  PerfReader *perf_reader = NULL;
+  void *input = NULL;
+  void *output = NULL;
+
+  if (input_format == SOURCE_PERF_EVENTS)
+    {
+      perf_reader = perf_reader_begin ();
+      if (perf_reader == NULL)
+	error (EXIT_BAD, errno, N_("Cannot set up perf_events interface"));
+      input = (void *)perf_reader;
+    }
+  else if (input_format == SOURCE_SYSPROF)
+    {
+#if HAVE_SYSPROF_HEADERS
+      /* TODO: Also handle common expansions e.g. ~/foo instead of /home/user/foo. */
+      if (strcmp (input_path, "-") == 0)
+	input_fd = STDIN_FILENO;
+      else
+	input_fd = open (input_path, O_RDONLY);
+      if (input_fd < 0)
+	error (EXIT_BAD, errno, N_("Cannot open input file or FIFO '%s'"), input_path);
+
+      sysprof_reader = sysprof_reader_begin (input_fd);
+      input = (void *)sysprof_reader;
+#endif
+    }
+
+  if (output_format == DEST_GMON_OUT)
+    {
+      output = NULL; /* TODO: Implement in subsequent patch. */
+      /* error (EXIT_BAD, 0, N_("gmon.out support is not available in this version")); */
+    }
+  else if (output_format == DEST_SYSPROF)
+    {
+#if HAVE_SYSPROF_HEADERS
+      if (strcmp (output_path, "-") == 0)
+	sysprof_output->fd = STDOUT_FILENO;
+      else
+	sysprof_output->fd = open (output_path, O_CREAT | O_WRONLY, 0640);
+      if (sysprof_output->fd < 0)
+	error (EXIT_BAD, errno, N_("Cannot open output file or FIFO '%s'"), output_path);
+
+      ssize_t n_write = write (sysprof_output->fd, &sysprof_reader->header,
+			       sizeof sysprof_reader->header);
+      if (n_write < 0)
+	error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
+      output = (void *)&sysprof_output;
+#endif
+    }
+  /* otherwise output_format == NONE, output == NULL */
+
+  int rc = 0;
   if (processing_mode == MODE_NONE)
     {
-      struct sysprof_passthru_info sni = { output_fd, reader, sizeof reader->header };
-      offset = sysprof_reader_getframes (reader, &sysprof_none_cb, &sni);
-      output_pos = sni.pos;
+      struct passthru_info ni = { input, output, NULL };
+      rc = reader_getframes (&process_none_cb, &ni);
     }
   else if (processing_mode == MODE_PASSTHRU)
     {
-      struct sysprof_passthru_info spi = { output_fd, reader, sizeof reader->header };
-      offset = sysprof_reader_getframes (reader, &sysprof_passthru_cb, &spi);
-      output_pos = spi.pos;
+      int (*process_passthru_cb)(void *) = NULL;
+      choose_passthru_cb(&process_passthru_cb);
+      struct passthru_info pi = { input, output, NULL };
+      rc = reader_getframes (process_passthru_cb, &pi);
     }
-  else /* processing_mode == MODE_NAIVE */
+  else /* processing_mode == MODE_BASIC */
     {
       if (!dwfltab_init())
 	error (EXIT_BAD, errno, N_("Could not initialize Dwfl table"));
 
+      tracker = dwflst_tracker_begin (&sample_callbacks);
       /* TODO: Generalize to other architectures. */
-      default_ebl = ebl_openbackend_machine(EM_X86_64);
 
-      struct sysprof_unwind_info sui;
-      sui.output_fd = output_fd;
-      sui.reader = reader;
-      sui.pos = sizeof reader->header;
-      sui.n_addrs = 0;
-      sui.last_base = 0;
-      sui.last_sp = 0;
-      sui.last_abi = PERF_SAMPLE_REGS_ABI_NONE;
-      sui.max_addrs = UNWIND_ADDR_INCREMENT;
-      sui.addrs = (Dwarf_Addr *)malloc (sui.max_addrs * sizeof(Dwarf_Addr));
-      sui.outbuf = (void *)malloc (USHRT_MAX * sizeof(uint8_t));
-      offset = sysprof_reader_getframes (reader, &sysprof_unwind_cb, &sui);
+      struct unwind_info ui;
+      ui.input = input;
+      ui.output = output;
+      unwind_info_init(&ui);
+
+      int (*process_unwind_cb)(void *) = NULL;
+      choose_unwind_cb(&process_unwind_cb);
+      rc = reader_getframes (process_unwind_cb, &ui);
+
       if (show_summary)
 	{
 	  /* Final diagnostics. */
@@ -1418,24 +1930,59 @@ https://sourceware.org/cgit/elfutils/tree/README.eu-stacktrace?h=users/serhei/eu
 		  total_samples, total_lost_samples,
 		  default_table.filled /* TODO: after implementing LRU eviction, need to maintain a separate count, e.g. htab->filled + htab->evicted */);
 	}
-      output_pos = sui.pos;
-      free(sui.addrs);
-      free(sui.outbuf);
     }
-  if (offset < 0 && output_pos <= sizeof reader->header)
+
+#if HAVE_SYSPROF_HEADERS
+  if (output_format == DEST_SYSPROF
+      && rc < 0 && sysprof_output.pos <= sizeof sysprof_reader->header)
     error (EXIT_BAD, errno, N_("No frames in file or FIFO '%s'"), input_path);
-  else if (offset < 0)
+  if (input_format == SOURCE_SYSPROF && output_format == DEST_SYSPROF
+      && rc < 0 && input_path != NULL)
     error (EXIT_BAD, errno, N_("Error processing file or FIFO '%s' at input offset %ld, output offset %ld"),
-	   input_path, reader->pos, output_pos);
-  sysprof_reader_end (reader);
+	   input_path, sysprof_reader->pos, sysprof_output.pos);
+  if (input_format == SOURCE_SYSPROF
+      && rc < 0 && input_path != NULL)
+    error (EXIT_BAD, errno, N_("Error processing file or FIFO '%s' at input offset %ld"),
+	   input_path, sysprof_reader->pos);
 #endif
+  if (rc < 0)
+    error (EXIT_BAD, errno, N_("Error processing input"));
 
   if (input_fd != -1)
     close (input_fd);
-  if (output_fd != -1)
-    close (output_fd);
-
-  dwflst_tracker_end (tracker);
+#if HAVE_SYSPROF_HEADERS
+  if (sysprof_reader != NULL)
+    sysprof_reader_end(sysprof_reader);
+  if (sysprof_output->fd != -1)
+    close (sysprof_output->fd);
+#endif
+  if (perf_reader != NULL)
+    perf_reader_end (perf_reader);
+  if (tracker != NULL)
+    dwflst_tracker_end (tracker);
 
   return EXIT_OK;
+
+  /* REWORK BELOW */
+
+  /* TODO: For now, code the processing loop for sysprof only; generalize later. */
+  /* processing_mode == MODE_BASIC */
+  /*   { */
+  /*     struct sysprof_unwind_info sui; */
+  /*     sui.output_fd = output_fd; */
+  /*     sui.reader = reader; */
+  /*     sui.pos = sizeof reader->header; */
+  /*     sui.n_addrs = 0; */
+  /*     sui.last_base = 0; */
+  /*     sui.last_sp = 0; */
+  /*     sui.last_abi = PERF_SAMPLE_REGS_ABI_NONE; */
+  /*     sui.max_addrs = UNWIND_ADDR_INCREMENT; */
+  /*     sui.addrs = (Dwarf_Addr *)malloc (sui.max_addrs * sizeof(Dwarf_Addr)); */
+  /*     sui.outbuf = (void *)malloc (USHRT_MAX * sizeof(uint8_t)); */
+  /*     offset = sysprof_reader_getframes (reader, &sysprof_unwind_cb, &sui); */
+  /*     /\* then we printed diagnostic summary *\/ */
+  /*     free(sui.addrs); */
+  /*     free(sui.outbuf); */
+  /*   } */
+  /* sysprof_reader_end (sysprof_reader); */
 }
