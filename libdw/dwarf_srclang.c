@@ -315,6 +315,18 @@ static int srclang_to_language (Dwarf_Word srclang,
       *lname = DW_LNAME_Nim;
       *lversion = 0;
       return 0;
+    case DW_LANG_Erlang:
+      *lname = DW_LNAME_Erlang;
+      *lversion = 0;
+      return 0;
+    case DW_LANG_Elixir:
+      *lname = DW_LNAME_Elixir;
+      *lversion = 0;
+      return 0;
+    case DW_LANG_Gleam:
+      *lname = DW_LNAME_Gleam;
+      *lversion = 0;
+      return 0;
     default:
       __libdw_seterrno (DWARF_E_UNKNOWN_LANGUAGE);
       return -1;
@@ -512,6 +524,15 @@ language_to_srclang (Dwarf_Word lname, Dwarf_Word lversion, Dwarf_Word *value)
       return 0;
     case DW_LNAME_Nim:
       *value = DW_LANG_Nim;
+      return 0;
+    case DW_LNAME_Erlang:
+      *value = DW_LANG_Erlang;
+      return 0;
+    case DW_LNAME_Elixir:
+      *value = DW_LANG_Elixir;
+      return 0;
+    case DW_LNAME_Gleam:
+      *value = DW_LANG_Gleam;
       return 0;
     default:
       __libdw_seterrno (DWARF_E_UNKNOWN_LANGUAGE);

@@ -90,6 +90,7 @@ dwarf_default_lower_bound (int lang, Dwarf_Sword *result)
     case DW_LANG_Hylo:
     case DW_LANG_V:
     case DW_LANG_Nim:
+    case DW_LANG_Gleam:
       *result = 0;
       return 0;
 
@@ -112,6 +113,8 @@ dwarf_default_lower_bound (int lang, Dwarf_Sword *result)
     case DW_LANG_Ada2012:
     case DW_LANG_Fortran23:
     case DW_LANG_Algol68:
+    case DW_LANG_Erlang:
+    case DW_LANG_Elixir:
       *result = 1;
       return 0;
 
@@ -172,6 +175,7 @@ dwarf_language_lower_bound (Dwarf_Word lang, Dwarf_Sword *result)
     case DW_LNAME_Metal:
     case DW_LNAME_V:
     case DW_LNAME_Nim:
+    case DW_LNAME_Gleam:
       *result = 0;
       return 0;
 
@@ -184,6 +188,8 @@ dwarf_language_lower_bound (Dwarf_Word lang, Dwarf_Sword *result)
     case DW_LNAME_Pascal:
     case DW_LNAME_PLI:
     case DW_LNAME_Algol68:
+    case DW_LNAME_Erlang:
+    case DW_LNAME_Elixir:
       *result = 1;
       return 0;
 
