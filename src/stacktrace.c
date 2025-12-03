@@ -349,8 +349,9 @@ perf_reader_begin ()
   attr.sample_freq = 1000;
   attr.sample_type = EUS_PERF_SAMPLE_TYPE;
   attr.disabled = 1;
+  attr.exclude_kernel = 1; /* TODO: Probably don't care about this for our initial usecase. */
   /* TODO attr.mmap, attr.mmap2 */
-  /* TODO? attr.exclude_kernel = 1;
+  /* TODO?
      attr.exclude_hv = 1; */
   /* TODO? attr.precise_ip = 0;
      attr.wakeup_events = 1; */
@@ -422,6 +423,7 @@ perf_event_read_simple (PerfReader *reader,
   uint64_t data_tail = header->data_tail;
   void *base = ((uint8_t *) header) + reader->page_size;
   int ret = DWARF_CB_OK;
+
   struct perf_event_header *ehdr;
   size_t ehdr_size;
 
@@ -442,7 +444,7 @@ perf_event_read_simple (PerfReader *reader,
 	  if (*copy_size < ehdr_size)
 	    {
 	      free(*copy_mem);
-	      copy_mem = malloc(ehdr_size);
+	      *copy_mem = malloc(ehdr_size);
 	      if (!*copy_mem)
 		{
 		  *copy_size = 0;
@@ -453,7 +455,7 @@ perf_event_read_simple (PerfReader *reader,
 	    }
 
 	  memcpy(*copy_mem, copy_start, len_first);
-	  memcpy(*copy_mem, copy_start, len_secnd);
+	  memcpy(*copy_mem + len_first, copy_start, len_secnd);
 	  ehdr = *copy_mem; 
 	}
 
@@ -508,20 +510,23 @@ perf_reader_getframes (PerfReader *reader,
 	  break;
 	}
       for (int i = 0; i < nfds; i++)
-	if (fds[i].revents <= 0)
-	  continue;
-	else if (fds[i].revents & POLLIN)
-	  {
-	    int ok = perf_event_read_simple (reader,
-					     reader->perf_headers[i],
-					     &copy_mem, &copy_size,
-					     callback, arg);
-	    if (ok != DWARF_CB_OK)
-	      {
-		rc = 1;
-		break;
-	      }
-	  }
+	{
+	  if (fds[i].revents <= 0)
+	    continue;
+	  ready --;
+	  if (fds[i].revents & POLLIN)
+	    {
+	      int ok = perf_event_read_simple (reader,
+					       reader->perf_headers[i],
+					       &copy_mem, &copy_size,
+					       callback, arg);
+	      if (ok != DWARF_CB_OK)
+		{
+		  rc = 1;
+		  break;
+		}
+	    }
+	}
     }
   fprintf(stderr, "total %d samples\n", reader->n_samples);
 
@@ -1155,8 +1160,8 @@ perf_unwind_cb (void *arg)
 {
   struct unwind_info *ui = (struct unwind_info *)arg;
   PerfSample *sample = (PerfSample *)(ui->last_frame);
-  /* TODO handle sample */
-  fprintf(stderr, "DEBUG got pid=%d tid=%d ip=%lx\n", sample->pid, sample->tid, sample->ip);
+  /* TODO also report cpu, handle sample */
+  fprintf(stderr, "DEBUG got time=%lx pid=%d tid=%d ip=%lx\n", sample->time, sample->pid, sample->tid, sample->ip);
   return DWARF_CB_OK;
 }
 
