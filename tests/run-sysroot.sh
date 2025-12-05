@@ -46,10 +46,14 @@ TID 431185:
 #8  0x0000aaaae56127f0 _start
 EOF
 
-HAVE_OPENAT2=$(grep '^#define HAVE_OPENAT2_RESOLVE_IN_ROOT' \
-                    ${abs_builddir}/../config.h | awk '{print $3}')
+libc_has_openat2_resolve_in_root() {
+  grep '^#define HAVE_OPENAT2_RESOLVE_IN_ROOT' ${abs_builddir}/../config.h | awk '{print $3}'
+}
+kernel_has_openat2_resolve_in_root() {
+  printf "%s\n%s" "5.6.0" "$(uname -r)" | sort -V -C
+}
 
-if [[ "$HAVE_OPENAT2" = 1 ]]; then
+if libc_has_openat2_resolve_in_root && kernel_has_openat2_resolve_in_root; then
     # Change the layout of files in sysroot to test symlink escape scenario
     rm -f "${tmpdir}/sysroot/bin"
     mkdir "${tmpdir}/sysroot/bin"
@@ -57,7 +61,8 @@ if [[ "$HAVE_OPENAT2" = 1 ]]; then
     ln -s /bin/bash "${tmpdir}/sysroot/usr/bin/bash"
 
     # Check that stack with --sysroot generates correct backtrace even if target
-    # binary is actually absolute symlink pointing outside of sysroot directory
+    # binary is actually absolute symlink to be interpreted relative to the sysroot
+    # directory
     testrun "${abs_top_builddir}"/src/stack --core "${tmpdir}/core.bash" \
 	    --sysroot "${tmpdir}/sysroot" >"${tmpdir}/stack.out"
 
