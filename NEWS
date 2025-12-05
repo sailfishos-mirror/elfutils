@@ -1,3 +1,7 @@
+debuginfod: Introduce --home-redirect and --home-html switches allowing
+            for redirecting to custom URL and/or serving a custom html
+            file, if document root is requested.  Related: PR33635.
+
 Version 0.194 "Manual Labour"
 
 debuginfod-find: Fixed caching bug preventing user-cancelled downloads

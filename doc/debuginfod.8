@@ -313,6 +313,16 @@ If a signature cannot be found in the sigcache rpm.sig file, the RPM will be
 tried as a fallback.
 
 .TP
+.B "\-\-home\-redirect"
+Allow for redirecting to a custom URL in case client requests the
+document root.
+
+.TP
+.B "\-\-home\-html"
+Allow for serving a custom text/html FILE in case client requests
+the document root.
+
+.TP
 .B "\-v"
 Increase verbosity of logging to the standard error file descriptor.
 May be repeated to increase details.  The default verbosity is 0.

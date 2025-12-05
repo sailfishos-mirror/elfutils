@@ -484,6 +484,8 @@ static const struct argp_option options[] =
      "Number of seconds to limit metadata query run time, 0=unlimited.", 0 },
 #define ARGP_KEY_HTTP_ADDR 0x100D
    { "listen-address", ARGP_KEY_HTTP_ADDR, "ADDR", 0, "HTTP address to listen on.", 0 },
+   { "home-redirect", 'h', "URL", 0, "Custom homepage - redirect.", 0 },
+   { "home-html", 'H', "FILE", 0, "Custom homepage - htmlfile.", 0 },
    { NULL, 0, NULL, 0, NULL, 0 },
   };
 
@@ -543,6 +545,8 @@ static long scan_checkpoint = 256;
 static bool requires_koji_sigcache_mapping = false;
 #endif
 static unsigned metadata_maxtime_s = 5;
+static string cust_homepage_redirect = "";
+static string cust_homepage_file = "";
 
 static void set_metric(const string& key, double value);
 static void inc_metric(const string& key);
@@ -769,6 +773,12 @@ parse_opt (int key, char *arg,
       addr_info = arg;
       break;
       // case 'h': argp_state_help (state, stderr, ARGP_HELP_LONG|ARGP_HELP_EXIT_OK);
+    case 'h':
+      cust_homepage_redirect = arg;
+      break;
+    case 'H':
+      cust_homepage_file = arg;
+      break;
     default: return ARGP_ERR_UNKNOWN;
     }
 
@@ -3793,11 +3803,36 @@ handle_metadata (MHD_Connection* conn,
 static struct MHD_Response*
 handle_root (off_t* size)
 {
+  MHD_Response* r;
+  if (cust_homepage_file != "")
+    try
+      {
+        int fd = open (cust_homepage_file.c_str(), O_RDONLY);
+        if (fd != -1) {
+          struct stat buf;
+          stat (cust_homepage_file.c_str(), &buf);
+          r =  MHD_create_response_from_fd(buf.st_size, fd);
+          // NB: MHD owns and handles the fd from now.  Must not close()!
+          if (r != NULL)
+            {
+              *size = buf.st_size;
+              add_mhd_response_header (r, "Content-Type", "text/html");
+            }
+        } else {
+          throw libc_exception (errno, "cannot open file " + cust_homepage_file);
+        }
+        return r;
+      }
+    catch (const reportable_exception& e)
+      {
+        e.report(clog);
+      }
+
   static string version = "debuginfod (" + string (PACKAGE_NAME) + ") "
-			  + string (PACKAGE_VERSION);
-  MHD_Response* r = MHD_create_response_from_buffer (version.size (),
-						     (void *) version.c_str (),
-						     MHD_RESPMEM_PERSISTENT);
+                          + string (PACKAGE_VERSION);
+  r = MHD_create_response_from_buffer (version.size (),
+                                       (void *) version.c_str (),
+                                       MHD_RESPMEM_PERSISTENT);
   if (r != NULL)
     {
       *size = version.size ();
@@ -3985,8 +4020,18 @@ handler_cb (void * /*cls*/,
       if (webapi_cors)
         // add ACAO header for all successful requests
         add_mhd_response_header (r, "Access-Control-Allow-Origin", "*");
-      rc = MHD_queue_response (connection, MHD_HTTP_OK, r);
-      http_code = MHD_HTTP_OK;
+      if ((cust_homepage_redirect) != "" && (url1 == "/"))
+        {
+          // redirect to given custom --homepage
+          MHD_add_response_header(r, "Location", cust_homepage_redirect.c_str());
+          rc = MHD_queue_response (connection, MHD_HTTP_FOUND, r);
+          http_code = MHD_HTTP_FOUND;
+        }
+      else
+        {
+          rc = MHD_queue_response (connection, MHD_HTTP_OK, r);
+          http_code = MHD_HTTP_OK;
+        }
       MHD_destroy_response (r);
     }
   catch (const reportable_exception& e)

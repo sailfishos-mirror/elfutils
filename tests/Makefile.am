@@ -296,7 +296,8 @@ TESTS += run-srcfiles-self.sh \
 	 run-debuginfod-IXr.sh \
 	 run-debuginfod-client-profile.sh \
 	 run-debuginfod-find-metadata.sh \
-	 run-debuginfod-longsource.sh
+	 run-debuginfod-longsource.sh \
+	 run-debuginfod-homesite.sh
 if LZMA
 TESTS += run-debuginfod-seekable.sh
 endif
@@ -636,6 +637,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     run-debuginfod-ima-verification.sh \
 	     run-debuginfod-find-metadata.sh \
 	     run-debuginfod-longsource.sh \
+	     run-debuginfod-homesite.sh \
 	     debuginfod-rpms/fedora30/hello2-1.0-2.src.rpm \
 	     debuginfod-rpms/fedora30/hello2-1.0-2.x86_64.rpm \
 	     debuginfod-rpms/fedora30/hello2-debuginfo-1.0-2.x86_64.rpm \
