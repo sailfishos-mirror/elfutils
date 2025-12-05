@@ -309,7 +309,7 @@ static int srclang_to_language (Dwarf_Word srclang,
       return 0;
     case DW_LANG_Algol68:
       *lname = DW_LNAME_Algol68;
-      *lversion = 0;
+      *lversion = 1978; /* Year of the Revised Report for revised language.  */
       return 0;
     case DW_LANG_Nim:
       *lname = DW_LNAME_Nim;
