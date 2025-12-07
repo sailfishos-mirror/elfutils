@@ -21,11 +21,9 @@
 
 #include "printversion.h"
 
-#include <set>
 #include <string>
 #include <memory>
 #include <unordered_map>
-#include <sstream>
 #include <vector>
 #include <bitset>
 #include <stdexcept>
@@ -33,24 +31,22 @@
 #include <csignal>
 #include <cassert>
 #include <chrono>
+#include <iostream>
 
 #include <sys/syscall.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/wait.h>
 #include <poll.h>
 #include <linux/perf_event.h>
-
-#include <dwarf.h>
 #include <argp.h>
-#include <gelf.h>
-#include <libdwfl.h>
 #include <fcntl.h>
-#include <iostream>
+
+#include <gelf.h>
+#include <dwarf.h>
+#include <libdwfl.h>
 #include <libdw.h>
-
 #include "../libebl/libebl.h"
-
-
 #include ELFUTILS_HEADER(dwfl_stacktrace)
 
 using namespace std;
@@ -156,7 +152,6 @@ ARGP_PROGRAM_VERSION_HOOK_DEF = print_version;
 /* Bug report address.  */
 ARGP_PROGRAM_BUG_ADDRESS_DEF = PACKAGE_BUGREPORT;
 
-
 /* Definitions of arguments for argp functions.  */
 static const struct argp_option options[] =
 {
@@ -164,7 +159,6 @@ static const struct argp_option options[] =
   { "verbose", 'v', NULL, 0, N_ ("Increase verbosity of logging messages."), 0 },
   { "gmon", 'g', NULL, 0, N_("Generate gmon.BUILDID.out files for each binary."), 0 },
   { "pid", 'p', "PID", 0, N_("Profile given PID, and its future children."), 0 },
-  // $CMD
   // --event $LIBPFM
   { NULL, 0, NULL, 0, NULL, 0 }
 };
@@ -185,9 +179,8 @@ static int pid;
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
-  /* Suppress "unused parameter" warning.  */
-  (void)arg;
   (void)state;
+  
   switch (key)
     {
     case ARGP_KEY_INIT:
@@ -227,6 +220,7 @@ int
 main (int argc, char *argv[])
 {
   int remaining;
+  int pipefd[2] = {-1, -1}; // for CMD child process post-fork sync
   (void) argp_parse (&argp, argc, argv, 0, &remaining, NULL);
 
   try
@@ -242,10 +236,34 @@ main (int argc, char *argv[])
       attr.exclude_kernel = 1; /* TODO: Probably don't care about this for our initial usecase. */
       attr.mmap = 1;
       attr.mmap2 = 1;
-      attr.inherit = 1; // propagate to child processes
-      attr.task = 1; // catch FORK/EXIT
-      attr.comm = 1; // catch EXEC
 
+      if (pid == 0 && remaining < argc) // got a CMD... suffix?  ok start it
+        {
+          pipe (pipefd); // will use pipefd[] >= 0 as flag for synchronization just below
+          pid = fork();
+          if (pid == 0) // in child
+            {
+              close (pipefd[1]); // close write end
+              char dummy;
+              read (pipefd[0], &dummy, 1); // block until parent is ready
+              close (pipefd[0]);
+              execvp (argv[remaining], & argv[remaining+1]);
+              // notreached unless error
+              cerr << "ERROR: execvp failed"
+                   << ": " << strerror(errno) << endl;                
+            }
+          else if (pid > 0) // in parent
+            {
+              close (pipefd[0]); // close read end
+            }
+          else // error
+            {
+              cerr << "ERROR: fork failed"
+                   << ": " << strerror(errno) << endl;
+              exit(1);
+            }
+        }
+      
 #if 0
       // Create the perf processing pipeline as per command line options
       GprofUnwindSampleConsumer usc;
@@ -258,9 +276,28 @@ main (int argc, char *argv[])
       
       signal(SIGINT, sigint_handler);
       signal(SIGTERM, sigint_handler);      
+
+      if (pid > 0 && pipefd[0]>=0) // need to release child CMD process?
+        {
+          write(pipefd[1], "x", 1); // unblock child
+          close(pipefd[1]);
+        }
+
+      if (verbose)
+        {
+          clog << "Starting stack profile collection ";
+          if (pid) clog << "pid " << pid;
+          else clog << "systemwide";
+          clog << endl;
+        }
       
-      while (! interrupted)
-        pr.process_some();
+      while (true) // main loop
+        {
+          if (interrupted) break;
+          if (pid > 0) waitpid(pid, NULL, WNOHANG); // reap dead child to allow kill(pid, 0) to signal death
+          if (pid > 0 && kill(pid, 0) != 0) break; // exit if child or targeted non-child process died
+          pr.process_some();
+        }
     }
   catch (const exception& e)
     {
@@ -292,9 +329,35 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
 
   this->consumer = consumer;
   
-  if (pid > 0) // attach to all threads
-    throw invalid_argument("pid attachment not yet supported");
-  else
+  while (pid > 0) // actually only once, to allow break in case of error
+    {
+      // XXX: later: attach to each preexisting thread of $pid
+      int fd = syscall(__NR_perf_event_open, attr, pid, -1, -1, 0);
+      if (fd < 0)
+        {
+          cerr << "WARNING: unable to open perf event for pid " << pid
+               << ": " << strerror(errno) << endl;
+          break;
+        }
+      void *buf = mmap(NULL, this->mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+      if (buf == MAP_FAILED)
+        {
+          cerr << "ERROR: perf event mmap failed"
+               << ": " << strerror(errno) << endl;
+          close(fd);
+          break;
+        }
+      this->perf_fds.push_back(fd);
+      this->perf_headers.push_back((perf_event_mmap_page*) buf);
+      struct pollfd pfd = {.fd = fd, .events=POLLIN};
+      this->pollfds.push_back(pfd);
+
+      attr->inherit = 1; // propagate to child processes
+      attr->task = 1; // catch FORK/EXIT
+      attr->comm = 1; // catch EXEC
+      break;
+    }
+  if (pid == 0) // systemwide!
     {
       // iterate over all cpus
       int ncpus = sysconf(_SC_NPROCESSORS_CONF);
