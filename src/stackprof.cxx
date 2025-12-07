@@ -250,7 +250,8 @@ main (int argc, char *argv[])
               execvp (argv[remaining], & argv[remaining+1]);
               // notreached unless error
               cerr << "ERROR: execvp failed"
-                   << ": " << strerror(errno) << endl;                
+                   << ": " << strerror(errno) << endl;
+              exit(1);
             }
           else if (pid > 0) // in parent
             {
