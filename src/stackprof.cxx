@@ -161,33 +161,26 @@ ARGP_PROGRAM_BUG_ADDRESS_DEF = PACKAGE_BUGREPORT;
 static const struct argp_option options[] =
 {
   { NULL, 0, NULL, OPTION_DOC, N_("Output options:"), 1 },
-  { "verbose", 'v', NULL, 0,
-    N_ ("Increase verbosity of logging messages."), 0 },
-  { "gmon", 'g', NULL, 0, N_("Generate gmon.out files for each binary."), 0 },
-  // --pid $PID
-  // --cmd $CMD
-  // --systemwide [assumed for now]
+  { "verbose", 'v', NULL, 0, N_ ("Increase verbosity of logging messages."), 0 },
+  { "gmon", 'g', NULL, 0, N_("Generate gmon.BUILDID.out files for each binary."), 0 },
+  { "pid", 'p', "PID", 0, N_("Profile given PID, and its future children."), 0 },
+  // $CMD
   // --event $LIBPFM
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
-/* Short description of program.  */
-static const char doc[] = N_("Collect systemwide stack-trace profiles.");
-/* Strings for arguments in help texts.  */
-static const char args_doc[] = N_("");
-/* Prototype for option handler.  */
 static error_t parse_opt (int key, char *arg, struct argp_state *state);
-/* Data structure to communicate with argp functions.  */
 static const struct argp argp =
-{
-  options, parse_opt, args_doc, doc, NULL, NULL, NULL
-};
+  {
+    options, parse_opt, "[CMD]...", N_("Collect systemwide stack-trace profiles."),
+    NULL, NULL, NULL
+  };
 
 
 // Globals set based on command line options:
-
 static unsigned verbose;
 static bool gmon;
+static int pid;
 
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
@@ -207,7 +200,11 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 'g':
       gmon = true;
       break;
-      
+
+    case 'p':
+      pid = atoi(arg);
+      break;
+
     default:
       return ARGP_ERR_UNKNOWN;
     }
@@ -229,7 +226,8 @@ void sigint_handler(int sig)
 int
 main (int argc, char *argv[])
 {
-  (void) argp_parse (&argp, argc, argv, ARGP_IN_ORDER, NULL /* CMD */, NULL);
+  int remaining;
+  (void) argp_parse (&argp, argc, argv, 0, &remaining, NULL);
 
   try
     {
@@ -247,14 +245,15 @@ main (int argc, char *argv[])
       attr.inherit = 1; // propagate to child processes
       attr.task = 1; // catch FORK/EXIT
       attr.comm = 1; // catch EXEC
+
 #if 0
       // Create the perf processing pipeline as per command line options
       GprofUnwindSampleConsumer usc;
       PerfConsumerUnwinder pcu(&attr, &usc);
-      PerfReader pr(&attr, &pcu); // , CMD->fork->pid
+      PerfReader pr(&attr, &pcu, pid);
 #else      
       StatsPerfConsumer pcu;
-      PerfReader pr(&attr, &pcu); // , CMD->fork->pid
+      PerfReader pr(&attr, &pcu, pid);
 #endif
       
       signal(SIGINT, sigint_handler);
@@ -287,10 +286,9 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   this->sample_regs_user = ebl_perf_frame_regs_mask (default_ebl);
   this->sample_regs_count = bitset<64>(this->sample_regs_user).count();
   attr->sample_regs_user = this->sample_regs_user;
-  attr->sample_stack_user = 8192;
+  attr->sample_stack_user = 8192; // enough?
   attr->sample_type |= PERF_SAMPLE_REGS_USER;
   attr->sample_type |= PERF_SAMPLE_STACK_USER;
-  /* TODO? attr.sample_stack_user = 65536; */
 
   this->consumer = consumer;
   
