@@ -837,6 +837,15 @@ AX_CXX_COMPILE_STDCXX(11, noext, optional)
 AS_IF([test "x$HAVE_CXX11" = "x1"], [HAVE_CXX11=yes], [HAVE_CXX11=no])
 AM_CONDITIONAL([HAVE_CXX11],[test "x$HAVE_CXX11" = "xyes"])
 
+# For eu-stackprof
+# optional:
+AC_CHECK_HEADERS([perfmon/pfmlib_perf_event.h])
+AC_CHECK_LIB(pfm, pfm_get_os_event_encoding, [AC_SUBST(libpfm_LIBS, '-lpfm')])
+# required:
+AC_CHECK_HEADERS([linux/perf_event.h])
+AM_CONDITIONAL([ENABLE_STACKPROF],[test "x${ac_cv_header_linux_perf_event_h}x${HAVE_CXX11}" = "xyesxyes" ])
+
+
 AC_CHECK_HEADERS([execinfo.h])
 
 # debuginfod-related checks

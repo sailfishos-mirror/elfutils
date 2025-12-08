@@ -38,9 +38,15 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 #include <poll.h>
+#ifdef HAVE_LINUX_PERF_EVENT_H
 #include <linux/perf_event.h>
+#endif
 #include <argp.h>
 #include <fcntl.h>
+
+#ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H
+#include <perfmon/pfmlib_perf_event.h>
+#endif
 
 #include <gelf.h>
 #include <dwarf.h>
@@ -159,14 +165,16 @@ static const struct argp_option options[] =
   { "verbose", 'v', NULL, 0, N_ ("Increase verbosity of logging messages."), 0 },
   { "gmon", 'g', NULL, 0, N_("Generate gmon.BUILDID.out files for each binary."), 0 },
   { "pid", 'p', "PID", 0, N_("Profile given PID, and its future children."), 0 },
-  // --event $LIBPFM
+#ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H  
+  { "event", 'e', "EVENT", 0, N_("Sample given LIBPFM event specification."), 0 },
+#endif
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
 static error_t parse_opt (int key, char *arg, struct argp_state *state);
 static const struct argp argp =
   {
-    options, parse_opt, "[CMD]...", N_("Collect systemwide stack-trace profiles."),
+    options, parse_opt, "[--] [CMD]...", N_("Collect systemwide stack-trace profiles."),
     NULL, NULL, NULL
   };
 
@@ -175,6 +183,8 @@ static const struct argp argp =
 static unsigned verbose;
 static bool gmon;
 static int pid;
+static string libpfm_event;
+static bool libpfm_event_list;
 
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
@@ -196,6 +206,10 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
     case 'p':
       pid = atoi(arg);
+      break;
+
+    case 'e':
+      libpfm_event = arg;
       break;
 
     default:
@@ -228,9 +242,36 @@ main (int argc, char *argv[])
       perf_event_attr attr;
       memset(&attr, 0, sizeof(attr));
       attr.size = sizeof(attr);
-      attr.type = PERF_TYPE_SOFTWARE;
-      attr.config = PERF_COUNT_SW_CPU_CLOCK;
-      attr.sample_freq = 1000;
+      
+      if (libpfm_event != "")
+        {
+#if HAVE_PERFMON_PFMLIB_PERF_EVENT_H
+          pfm_err_t rc = pfm_initialize();
+          if (rc != PFM_SUCCESS)
+            {
+              cerr << "ERROR: pfm_initialized failed"
+                   << ": " << pfm_strerror(rc) << endl;
+              exit(1);
+            }
+          pfm_perf_encode_arg_t arg = { .attr = &attr, .size = sizeof(arg) };
+          rc = pfm_get_os_event_encoding(libpfm_event.c_str(),
+                                         PFM_PLM3, /* user level */ /* user+kernel: PFM_PLM3|PFM_PLM0 */
+                                         PFM_OS_PERF_EVENT_EXT, &arg);
+          if (rc != PFM_SUCCESS)
+            {
+              cerr << "ERROR: pfm_get_os_event_encoding failed"
+                   << ": " << pfm_strerror(rc) << endl;
+              exit(1);
+            }
+#endif
+        }
+      else
+        {
+          attr.type = PERF_TYPE_SOFTWARE;
+          attr.config = PERF_COUNT_SW_CPU_CLOCK;
+          attr.sample_freq = 1000;
+        }
+
       attr.sample_type =  (PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME);
       attr.disabled = 1;
       attr.exclude_kernel = 1; /* TODO: Probably don't care about this for our initial usecase. */
@@ -239,15 +280,23 @@ main (int argc, char *argv[])
 
       if (pid == 0 && remaining < argc) // got a CMD... suffix?  ok start it
         {
-          pipe (pipefd); // will use pipefd[] >= 0 as flag for synchronization just below
+          int rc = pipe (pipefd); // will use pipefd[] >= 0 as flag for synchronization just below
+          if (rc < 0)
+            {
+              cerr << "ERROR: pipe failed"
+                   << ": " << strerror(errno) << endl;
+              exit(1);
+            }
+
           pid = fork();
           if (pid == 0) // in child
             {
               close (pipefd[1]); // close write end
               char dummy;
-              read (pipefd[0], &dummy, 1); // block until parent is ready
+              int rc = read (pipefd[0], &dummy, 1); // block until parent is ready
+              assert (rc == 1);              
               close (pipefd[0]);
-              execvp (argv[remaining], & argv[remaining+1]);
+              execvp (argv[remaining], & argv[remaining] /* not +1: child argv[0] included! */ );
               // notreached unless error
               cerr << "ERROR: execvp failed"
                    << ": " << strerror(errno) << endl;
@@ -256,6 +305,7 @@ main (int argc, char *argv[])
           else if (pid > 0) // in parent
             {
               close (pipefd[0]); // close read end
+              // will write to pipefd[1] after perfreader sicced at child
             }
           else // error
             {
@@ -280,7 +330,8 @@ main (int argc, char *argv[])
 
       if (pid > 0 && pipefd[0]>=0) // need to release child CMD process?
         {
-          write(pipefd[1], "x", 1); // unblock child
+          int rc = write(pipefd[1], "x", 1); // unblock child
+          assert (rc == 1);
           close(pipefd[1]);
         }
 
@@ -299,6 +350,8 @@ main (int argc, char *argv[])
           if (pid > 0 && kill(pid, 0) != 0) break; // exit if child or targeted non-child process died
           pr.process_some();
         }
+
+      // reporting done in various destructors
     }
   catch (const exception& e)
     {

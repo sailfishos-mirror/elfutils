@@ -34,6 +34,8 @@ bin_PROGRAMS = readelf nm size strip elflint findtextrel addr2line \
 
 if ENABLE_STACKTRACE
 bin_PROGRAMS += stacktrace
+endif
+if ENABLE_STACKPROF
 bin_PROGRAMS += stackprof
 endif
 
@@ -115,7 +117,7 @@ srcfiles_SOURCES = srcfiles.cxx
 srcfiles_LDADD = $(libdw) $(libelf) $(libeu) $(argp_LDADD) $(libarchive_LIBS) $(libdebuginfod)
 stackprof_SOURCES = stackprof.cxx
 stackprof_CXXFLAGS = -std=c++11
-stackprof_LDADD = $(libebl) $(libdw) $(libelf) $(libeu) $(argp_LDADD)
+stackprof_LDADD = $(libebl) $(libdw) $(libelf) $(libeu) $(argp_LDADD) $(libpfm_LIBS)
 
 installcheck-binPROGRAMS: $(bin_PROGRAMS)
 	bad=0; pid=$$$$; list="$(bin_PROGRAMS)"; for p in $$list; do \
