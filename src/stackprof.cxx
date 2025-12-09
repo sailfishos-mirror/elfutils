@@ -23,6 +23,7 @@
 
 #include <string>
 #include <memory>
+#include <iomanip>
 #include <unordered_map>
 #include <vector>
 #include <bitset>
@@ -278,6 +279,14 @@ main (int argc, char *argv[])
       attr.mmap = 1;
       attr.mmap2 = 1;
 
+      if (verbose>1)
+	{
+	  clog << "perf_event_attr configuration" << hex << showbase
+	       << " type=" << attr.type
+	       << " config=" << attr.config
+	       << " sample_freq=" << attr.sample_freq << endl << resetiosflags;
+	}
+      
       if (pid == 0 && remaining < argc) // got a CMD... suffix?  ok start it
         {
           int rc = pipe (pipefd); // will use pipefd[] >= 0 as flag for synchronization just below
