@@ -294,7 +294,12 @@ main (int argc, char *argv[])
               close (pipefd[1]); // close write end
               char dummy;
               int rc = read (pipefd[0], &dummy, 1); // block until parent is ready
-              assert (rc == 1);              
+	      if (rc != 1)
+		{
+		  cerr << "ERROR: child sync read failed"
+		       << ": " << strerror(errno) << endl;
+		  exit(1);
+		}
               close (pipefd[0]);
               execvp (argv[remaining], & argv[remaining] /* not +1: child argv[0] included! */ );
               // notreached unless error
