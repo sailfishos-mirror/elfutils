@@ -11724,7 +11724,7 @@ print_debug_exception_table (Dwfl_Module *dwflmod __attribute__ ((unused)),
   while (readp < action_table)
     {
       if (u == 0)
-	fputs (_("\n Call site table:"), out);
+	fputs (_("\n Call site table:\n"), out);
 
       uint64_t call_site_start;
       readp = read_encoded (call_site_encoding, readp, dataend,
@@ -11752,7 +11752,7 @@ print_debug_exception_table (Dwfl_Module *dwflmod __attribute__ ((unused)),
   unsigned int max_ar_filter = 0;
   if (max_action > 0)
     {
-      fputs ("\n Action table:", out);
+      fputs ("\n Action table:\n", out);
 
       size_t maxdata = (size_t) (dataend - action_table);
       if (max_action > maxdata || maxdata - max_action < 1)
@@ -11783,7 +11783,7 @@ print_debug_exception_table (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	  if (abs (ar_disp) & 1)
 	    fprintf (out, " -> [%4u]\n", u + (ar_disp + 1) / 2);
 	  else if (ar_disp != 0)
-	    fputs (" -> ???", out);
+	    fputs (" -> ???\n", out);
 	  else
 	    fputc ('\n', out);
 	  ++u;
