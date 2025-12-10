@@ -167,10 +167,7 @@ SYSPROF_ALIGNED_END(1);
 
 /* TODO: Reduce repeated error messages in show_failures. */
 
-#if HAVE_SYSPROF_HEADERS
-/* TODO also use in perf_events backend */
 static int maxframes = 256;
-#endif
 
 static char *input_path = NULL;
 static char *output_path = NULL;
@@ -228,13 +225,52 @@ static bool show_summary = true;
 #define EXIT_BAD    2
 #define EXIT_USAGE 64
 
-/* Basic unwinder state structure; see also struct unwind_info below. */
+/***********************
+ * Unwinder state data *
+ ***********************/
+
+/* Basic unwinder state structure. */
 struct passthru_info
 {
   void *input; /* SysprofReader* or PerfReader* */
   void *output; /* SysprofOutput* or GmonOutput* */
   void *last_frame; /* SysprofCaptureFrame* or PerfCaptureFrame* */
 };
+
+/* ... and with additional diagnostics. */
+#define UNWIND_ADDR_INCREMENT 512
+struct unwind_info
+{
+  void *input; /* SysprofReader* or PerfReader* */
+  void *output; /* SysprofOutput* or GmonOutput* */
+  void *last_frame; /* SysprofCaptureFrame* or PerfSample* */
+
+  int n_addrs;
+  Dwarf_Addr *addrs; /* allocate in blocks of UNWIND_ADDR_INCREMENT */
+  int max_addrs; /* last allocated size */
+  int last_elfclass;
+
+  Dwarf_Addr last_base; /* for diagnostic purposes */
+  Dwarf_Addr last_sp; /* for diagnostic purposes */
+  Dwfl *last_dwfl; /* for diagnostic purposes */
+  pid_t last_pid; /* to provide access to dwfltab */
+};
+
+void
+unwind_info_init (struct unwind_info *ui)
+{
+  ui->n_addrs = 0;
+  ui->max_addrs = UNWIND_ADDR_INCREMENT;
+  ui->addrs = (Dwarf_Addr *)malloc (ui->max_addrs * sizeof(Dwarf_Addr));
+  ui->last_elfclass = ELFCLASS64;
+
+  ui->last_base = 0;
+  ui->last_sp = 0;
+  ui->last_dwfl = NULL;
+  ui->last_pid = 0;
+
+  /* TODO also implement a cleanup function */
+}
 
 /*****************************
  * perf_events input support *
@@ -262,9 +298,6 @@ typedef struct
   int n_samples; /* for diagnostic purposes */
 } PerfReader;
 
-/* forward decl */
-void perf_reader_end (PerfReader *reader);
-
 /* TODO: Consider including PERF_SAMPLE_IDENTIFIER. */
 #define EUS_PERF_SAMPLE_TYPE (PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME \
 			      | PERF_SAMPLE_REGS_USER | PERF_SAMPLE_STACK_USER)
@@ -280,18 +313,6 @@ typedef struct
   /* char *data; -- XXX variable size */
 } PerfSample;
 
-int
-count_mask (uint64_t perf_regs_mask)
-{
-  /* TODO: Generalize PERF_REG_X86_64_MAX to other arches. */
-  int k, count; uint64_t bit;
-  for (k = 0, count = 0, bit = 1;
-       k < PERF_REG_X86_64_MAX; k++, bit <<= 1)
-    if ((bit & perf_regs_mask))
-      count++;
-  return count;
-}
-
 uint64_t
 perf_sample_get_size (PerfReader *reader, PerfSample *sample)
 {
@@ -304,6 +325,21 @@ perf_sample_get_data (PerfReader *reader, PerfSample *sample)
 {
   int nregs = reader->sample_regs_count;
   return (char *)(sample->regs + (nregs + 1) * sizeof(uint64_t));
+}
+
+/* forward decl */
+void perf_reader_end (PerfReader *reader);
+
+int
+count_mask (uint64_t perf_regs_mask)
+{
+  /* TODO: Generalize PERF_REG_X86_64_MAX to other arches. */
+  int k, count; uint64_t bit;
+  for (k = 0, count = 0, bit = 1;
+       k < PERF_REG_X86_64_MAX; k++, bit <<= 1)
+    if ((bit & perf_regs_mask))
+      count++;
+  return count;
 }
 
 PerfReader *
@@ -443,10 +479,12 @@ perf_event_read_simple (PerfReader *reader,
 
 	  if (*copy_size < ehdr_size)
 	    {
+	      fprintf(stderr, "DEBUG perf_event_copy_simple malloc %ld\n", ehdr_size);
 	      free(*copy_mem);
 	      *copy_mem = malloc(ehdr_size);
 	      if (!*copy_mem)
 		{
+		  fprintf(stderr, "DEBUG copy_size gone\n");
 		  *copy_size = 0;
 		  ret = DWARF_CB_ABORT;
 		  break;
@@ -454,6 +492,7 @@ perf_event_read_simple (PerfReader *reader,
 	      *copy_size = ehdr_size;
 	    }
 
+	  (void)len_first; (void)len_secnd;
 	  memcpy(*copy_mem, copy_start, len_first);
 	  memcpy(*copy_mem + len_first, copy_start, len_secnd);
 	  ehdr = *copy_mem; 
@@ -500,7 +539,9 @@ perf_reader_getframes (PerfReader *reader,
   size_t copy_size = 0;
   while (1)
     {
+      fprintf (stderr, "DEBUG poll0 %d\n", reader->n_samples);
       int ready = poll(fds, nfds, -1);
+      fprintf (stderr, "DEBUG poll0->ret\n");
       if (ready < 0)
 	{
 	  /* TODO: handle EINTR properly */
@@ -530,6 +571,8 @@ perf_reader_getframes (PerfReader *reader,
     }
   fprintf(stderr, "total %d samples\n", reader->n_samples);
 
+  if (copy_mem != NULL)
+    free(copy_mem);
   free(fds);
   return rc;
 }
@@ -986,210 +1029,12 @@ pid_store_dwfl (pid_t pid, Dwfl *dwfl)
   return;
 }
 
-/******************************************************
- * unwinder state data and generic reader_getframes() *
- ******************************************************/
+/**************************
+ * generic unwinding code *
+ **************************/
 
-struct unwind_info
-{
-  void *input; /* SysprofReader* or PerfReader* */
-  void *output; /* SysprofOutput* or GmonOutput* */
-  void *last_frame; /* SysprofCaptureFrame* or PerfSample* */
-  /* TODO */
-};
-
-void
-unwind_info_init (struct unwind_info *ui)
-{
-  /* TODO */
-  (void)ui;
-}
-
-int
-reader_getframes (int (*callback) (void *), void *arg)
-{
-  /* passthru_info prefixes all valid arg structs: */
-  struct passthru_info *pi = (struct passthru_info *) arg;
-  int rc = 0;
-  if (input_format == SOURCE_PERF_EVENTS)
-    {
-      PerfReader *reader = (PerfReader *)pi->input;
-      rc = perf_reader_getframes (reader, callback, arg);
-    }
-#if HAVE_SYSPROF_HEADERS
-  else if (input_format == SOURCE_SYSPROF)
-    {
-      SysprofReader *reader = (SysprofReader *)pi->input;
-      rc = sysprof_reader_getframes (reader, callback, arg);
-    }
-#endif
-  else
-    rc = -1; /* TODO set errno? */
-  return rc;
-}
-
-/* forward decls */
-int sysprof_unwind_cb (void *arg);
-int perf_unwind_cb (void *arg);
-
-void
-choose_unwind_cb (int (**callback) (void *))
-{
-#if HAVE_SYSPROF_HEADERS
-  if (input_format == SOURCE_SYSPROF)
-    {
-      *callback = &sysprof_unwind_cb;
-    }
-#endif
-  if (input_format == SOURCE_PERF_EVENTS)
-    {
-      *callback = &perf_unwind_cb;
-      return;
-    }
-  *callback = NULL;
-}
-
-/************************************
- * basic none/passthrough callbacks *
- ************************************/
-
-int
-process_none_cb (void *arg __attribute__ ((unused)))
-{
-  return DWARF_CB_OK;
-}
-
-#if HAVE_SYSPROF_HEADERS
-
-int
-passthru_sysprof_cb (SysprofCaptureFrame *frame, void *arg)
-{
-  struct passthru_info *pi = (struct passthru_info *)arg;
-  SysprofReader *reader = (SysprofReader *)pi->input;
-  SysprofOutput *output = (SysprofOutput *)pi->output;
-  sysprof_reader_bswap_frame (reader, frame); /* reverse the earlier bswap */
-  ssize_t n_write = write (output->fd, frame, frame->len);
-  output->pos += frame->len;
-  assert ((output->pos % SYSPROF_CAPTURE_ALIGN) == 0);
-  if (n_write < 0)
-    error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
-  return DWARF_CB_OK;
-}
-
-int
-passthru_perf_to_sysprof_cb (PerfCaptureFrame *frame, void *arg)
-{
-  /* TODO */
-}
-
-#endif /* HAVE_SYSPROF_HEADERS */
-
-void
-choose_passthru_cb (int (**callback) (void *))
-{
-#if HAVE_SYSPROF_HEADERS
-  if (input_format == SOURCE_SYSPROF && output_format == DEST_SYSPROF)
-    {
-      *callback = &passthru_sysprof_cb;
-      return;
-    }
-  if (input_format == SOURCE_PERF_EVENTS && output_format == DEST_SYSPROF)
-    {
-      *callback = &passthru_perf_to_sysprof_cb;
-      return;
-    }
-#endif
-  if (output_format == DEST_NONE)
-    {
-      *callback = &process_none_cb;
-      return;
-    }
-  *callback = NULL;
-}
-
-/****************************
- * find_debuginfo callbacks *
- ****************************/
-
-#ifdef FIND_DEBUGINFO
-
-static char *debuginfo_path = NULL;
-
-static const Dwfl_Callbacks sample_callbacks =
-  {
-    .find_elf = dwflst_tracker_linux_proc_find_elf,
-    .find_debuginfo = dwfl_standard_find_debuginfo,
-    .debuginfo_path = &debuginfo_path,
-  };
-
-#else
-
-int
-nop_find_debuginfo (Dwfl_Module *mod __attribute__((unused)),
-		    void **userdata __attribute__((unused)),
-		    const char *modname __attribute__((unused)),
-		    GElf_Addr base __attribute__((unused)),
-		    const char *file_name __attribute__((unused)),
-		    const char *debuglink_file __attribute__((unused)),
-		    GElf_Word debuglink_crc __attribute__((unused)),
-		    char **debuginfo_file_name __attribute__((unused)))
-{
-#ifdef DEBUG_MODULES
-  fprintf(stderr, "nop_find_debuginfo: modname=%s file_name=%s debuglink_file=%s\n",
-	  modname, file_name, debuglink_file);
-#endif
-  return -1;
-}
-
-static const Dwfl_Callbacks sample_callbacks =
-{
-  .find_elf = dwflst_tracker_linux_proc_find_elf,
-  .find_debuginfo = nop_find_debuginfo, /* work with CFI only */
-};
-
-#endif /* FIND_DEBUGINFO */
-
-/********************************************
- * perf_events backend: unwinding callbacks *
- ********************************************/
-
-/* TODO */
-
-int
-perf_unwind_cb (void *arg)
-{
-  struct unwind_info *ui = (struct unwind_info *)arg;
-  PerfSample *sample = (PerfSample *)(ui->last_frame);
-  /* TODO also report cpu, handle sample */
-  fprintf(stderr, "DEBUG got time=%lx pid=%d tid=%d ip=%lx\n", sample->time, sample->pid, sample->tid, sample->ip);
-  return DWARF_CB_OK;
-}
-
-/****************************************
- * Sysprof backend: unwinding callbacks *
- ****************************************/
-
-#if HAVE_SYSPROF_HEADERS
-
-#define UNWIND_ADDR_INCREMENT 512
-struct sysprof_unwind_info
-{
-  int output_fd;
-  SysprofReader *reader;
-  int pos; /* for diagnostic purposes */
-  int n_addrs;
-  int max_addrs; /* for diagnostic purposes */
-  uint64_t last_abi;
-  Dwarf_Addr last_base; /* for diagnostic purposes */
-  Dwarf_Addr last_sp; /* for diagnostic purposes */
-  Dwfl *last_dwfl; /* for diagnostic purposes */
-  pid_t last_pid; /* for diagnostic purposes, to provide access to dwfltab */
-  Dwarf_Addr *addrs; /* allocate blocks of UNWIND_ADDR_INCREMENT */
-  void *outbuf;
-};
-
-/* TODO: Probably needs to be relocated to libdwfl/linux-pid-attach.c
-   to remove a dependency on the private dwfl interface. */
+/* TODO: Could be relocated to libdwfl/linux-pid-attach.c
+   to remove a dependency on the libdwflP.h interface. */
 int
 find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
 {
@@ -1278,9 +1123,9 @@ find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
 }
 
 Dwfl *
-sysprof_init_dwfl_cb (Dwflst_Process_Tracker *cb_tracker,
-		      pid_t pid,
-		      void *arg __attribute__ ((unused)))
+init_dwfl_cb (Dwflst_Process_Tracker *cb_tracker,
+	      pid_t pid,
+	      void *arg __attribute__ ((unused)))
 {
   Dwfl *dwfl = dwflst_tracker_dwfl_begin (cb_tracker);
 
@@ -1305,29 +1150,26 @@ sysprof_init_dwfl_cb (Dwflst_Process_Tracker *cb_tracker,
 }
 
 Dwfl *
-sysprof_find_dwfl (struct sysprof_unwind_info *sui,
-		   SysprofCaptureStackUser *ev,
-		   SysprofCaptureUserRegs *regs,
-		   Elf **out_elf)
+find_dwfl (struct unwind_info *ui, pid_t pid,
+	   const Dwarf_Word *regs, uint32_t n_regs,
+	   Elf **out_elf, bool *cached)
 {
-  pid_t pid = ev->frame.pid;
-  /* XXX: Note that sysprof requesting the x86_64 register file from
+  /* XXX: Note that requesting the x86_64 register file from
      perf_events will result in an array of 17 regs even for 32-bit
      applications. */
-  if (regs->n_regs < ebl_frame_nregs(default_ebl)) /* XXX expecting everything except FLAGS */
+  if (n_regs < ebl_frame_nregs(default_ebl)) /* XXX expecting everything except FLAGS */
     {
       if (show_failures)
-	fprintf(stderr, N_("sysprof_find_dwfl: n_regs=%d, expected %ld\n"),
-		regs->n_regs, ebl_frame_nregs(default_ebl));
+	fprintf(stderr, N_("find_dwfl: n_regs=%d, expected %ld\n"),
+		n_regs, ebl_frame_nregs(default_ebl));
       return NULL;
     }
 
   Elf *elf = NULL;
-  Dwfl *dwfl = dwflst_tracker_find_pid (tracker, pid, sysprof_init_dwfl_cb, NULL);
-  bool cached = false;
+  Dwfl *dwfl = dwflst_tracker_find_pid (tracker, pid, init_dwfl_cb, NULL);
   if (dwfl != NULL && dwfl->process != NULL)
     {
-      cached = true;
+      *cached = true;
       goto reuse;
     }
 
@@ -1342,26 +1184,18 @@ sysprof_find_dwfl (struct sysprof_unwind_info *sui,
     }
 
  reuse:
-  /* TODO: Generalize to other architectures than x86_64. */
-  sui->last_sp = regs->regs[7];
-  sui->last_base = sui->last_sp;
+  /* TODO: Generalize to other architectures than x86. */
+  ui->last_sp = regs[7];
+  ui->last_base = ui->last_sp;
 
-  if (show_frames) {
-    bool is_abi32 = (regs->abi == PERF_SAMPLE_REGS_ABI_32);
-    fprintf(stderr, "sysprof_find_dwfl pid %lld%s: size=%ld%s pc=%lx sp=%lx+(%lx)\n",
-	    (long long) pid, cached ? " (cached)" : "",
-	    ev->size, is_abi32 ? " (32-bit)" : "",
-	    regs->regs[8], sui->last_base, (long)0);
-  }
-
-  if (!cached)
+  if (!*cached)
     pid_store_dwfl (pid, dwfl);
   *out_elf = elf;
   return dwfl;
 }
 
 int
-sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
+unwind_frame_cb (Dwfl_Frame *state, void *arg)
 {
   Dwarf_Addr pc;
   bool isactivation;
@@ -1375,9 +1209,10 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
 
   Dwarf_Addr pc_adjusted = pc - (isactivation ? 0 : 1);
   Dwarf_Addr sp;
-  /* TODO: Need to generalize this code beyond x86 architectures. */
-  struct sysprof_unwind_info *sui = (struct sysprof_unwind_info *)arg;
-  int is_abi32 = (sui->last_abi == PERF_SAMPLE_REGS_ABI_32);
+
+  /* TODO: Generalize to other architectures than x86. */
+  struct unwind_info *ui = (struct unwind_info *)arg;
+  int is_abi32 = (ui->last_elfclass == ELFCLASS32);
   /* DWARF register order cf. elfutils backends/{x86_64,i386}_initreg.c: */
   int user_regs_sp = is_abi32 ? 4 : 7;
   int rc = dwfl_frame_reg (state, user_regs_sp, &sp);
@@ -1390,7 +1225,7 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
     }
 
 #ifdef DEBUG_MODULES
-  Dwfl_Module *mod = dwfl_addrmodule(sui->last_dwfl, pc);
+  Dwfl_Module *mod = dwfl_addrmodule(ui->last_dwfl, pc);
   if (mod == NULL)
     {
       fprintf(stderr, "* pc=%lx -> NO MODULE\n", pc);
@@ -1409,7 +1244,7 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
     }
 #endif
 
-  dwfltab_ent *dwfl_ent = dwfltab_find(sui->last_pid);
+  dwfltab_ent *dwfl_ent = dwfltab_find(ui->last_pid);
   if (dwfl_ent != NULL)
     {
       Dwfl_Unwound_Source unwound_source = dwfl_frame_unwound_source(state);
@@ -1418,46 +1253,302 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
       dwfl_ent->last_unwound = unwound_source;
       if (show_frames)
 	fprintf(stderr, "* frame %d: pc_adjusted=%lx sp=%lx+(%lx) [%s]\n",
-		sui->n_addrs, pc_adjusted, sui->last_base, sp - sui->last_base,
+		ui->n_addrs, pc_adjusted, ui->last_base, sp - ui->last_base,
 		dwfl_unwound_source_str(unwound_source));
     }
   else
     {
       if (show_frames)
 	fprintf(stderr, N_("* frame %d: pc_adjusted=%lx sp=%lx+(%lx) [dwfl_ent not found]\n"),
-		sui->n_addrs, pc_adjusted, sui->last_base, sp - sui->last_base);
+		ui->n_addrs, pc_adjusted, ui->last_base, sp - ui->last_base);
     }
   if (show_buildid)
     {
-      Dwfl_Module *m = dwfl_addrmodule(sui->last_dwfl, pc);
+      Dwfl_Module *m = dwfl_addrmodule(ui->last_dwfl, pc);
       const unsigned char *desc;
       GElf_Addr vaddr;
       int build_id_len = dwfl_module_build_id (m, &desc, &vaddr);
       if (show_buildid)
-	fprintf(stderr, "* pid %d build_id ", sui->last_pid);
+	fprintf(stderr, "* pid %d build_id ", ui->last_pid);
       for (int i = 0; i < build_id_len; ++i)
 	fprintf(stderr, "%02" PRIx8, (uint8_t) desc[i]);
       fprintf(stderr, "\n");
     }
 
-  if (sui->n_addrs > maxframes)
+  if (ui->n_addrs > maxframes)
     {
       /* XXX very rarely, the unwinder can loop infinitely; worth investigating? */
       if (show_failures)
-	fprintf(stderr, N_("sysprof_unwind_frame_cb: sample exceeded maxframes %d\n"),
+	fprintf(stderr, N_("unwind_frame_cb: sample exceeded maxframes %d\n"),
 		maxframes);
       return DWARF_CB_ABORT;
     }
 
-  sui->last_sp = sp;
-  if (sui->n_addrs >= sui->max_addrs)
+  ui->last_sp = sp;
+  if (ui->n_addrs >= ui->max_addrs)
     {
-      sui->addrs = reallocarray (sui->addrs, sui->max_addrs + UNWIND_ADDR_INCREMENT, sizeof(Dwarf_Addr));
-      sui->max_addrs = sui->max_addrs + UNWIND_ADDR_INCREMENT;
+      ui->addrs = reallocarray (ui->addrs, ui->max_addrs + UNWIND_ADDR_INCREMENT, sizeof(Dwarf_Addr));
+      ui->max_addrs = ui->max_addrs + UNWIND_ADDR_INCREMENT;
     }
-  sui->addrs[sui->n_addrs] = pc;
-  sui->n_addrs++;
+  ui->addrs[ui->n_addrs] = pc;
+  ui->n_addrs++;
   return DWARF_CB_OK;
+}
+
+/* forward decls */
+int perf_unwind_cb (void *arg);
+int sysprof_unwind_cb (void *arg);
+
+void
+choose_unwind_cb (int (**callback) (void *))
+{
+#if HAVE_SYSPROF_HEADERS
+  if (input_format == SOURCE_SYSPROF)
+    {
+      *callback = &sysprof_unwind_cb;
+    }
+#endif
+  if (input_format == SOURCE_PERF_EVENTS)
+    {
+      *callback = &perf_unwind_cb;
+      return;
+    }
+  *callback = NULL;
+}
+
+int
+reader_getframes (int (*callback) (void *), void *arg)
+{
+  /* passthru_info prefixes all valid arg structs: */
+  struct passthru_info *pi = (struct passthru_info *) arg;
+  int rc = 0;
+  if (input_format == SOURCE_PERF_EVENTS)
+    {
+      PerfReader *reader = (PerfReader *)pi->input;
+      rc = perf_reader_getframes (reader, callback, arg);
+    }
+#if HAVE_SYSPROF_HEADERS
+  else if (input_format == SOURCE_SYSPROF)
+    {
+      SysprofReader *reader = (SysprofReader *)pi->input;
+      rc = sysprof_reader_getframes (reader, callback, arg);
+    }
+#endif
+  else
+    rc = -1; /* TODO set errno? */
+  return rc;
+}
+
+/************************************
+ * basic none/passthrough callbacks *
+ ************************************/
+
+int
+process_none_cb (void *arg __attribute__ ((unused)))
+{
+  return DWARF_CB_OK;
+}
+
+#if HAVE_SYSPROF_HEADERS
+
+int
+passthru_sysprof_cb (SysprofCaptureFrame *frame, void *arg)
+{
+  struct passthru_info *pi = (struct passthru_info *)arg;
+  SysprofReader *reader = (SysprofReader *)pi->input;
+  SysprofOutput *output = (SysprofOutput *)pi->output;
+  sysprof_reader_bswap_frame (reader, frame); /* reverse the earlier bswap */
+  ssize_t n_write = write (output->fd, frame, frame->len);
+  output->pos += frame->len;
+  assert ((output->pos % SYSPROF_CAPTURE_ALIGN) == 0);
+  if (n_write < 0)
+    error (EXIT_BAD, errno, N_("Write error to file or FIFO '%s'"), output_path);
+  return DWARF_CB_OK;
+}
+
+int
+passthru_perf_to_sysprof_cb (PerfCaptureFrame *frame, void *arg)
+{
+  /* TODO */
+  return DWARF_CB_ABORT;
+}
+
+#endif /* HAVE_SYSPROF_HEADERS */
+
+void
+choose_passthru_cb (int (**callback) (void *))
+{
+#if HAVE_SYSPROF_HEADERS
+  if (input_format == SOURCE_SYSPROF && output_format == DEST_SYSPROF)
+    {
+      *callback = &passthru_sysprof_cb;
+      return;
+    }
+  if (input_format == SOURCE_PERF_EVENTS && output_format == DEST_SYSPROF)
+    {
+      *callback = &passthru_perf_to_sysprof_cb;
+      return;
+    }
+#endif
+  if (output_format == DEST_NONE)
+    {
+      *callback = &process_none_cb;
+      return;
+    }
+  *callback = NULL;
+}
+
+/****************************
+ * find_debuginfo callbacks *
+ ****************************/
+
+#ifdef FIND_DEBUGINFO
+
+static char *debuginfo_path = NULL;
+
+static const Dwfl_Callbacks sample_callbacks =
+  {
+    .find_elf = dwflst_tracker_linux_proc_find_elf,
+    .find_debuginfo = dwfl_standard_find_debuginfo,
+    .debuginfo_path = &debuginfo_path,
+  };
+
+#else
+
+int
+nop_find_debuginfo (Dwfl_Module *mod __attribute__((unused)),
+		    void **userdata __attribute__((unused)),
+		    const char *modname __attribute__((unused)),
+		    GElf_Addr base __attribute__((unused)),
+		    const char *file_name __attribute__((unused)),
+		    const char *debuglink_file __attribute__((unused)),
+		    GElf_Word debuglink_crc __attribute__((unused)),
+		    char **debuginfo_file_name __attribute__((unused)))
+{
+#ifdef DEBUG_MODULES
+  fprintf(stderr, "nop_find_debuginfo: modname=%s file_name=%s debuglink_file=%s\n",
+	  modname, file_name, debuglink_file);
+#endif
+  return -1;
+}
+
+static const Dwfl_Callbacks sample_callbacks =
+{
+  .find_elf = dwflst_tracker_linux_proc_find_elf,
+  .find_debuginfo = nop_find_debuginfo, /* work with CFI only */
+};
+
+#endif /* FIND_DEBUGINFO */
+
+/*******************************************
+ * perf_events backend: unwinding callback *
+ *******************************************/
+
+/* TODO */
+
+int
+perf_unwind_cb (void *arg)
+{
+  struct unwind_info *ui = (struct unwind_info *)arg;
+  PerfSample *sample = (PerfSample *)(ui->last_frame);
+
+  char *comm = NULL;
+  comm = pid_find_comm(sample->pid);
+
+  /* TODO extract n_regs */
+  PerfReader *reader = (PerfReader *)(ui->input);
+  int n_regs = reader->sample_regs_count;
+
+  if (show_frames)
+    fprintf(stderr, "\n"); /* extra newline for padding */
+
+  Elf *elf = NULL;
+  bool cached = false;
+  Dwfl *dwfl = find_dwfl (ui, sample->pid, sample->regs, n_regs, &elf, &cached);
+  if (dwfl == NULL)
+    {
+      if (show_summary)
+	{
+	  dwfltab_ent *dwfl_ent = dwfltab_find(sample->pid);
+	  dwfl_ent->total_samples++;
+	  dwfl_ent->lost_samples++;
+	}
+      if (show_failures)
+	fprintf(stderr, "find_dwfl pid %lld (%s) (failed)\n",
+		(long long)sample->pid, comm);
+      return DWARF_CB_OK;
+    }
+
+  if (show_frames) {
+    bool is_abi32 = (sample->abi == PERF_SAMPLE_REGS_ABI_32);
+    fprintf(stderr, "find_dwfl pid %lld%s: size=%d%s pc=%lx sp=%lx+(%lx)\n",
+	    (long long) sample->pid, cached ? " (cached)" : "",
+	    sample->header.size /* TODO ?? */, is_abi32 ? " (32-bit)" : "",
+	    sample->regs[8] /* TODO: Generalize beyond x86 */, ui->last_base, (long)0);
+  }
+
+  ui->n_addrs = 0;
+  ui->last_elfclass = sample->abi == PERF_SAMPLE_REGS_ABI_32 ? ELFCLASS32 : ELFCLASS64;
+  ui->last_dwfl = dwfl;
+  ui->last_pid = sample->pid;
+  uint64_t regs_mask = reader->sample_regs_user;
+  uint64_t data_size = perf_sample_get_size (reader, sample);
+  char *data = perf_sample_get_data (reader, sample);
+
+  int rc = dwflst_perf_sample_getframes (dwfl, elf, sample->pid, sample->tid,
+					 (uint8_t *)data, data_size,
+					 sample->regs, n_regs,
+					 regs_mask, sample->abi,
+					 unwind_frame_cb, ui);
+  if (rc < 0)
+    {
+      if (show_failures)
+	fprintf(stderr, "dwflst_perf_sample_getframes pid %lld: %s\n",
+		(long long)sample->pid, dwfl_errmsg(-1));
+    }
+  if (show_summary)
+    {
+      /* For final diagnostics. */
+      dwfltab_ent *dwfl_ent = dwfltab_find(sample->pid);
+      if (dwfl_ent != NULL && ui->n_addrs > dwfl_ent->max_frames)
+	dwfl_ent->max_frames = ui->n_addrs;
+      dwfl_ent->total_samples++;
+      if (ui->n_addrs <= 2)
+	dwfl_ent->lost_samples ++;
+    }
+
+  return DWARF_CB_OK;
+}
+
+/****************************************
+ * Sysprof backend: unwinding callbacks *
+ ****************************************/
+
+#if HAVE_SYSPROF_HEADERS
+
+#define UNWIND_ADDR_INCREMENT 512
+struct sysprof_unwind_info
+{
+  int output_fd;
+  SysprofReader *reader;
+  int pos; /* for diagnostic purposes */
+  int n_addrs;
+  int max_addrs; /* for diagnostic purposes */
+  uint64_t last_abi;
+  Dwarf_Addr last_base; /* for diagnostic purposes */
+  Dwarf_Addr last_sp; /* for diagnostic purposes */
+  Dwfl *last_dwfl; /* for diagnostic purposes */
+  pid_t last_pid; /* for diagnostic purposes, to provide access to dwfltab */
+  Dwarf_Addr *addrs; /* allocate blocks of UNWIND_ADDR_INCREMENT */
+  void *outbuf;
+};
+
+int
+sysprof_unwind_cb
+{
+  struct unwind_info *ui = (struct unwind_info *)arg;
+  SysprofCaptureFrame *frame = (SysprofCaptureFrame *)(arg->last_frame);
+  ssize_t n_write;
 }
 
 int
@@ -1512,7 +1603,8 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
   if (show_frames)
     fprintf(stderr, "\n"); /* extra newline for padding */
   Elf *elf = NULL;
-  Dwfl *dwfl = sysprof_find_dwfl (sui, ev, regs, &elf);
+  bool cached = false;
+  Dwfl *dwfl = find_dwfl (sui, frame->pid, regs->regs, regs->n_regs, &elf, &cached);
   if (dwfl == NULL)
     {
       if (show_summary)
@@ -1522,12 +1614,20 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
 	  dwfl_ent->lost_samples++;
 	}
       if (show_failures)
-	fprintf(stderr, "sysprof_find_dwfl pid %lld (%s) (failed)\n",
+	fprintf(stderr, "find_dwfl pid %lld (%s) (failed)\n",
 		(long long)frame->pid, comm);
       return DWARF_CB_OK;
     }
+  if (show_frames) {
+    bool is_abi32 = (regs->abi == PERF_SAMPLE_REGS_ABI_32);
+    fprintf(stderr, "find_dwfl pid %lld%s: size=%ld%s pc=%lx sp=%lx+(%lx)\n",
+	    (long long) frame->pid, cached ? " (cached)" : "",
+	    ev->size, is_abi32 ? " (32-bit)" : "",
+	    regs->regs[8] /* TODO: Generalize beyond x86 */, sui->last_base, (long)0);
+  }
+
   sui->n_addrs = 0;
-  sui->last_abi = regs->abi;
+  sui->last_elfclass = regs->abi == PERF_SAMPLE_REGS_ABI_32 ? ELFCLASS32 : ELFCLASS64;
   sui->last_dwfl = dwfl;
   sui->last_pid = frame->pid;
   uint64_t regs_mask = ebl_perf_frame_regs_mask (default_ebl);
@@ -1967,27 +2067,4 @@ https://sourceware.org/cgit/elfutils/tree/README.eu-stacktrace?h=users/serhei/eu
     dwflst_tracker_end (tracker);
 
   return EXIT_OK;
-
-  /* REWORK BELOW */
-
-  /* TODO: For now, code the processing loop for sysprof only; generalize later. */
-  /* processing_mode == MODE_BASIC */
-  /*   { */
-  /*     struct sysprof_unwind_info sui; */
-  /*     sui.output_fd = output_fd; */
-  /*     sui.reader = reader; */
-  /*     sui.pos = sizeof reader->header; */
-  /*     sui.n_addrs = 0; */
-  /*     sui.last_base = 0; */
-  /*     sui.last_sp = 0; */
-  /*     sui.last_abi = PERF_SAMPLE_REGS_ABI_NONE; */
-  /*     sui.max_addrs = UNWIND_ADDR_INCREMENT; */
-  /*     sui.addrs = (Dwarf_Addr *)malloc (sui.max_addrs * sizeof(Dwarf_Addr)); */
-  /*     sui.outbuf = (void *)malloc (USHRT_MAX * sizeof(uint8_t)); */
-  /*     offset = sysprof_reader_getframes (reader, &sysprof_unwind_cb, &sui); */
-  /*     /\* then we printed diagnostic summary *\/ */
-  /*     free(sui.addrs); */
-  /*     free(sui.outbuf); */
-  /*   } */
-  /* sysprof_reader_end (sysprof_reader); */
 }
