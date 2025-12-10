@@ -308,7 +308,7 @@ typedef struct
   uint32_t pid, tid;
   uint64_t time;
   uint64_t abi;
-  uint64_t *regs; /* XXX variable size */
+  uint64_t regs[]; /* XXX variable size */
   /* uint64_t size; */
   /* char *data; -- XXX variable size */
 } PerfSample;
