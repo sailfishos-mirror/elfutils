@@ -144,6 +144,17 @@ public:
   void process(const UnwindSample* sample); // accumulate hits / callgraph edges (need maxdepth=1 only)
 };
 
+
+class UnwindStatsConsumer: public UnwindSampleConsumer
+{
+public:
+ UnwindStatsConsumer() {}
+  ~UnwindStatsConsumer();
+  void process(const UnwindSample* sample);
+};
+
+
+
 // hypothetical: FlamegraphUnwindSampleConsumer, taking in a bigger maxdepth
 // hypothetical: PprofUnwindSampleConsumer, https://github.com/google/pprof
 
@@ -328,13 +339,19 @@ main (int argc, char *argv[])
               exit(1);
             }
         }
-      
-#if 0
+
       // Create the perf processing pipeline as per command line options
+#if 0
+      UnwindStatsConsumer usc;
+      PerfConsumerUnwinder pcu(&attr, &usc);
+      PerfReader pr(&attr, &pcu, pid);
+#endif
+#if 0
       GprofUnwindSampleConsumer usc;
       PerfConsumerUnwinder pcu(&attr, &usc);
       PerfReader pr(&attr, &pcu, pid);
-#else      
+#endif
+#if 1
       StatsPerfConsumer pcu;
       PerfReader pr(&attr, &pcu, pid);
 #endif
