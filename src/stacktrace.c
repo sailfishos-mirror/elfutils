@@ -492,9 +492,8 @@ perf_event_read_simple (PerfReader *reader,
 	      *copy_size = ehdr_size;
 	    }
 
-	  (void)len_first; (void)len_secnd;
 	  memcpy(*copy_mem, copy_start, len_first);
-	  memcpy(*copy_mem + len_first, copy_start, len_secnd);
+	  memcpy(*copy_mem + len_first, base, len_secnd);
 	  ehdr = *copy_mem; 
 	}
 
@@ -1483,9 +1482,9 @@ perf_unwind_cb (void *arg)
   char *data = perf_sample_get_data (reader, sample);
   if (show_frames) {
     bool is_abi32 = (sample->abi == PERF_SAMPLE_REGS_ABI_32);
-    fprintf(stderr, "find_dwfl pid %lld%s: size=%ld%s pc=%lx sp=%lx+(%lx)\n",
+    fprintf(stderr, "find_dwfl pid %lld%s: hdr_size=%d size=%ld%s pc=%lx sp=%lx+(%lx)\n",
 	    (long long) sample->pid, cached ? " (cached)" : "",
-	    data_size, is_abi32 ? " (32-bit)" : "",
+	    sample->header.size, data_size, is_abi32 ? " (32-bit)" : "",
 	    sample->regs[8] /* TODO: Generalize beyond x86 */, ui->last_base, (long)0);
   }
 
