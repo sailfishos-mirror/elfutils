@@ -317,14 +317,14 @@ uint64_t
 perf_sample_get_size (PerfReader *reader, PerfSample *sample)
 {
   int nregs = reader->sample_regs_count;
-  return (uint64_t)(sample->regs + nregs * sizeof(uint64_t));
+  return *(uint64_t *)(sample->regs + nregs);
 }
 
 char *
 perf_sample_get_data (PerfReader *reader, PerfSample *sample)
 {
   int nregs = reader->sample_regs_count;
-  return (char *)(sample->regs + (nregs + 1) * sizeof(uint64_t));
+  return (char *)(sample->regs + (nregs + 1));
 }
 
 /* forward decl */
@@ -1479,11 +1479,13 @@ perf_unwind_cb (void *arg)
       return DWARF_CB_OK;
     }
 
+  uint64_t data_size = perf_sample_get_size (reader, sample);
+  char *data = perf_sample_get_data (reader, sample);
   if (show_frames) {
     bool is_abi32 = (sample->abi == PERF_SAMPLE_REGS_ABI_32);
-    fprintf(stderr, "find_dwfl pid %lld%s: size=%d%s pc=%lx sp=%lx+(%lx)\n",
+    fprintf(stderr, "find_dwfl pid %lld%s: size=%ld%s pc=%lx sp=%lx+(%lx)\n",
 	    (long long) sample->pid, cached ? " (cached)" : "",
-	    sample->header.size /* TODO ?? */, is_abi32 ? " (32-bit)" : "",
+	    data_size, is_abi32 ? " (32-bit)" : "",
 	    sample->regs[8] /* TODO: Generalize beyond x86 */, ui->last_base, (long)0);
   }
 
@@ -1492,8 +1494,6 @@ perf_unwind_cb (void *arg)
   ui->last_dwfl = dwfl;
   ui->last_pid = sample->pid;
   uint64_t regs_mask = reader->sample_regs_user;
-  uint64_t data_size = perf_sample_get_size (reader, sample);
-  char *data = perf_sample_get_data (reader, sample);
 
   int rc = dwflst_perf_sample_getframes (dwfl, elf, sample->pid, sample->tid,
 					 (uint8_t *)data, data_size,
