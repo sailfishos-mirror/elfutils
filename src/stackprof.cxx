@@ -99,20 +99,46 @@ class PerfConsumer
 public:
   PerfConsumer() {}
   virtual ~PerfConsumer() {}
-  virtual void process(const perf_event_header* sample) = 0;
+  virtual void process_comm(const perf_event_header* sample,
+			    uint32_t pid, uint32_t tid, const char* comm) { process(sample);}
+  virtual void process_exit(const perf_event_header* sample,
+			    uint32_t pid, uint32_t ppid,
+			    uint32_t tid, uint32_t ptid,
+			    const char* comm) { process(sample);}
+  virtual void process_fork(const perf_event_header* sample,
+			    uint32_t pid, uint32_t ppid,
+			    uint32_t tid, uint32_t ptid,
+			    const char* comm) { process(sample);}
+  virtual void process_sample(const perf_event_header* sample,
+			      uint64_t ip,
+			      uint32_t pid, uint32_t tid,
+			      uint64_t time,
+			      uint64_t abi,
+			      uint32_t nregs,
+			      uint64_t *regs,
+			      uint64_t data_size, uint8_t *data) { process(sample); }
+  virtual void process_mmap2(const perf_event_header* sample,
+			     uint32_t pid, uint32_t tid,
+			     uint64_t addr, uint64_t len, uint64_t pgoff,
+			     uint8_t build_id_size, const uint8_t *build_id,
+			     const char *filename) { process(sample); }
+  virtual void process(const perf_event_header* sample) {}
 };
 
 
 struct UnwindSample
 {
-  // pid_t pid; etc.?
+  perf_event_header *event;
+  uint32_t pid, tid;
   vector<pair<string,Dwarf_Addr>> buildid_reladdrs;
 };
 
+
 class UnwindSampleConsumer
 {
+  unsigned maxdepth;
 public:
-  virtual unsigned maxdepth() const; // how deep unwinding is desired
+  UnwindSampleConsumer(unsigned maxdepth=0): maxdepth(maxdepth) {}
   virtual void process(const UnwindSample* sample) = 0;
 };
 
@@ -127,12 +153,19 @@ public:
   void process(const perf_event_header* sample);
 };
 
-class PerfConsumerUnwinder: public PerfConsumer // a perf sample consumer that always unwinds perf samples 
+
+class PerfConsumerUnwinder: public PerfConsumer
 {
+  UnwindSampleConsumer *usc;
 public:
-  PerfConsumerUnwinder(perf_event_attr* attr, UnwindSampleConsumer* usc) {}
+  PerfConsumerUnwinder(UnwindSampleConsumer* usc): usc(usc) {}
   virtual ~PerfConsumerUnwinder() {}
-  void process(const perf_event_header* sample); // handle process lifecycle events; relay unwound call stack events to a consumer 
+  // XXX: needs to implement most of the process_* modes to unwind
+  void process(const perf_event_header* sample) {
+    UnwindSample junk;
+    junk.pid = getpid();
+    usc->process(& junk);
+  }
 };
 
 
@@ -147,6 +180,9 @@ public:
 
 class UnwindStatsConsumer: public UnwindSampleConsumer
 {
+  unordered_map<int,unsigned> event_unwind_counts;
+  unordered_map<string,unsigned> event_buildid_hits;  
+  
 public:
  UnwindStatsConsumer() {}
   ~UnwindStatsConsumer();
@@ -284,18 +320,15 @@ main (int argc, char *argv[])
           attr.sample_freq = 1000;
         }
 
-      attr.sample_type =  (PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME);
-      attr.disabled = 1;
-      attr.exclude_kernel = 1; /* TODO: Probably don't care about this for our initial usecase. */
-      attr.mmap = 1;
-      attr.mmap2 = 1;
 
       if (verbose>1)
 	{
+	  auto oldf = clog.flags();	  
 	  clog << "perf_event_attr configuration" << hex << showbase
 	       << " type=" << attr.type
 	       << " config=" << attr.config
-	       << " sample_freq=" << attr.sample_freq << endl << resetiosflags;
+	       << " sample_freq=" << attr.sample_freq << endl;
+	  clog.setf(oldf);
 	}
       
       if (pid == 0 && remaining < argc) // got a CMD... suffix?  ok start it
@@ -341,20 +374,27 @@ main (int argc, char *argv[])
         }
 
       // Create the perf processing pipeline as per command line options
+      PerfReader *pr = nullptr;
+      UnwindStatsConsumer *usc = nullptr;
+      PerfConsumerUnwinder *pcu = nullptr;
+      StatsPerfConsumer *spc = nullptr;
+      
+      if (gmon)
+	{
+	  usc = new UnwindStatsConsumer();
+	  pcu = new PerfConsumerUnwinder(usc);
+	  pr = new PerfReader(&attr, pcu, pid);
 #if 0
-      UnwindStatsConsumer usc;
-      PerfConsumerUnwinder pcu(&attr, &usc);
-      PerfReader pr(&attr, &pcu, pid);
+	  GprofUnwindSampleConsumer usc;
+	  PerfConsumerUnwinder pcu(&usc);
+	  PerfReader pr(&attr, &pcu, pid);
 #endif
-#if 0
-      GprofUnwindSampleConsumer usc;
-      PerfConsumerUnwinder pcu(&attr, &usc);
-      PerfReader pr(&attr, &pcu, pid);
-#endif
-#if 1
-      StatsPerfConsumer pcu;
-      PerfReader pr(&attr, &pcu, pid);
-#endif
+	}
+      else
+	{
+	  spc = new StatsPerfConsumer();
+	  pr = new PerfReader(&attr, spc, pid);
+	}
       
       signal(SIGINT, sigint_handler);
       signal(SIGTERM, sigint_handler);      
@@ -379,9 +419,14 @@ main (int argc, char *argv[])
           if (interrupted) break;
           if (pid > 0) waitpid(pid, NULL, WNOHANG); // reap dead child to allow kill(pid, 0) to signal death
           if (pid > 0 && kill(pid, 0) != 0) break; // exit if child or targeted non-child process died
-          pr.process_some();
+          pr->process_some();
         }
 
+      delete pr;
+      delete usc;
+      delete pcu;
+      delete spc;
+      
       // reporting done in various destructors
     }
   catch (const exception& e)
@@ -391,7 +436,6 @@ main (int argc, char *argv[])
   
   return 0;
 }
-
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -407,67 +451,51 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   Ebl *default_ebl = ebl_openbackend_machine(EM_X86_64); // XXX
   this->sample_regs_user = ebl_perf_frame_regs_mask (default_ebl);
   this->sample_regs_count = bitset<64>(this->sample_regs_user).count();
+  
   attr->sample_regs_user = this->sample_regs_user;
   attr->sample_stack_user = 8192; // enough?
+  attr->sample_type = (PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME);
   attr->sample_type |= PERF_SAMPLE_REGS_USER;
   attr->sample_type |= PERF_SAMPLE_STACK_USER;
+  // maybe: ask for PERF_SAMPLE_CALLCHAIN, in case kernel can unwind for us?
+  attr->mmap = 1;
+  attr->mmap2 = 1;
+  attr->exclude_kernel = 1; /* TODO: Probably don't care about this for our initial usecase. */
+  attr->disabled = 1; /* will get enabled soon */
+  attr->task = 1; // catch FORK/EXIT
+  attr->comm = 1; // catch EXEC
+  attr->precise_ip = 2; // request 0 skid
 
   this->consumer = consumer;
   
-  while (pid > 0) // actually only once, to allow break in case of error
+  if (pid > 0) // actually only once, to allow break in case of error
+    attr->inherit = 1; // propagate to child processes
+      
+  // Iterate over all cpus, even if attaching to a single pid, because
+  // we set ->inherit=1.  That requires possible concurrency, which is
+  // enabled by per-cpu ring buffers.
+  int ncpus = sysconf(_SC_NPROCESSORS_CONF);
+  for (int cpu=0; cpu<ncpus; cpu++)
     {
-      // XXX: later: attach to each preexisting thread of $pid
-      int fd = syscall(__NR_perf_event_open, attr, pid, -1, -1, 0);
+      int fd = syscall(__NR_perf_event_open, attr, (pid > 0 ? pid : -1), cpu, -1, 0);
       if (fd < 0)
-        {
-          cerr << "WARNING: unable to open perf event for pid " << pid
-               << ": " << strerror(errno) << endl;
-          break;
-        }
+	{
+	  cerr << "WARNING: unable to open perf event for cpu " << cpu
+	       << ": " << strerror(errno) << endl;
+	  continue;
+	}
       void *buf = mmap(NULL, this->mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
       if (buf == MAP_FAILED)
-        {
-          cerr << "ERROR: perf event mmap failed"
-               << ": " << strerror(errno) << endl;
-          close(fd);
-          break;
-        }
+	{
+	  cerr << "ERROR: perf event mmap failed"
+	       << ": " << strerror(errno) << endl;
+	  close(fd);
+	  continue;
+	}
       this->perf_fds.push_back(fd);
       this->perf_headers.push_back((perf_event_mmap_page*) buf);
       struct pollfd pfd = {.fd = fd, .events=POLLIN};
       this->pollfds.push_back(pfd);
-
-      attr->inherit = 1; // propagate to child processes
-      attr->task = 1; // catch FORK/EXIT
-      attr->comm = 1; // catch EXEC
-      break;
-    }
-  if (pid == 0) // systemwide!
-    {
-      // iterate over all cpus
-      int ncpus = sysconf(_SC_NPROCESSORS_CONF);
-      for (int cpu=0; cpu<ncpus; cpu++)
-        {
-          int fd = syscall(__NR_perf_event_open, attr, -1, cpu, -1, 0);
-          if (fd < 0)
-            {
-              cerr << "WARNING: unable to open perf event for cpu " << cpu
-                   << ": " << strerror(errno) << endl;
-              continue;
-            }
-          void *buf = mmap(NULL, this->mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-          if (buf == MAP_FAILED)
-            {
-              cerr << "ERROR: perf event mmap failed"
-                   << ": " << strerror(errno) << endl;
-              close(fd);
-              continue;
-            }
-          this->perf_fds.push_back(fd);
-          this->perf_headers.push_back((perf_event_mmap_page*) buf);
-          struct pollfd pfd = {.fd = fd, .events=POLLIN};
-          this->pollfds.push_back(pfd);
-        }
     }
 
   if (this->perf_fds.size() == 0)
@@ -580,3 +608,22 @@ void StatsPerfConsumer::process(const perf_event_header* ehdr)
 // unwind consumers // gprof
 
 
+UnwindStatsConsumer::~UnwindStatsConsumer()
+{
+  cout << "pid / unwind-hit counts:" << endl;
+  for (const auto& kv : this->event_unwind_counts)
+    cout << "pid " << kv.first << " count " << kv.second << endl;
+
+  cout << "buildid / unwind-hit counts:" << endl;
+  for (const auto& kv : this->event_buildid_hits)
+    cout << "buildid " << kv.first << " count " << kv.second << endl;
+  
+}
+
+void UnwindStatsConsumer::process(const UnwindSample* sample)
+{
+  this->event_unwind_counts[sample->pid] ++;
+
+  for (auto& p : sample->buildid_reladdrs)
+    this->event_buildid_hits[p.first] ++;
+}
