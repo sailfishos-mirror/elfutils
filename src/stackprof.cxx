@@ -74,15 +74,15 @@ private:
   vector<pollfd> pollfds;
 
   PerfConsumer* consumer; // pluralize!
-  
   uint64_t sample_regs_user;
   int sample_regs_count;
   bool enabled;
   int page_size;
   int page_count;
   int mmap_size;
-
-  vector<uint8_t> event_wraparound_temp;
+  vector<uint8_t> event_wraparound_temp; // for events straddling ring buffer end
+  
+  void decode_event(const perf_event_header* ehdr);
 
 public:
   // PerfReader(perf_event_attr* attr, int pid, PerfConsumer* consumer); // attach to process hierarchy; may modify *attr
@@ -90,7 +90,7 @@ public:
   
   ~PerfReader();
 
-  void process_some(); // run briefly, relay perf_events to consumer
+  void process_some(); // run briefly, relay decoded perf_events to consumer  
 };
 
 
@@ -100,29 +100,26 @@ public:
   PerfConsumer() {}
   virtual ~PerfConsumer() {}
   virtual void process_comm(const perf_event_header* sample,
-			    uint32_t pid, uint32_t tid, const char* comm) { process(sample);}
+          uint32_t pid, uint32_t tid, const char* comm);
   virtual void process_exit(const perf_event_header* sample,
-			    uint32_t pid, uint32_t ppid,
-			    uint32_t tid, uint32_t ptid,
-			    const char* comm) { process(sample);}
+          uint32_t pid, uint32_t ppid,
+          uint32_t tid, uint32_t ptid);
   virtual void process_fork(const perf_event_header* sample,
-			    uint32_t pid, uint32_t ppid,
-			    uint32_t tid, uint32_t ptid,
-			    const char* comm) { process(sample);}
+          uint32_t pid, uint32_t ppid,
+          uint32_t tid, uint32_t ptid);
   virtual void process_sample(const perf_event_header* sample,
-			      uint64_t ip,
-			      uint32_t pid, uint32_t tid,
-			      uint64_t time,
-			      uint64_t abi,
-			      uint32_t nregs,
-			      uint64_t *regs,
-			      uint64_t data_size, uint8_t *data) { process(sample); }
+            uint64_t ip,
+            uint32_t pid, uint32_t tid,
+            uint64_t time,
+            uint64_t abi,
+            uint32_t nregs, const uint64_t *regs,
+            uint64_t data_size, const uint8_t *data);
   virtual void process_mmap2(const perf_event_header* sample,
-			     uint32_t pid, uint32_t tid,
-			     uint64_t addr, uint64_t len, uint64_t pgoff,
-			     uint8_t build_id_size, const uint8_t *build_id,
-			     const char *filename) { process(sample); }
-  virtual void process(const perf_event_header* sample) {}
+           uint32_t pid, uint32_t tid,
+           uint64_t addr, uint64_t len, uint64_t pgoff,
+           uint8_t build_id_size, const uint8_t *build_id,
+           const char *filename);
+  virtual void process(const perf_event_header* sample) { /* ignore */ }
 };
 
 
@@ -465,6 +462,7 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   attr->task = 1; // catch FORK/EXIT
   attr->comm = 1; // catch EXEC
   attr->precise_ip = 2; // request 0 skid
+  attr->build_id = 1; // request build ids in MMAP2 events
 
   this->consumer = consumer;
   
@@ -574,7 +572,7 @@ void PerfReader::process_some()
                     ehdr = (perf_event_header*) event_temp; 
                   }
 
-                this->consumer->process (ehdr);
+                this->decode_event(ehdr);
                 data_tail += ehdr_size;
               }
 
@@ -585,8 +583,156 @@ void PerfReader::process_some()
 }
 
 
+void PerfReader::decode_event(const perf_event_header* ehdr)
+  {
+    switch (ehdr->type)
+    {
+      case PERF_RECORD_SAMPLE:
+      {
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
+        uint64_t ip = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+        uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+        uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+        uint64_t time = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+        // PERF_SAMPLE_CALLCHAIN would be here if requested
+        uint64_t abi = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+        uint32_t nregs = this->sample_regs_count;
+        const uint64_t* regs = reinterpret_cast<const uint64_t*>(data); data += nregs * sizeof(uint64_t);
+        uint64_t data_size = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+        const uint8_t* stack_data = data;
+        consumer->process_sample(ehdr, ip, pid, tid, time, abi, nregs, regs, data_size, stack_data);
+        break;
+      }
+      case PERF_RECORD_COMM:
+      {
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
+        uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+        uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+        const char* comm = reinterpret_cast<const char*>(data);
+        consumer->process_comm(ehdr, pid, tid, comm);
+        break;
+      }
+      case PERF_RECORD_EXIT:
+      {
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
+        uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+        uint32_t ppid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+        uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+        uint32_t ptid = *reinterpret_cast<const uint32_t*>(data);
+        consumer->process_exit(ehdr, pid, ppid, tid, ptid);
+        break;
+      }
+      case PERF_RECORD_FORK:
+      {
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
+        uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+        uint32_t ppid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+        uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+        uint32_t ptid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+        consumer->process_fork(ehdr, pid, ppid, tid, ptid);
+        break;
+      }
+      case PERF_RECORD_MMAP2:
+      {
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
+        uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+        uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+        uint64_t addr = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+        uint64_t len = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+        uint64_t pgoff = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+        uint8_t build_id_size = 0;
+        const uint8_t* build_id = nullptr;
+        if (ehdr->misc & PERF_RECORD_MISC_MMAP_BUILD_ID)
+          {
+            build_id_size = *reinterpret_cast<const uint8_t*>(data); data += sizeof(uint8_t);
+            data += sizeof(uint8_t) + sizeof(uint16_t); // skip padding
+            build_id = reinterpret_cast<const uint8_t*>(data);
+            data += build_id_size;
+          }
+        else
+          {
+            data += 4 + 4 + 8 + 8; // maj, min, ino, ino_generation
+          }
+        data += sizeof(uint32_t) + sizeof(uint32_t); // prot, flags
+        const char* filename = reinterpret_cast<const char*>(data);
+        consumer->process_mmap2(ehdr, pid, tid, addr, len, pgoff, build_id_size, build_id, filename);
+        break;
+      }
+      default:
+        consumer->process(ehdr);
+        break;
+    }
+  }
+
+
+
 ////////////////////////////////////////////////////////////////////////
 // perf event consumers / unwinders
+
+  void PerfConsumer::process_comm(const perf_event_header *sample,
+                                  uint32_t pid, uint32_t tid, const char *comm)
+  {
+    if (verbose > 2)
+    {
+      clog << "process_comm: pid=" << pid << " tid=" << tid << " comm=" << comm << endl;
+    }
+    this->process(sample);
+  }
+  void PerfConsumer::process_exit(const perf_event_header *sample,
+                                  uint32_t pid, uint32_t ppid,
+                                  uint32_t tid, uint32_t ptid)
+  {
+    if (verbose > 2)
+    {
+      clog << "process_exit: pid=" << pid << " ppid=" << ppid << " tid=" << tid << " ptid=" << ptid << endl;
+    }
+    this->process(sample);
+  }
+  void PerfConsumer::process_fork(const perf_event_header *sample,
+                                  uint32_t pid, uint32_t ppid,
+                                  uint32_t tid, uint32_t ptid)
+  {
+    if (verbose > 2)
+    {
+      clog << "process_fork: pid=" << pid << " ppid=" << ppid << " tid=" << tid << " ptid=" << ptid << endl;
+    }
+    this->process(sample);
+  }
+  void PerfConsumer::process_sample(const perf_event_header *sample,
+                                    uint64_t ip,
+                                    uint32_t pid, uint32_t tid,
+                                    uint64_t time,
+                                    uint64_t abi,
+                                    uint32_t nregs, const uint64_t *regs,
+                                    uint64_t data_size, const uint8_t *data)
+  {
+    if (verbose > 2)
+    {
+      auto oldf = clog.flags();
+      clog << "process_sample: pid=" << pid << " tid=" << tid << " ip=" << hex << ip 
+           << " time=" << time << " abi=" << abi << " nregs=" << nregs
+           << " data_size=" << data_size << endl;
+      clog.setf(oldf);
+    }
+    this->process(sample);
+  }
+  void PerfConsumer::process_mmap2(const perf_event_header *sample,
+                                   uint32_t pid, uint32_t tid,
+                                   uint64_t addr, uint64_t len, uint64_t pgoff,
+                                   uint8_t build_id_size, const uint8_t *build_id,
+                                   const char *filename)
+  {
+    if (verbose > 2)
+    {
+      auto oldf = clog.flags();
+      clog << "process_mmap2: pid=" << pid << " tid=" << tid << " addr=" << hex << addr
+           << " len=" << len << " pgoff=" << pgoff << " build_id_size=" << (unsigned)build_id_size
+           << " filename=" << filename << endl;
+      clog.setf(oldf);
+    }
+    this->process(sample);
+  }
+
 
 StatsPerfConsumer::~StatsPerfConsumer()
 {
