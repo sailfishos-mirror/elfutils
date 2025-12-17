@@ -11794,7 +11794,7 @@ print_debug_exception_table (Dwfl_Module *dwflmod __attribute__ ((unused)),
   if (max_ar_filter > 0 && ttype_base != NULL)
     {
       unsigned char dsize;
-      fputs ("\n TType table:", out);
+      fputs ("\n TType table:\n", out);
 
       // XXX Not *4, size of encoding;
       switch (ttype_encoding & 7)
