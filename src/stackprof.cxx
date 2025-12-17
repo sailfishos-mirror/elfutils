@@ -100,25 +100,25 @@ public:
   PerfConsumer() {}
   virtual ~PerfConsumer() {}
   virtual void process_comm(const perf_event_header* sample,
-          uint32_t pid, uint32_t tid, const char* comm);
+			    uint32_t pid, uint32_t tid, const char* comm);
   virtual void process_exit(const perf_event_header* sample,
-          uint32_t pid, uint32_t ppid,
-          uint32_t tid, uint32_t ptid);
+			    uint32_t pid, uint32_t ppid,
+			    uint32_t tid, uint32_t ptid);
   virtual void process_fork(const perf_event_header* sample,
-          uint32_t pid, uint32_t ppid,
-          uint32_t tid, uint32_t ptid);
+			    uint32_t pid, uint32_t ppid,
+			    uint32_t tid, uint32_t ptid);
   virtual void process_sample(const perf_event_header* sample,
-            uint64_t ip,
-            uint32_t pid, uint32_t tid,
-            uint64_t time,
-            uint64_t abi,
-            uint32_t nregs, const uint64_t *regs,
-            uint64_t data_size, const uint8_t *data);
+			      uint64_t ip,
+			      uint32_t pid, uint32_t tid,
+			      uint64_t time,
+			      uint64_t abi,
+			      uint32_t nregs, const uint64_t *regs,
+			      uint64_t data_size, const uint8_t *data);
   virtual void process_mmap2(const perf_event_header* sample,
-           uint32_t pid, uint32_t tid,
-           uint64_t addr, uint64_t len, uint64_t pgoff,
-           uint8_t build_id_size, const uint8_t *build_id,
-           const char *filename);
+			     uint32_t pid, uint32_t tid,
+			     uint64_t addr, uint64_t len, uint64_t pgoff,
+			     uint8_t build_id_size, const uint8_t *build_id,
+			     const char *filename);
   virtual void process(const perf_event_header* sample) { /* ignore */ }
 };
 
@@ -133,10 +133,9 @@ struct UnwindSample
 
 class UnwindSampleConsumer
 {
-  unsigned maxdepth;
 public:
-  UnwindSampleConsumer(unsigned maxdepth=0): maxdepth(maxdepth) {}
-  virtual void process(const UnwindSample* sample) = 0;
+  UnwindSampleConsumer() {}
+  void process(const UnwindSample* sample);
 };
 
 
@@ -157,12 +156,27 @@ class PerfConsumerUnwinder: public PerfConsumer
 public:
   PerfConsumerUnwinder(UnwindSampleConsumer* usc): usc(usc) {}
   virtual ~PerfConsumerUnwinder() {}
-  // XXX: needs to implement most of the process_* modes to unwind
-  void process(const perf_event_header* sample) {
-    UnwindSample junk;
-    junk.pid = getpid();
-    usc->process(& junk);
-  }
+
+  void process_comm(const perf_event_header* sample,
+          uint32_t pid, uint32_t tid, const char* comm);
+  void process_exit(const perf_event_header* sample,
+          uint32_t pid, uint32_t ppid,
+          uint32_t tid, uint32_t ptid);
+  void process_fork(const perf_event_header* sample,
+          uint32_t pid, uint32_t ppid,
+          uint32_t tid, uint32_t ptid);
+  void process_sample(const perf_event_header* sample,
+            uint64_t ip,
+            uint32_t pid, uint32_t tid,
+            uint64_t time,
+            uint64_t abi,
+            uint32_t nregs, const uint64_t *regs,
+            uint64_t data_size, const uint8_t *data);
+  void process_mmap2(const perf_event_header* sample,
+           uint32_t pid, uint32_t tid,
+           uint64_t addr, uint64_t len, uint64_t pgoff,
+           uint8_t build_id_size, const uint8_t *build_id,
+           const char *filename);
 };
 
 
@@ -461,7 +475,8 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   attr->disabled = 1; /* will get enabled soon */
   attr->task = 1; // catch FORK/EXIT
   attr->comm = 1; // catch EXEC
-  attr->precise_ip = 2; // request 0 skid
+  attr->comm_exec = 1; // catch EXEC  
+  // attr->precise_ip = 2; // request 0 skid ... but that conflicts with PERF_COUNT_HW_BRANCH_INSTRUCTIONS:freq=4000
   attr->build_id = 1; // request build ids in MMAP2 events
 
   this->consumer = consumer;
@@ -475,7 +490,9 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   int ncpus = sysconf(_SC_NPROCESSORS_CONF);
   for (int cpu=0; cpu<ncpus; cpu++)
     {
-      int fd = syscall(__NR_perf_event_open, attr, (pid > 0 ? pid : -1), cpu, -1, 0);
+      int fd = syscall(__NR_perf_event_open, attr,
+		       (pid > 0 ? pid : -1), cpu, -1,
+		       PERF_FLAG_FD_CLOEXEC);
       if (fd < 0)
 	{
 	  cerr << "WARNING: unable to open perf event for cpu " << cpu
@@ -609,7 +626,8 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
         uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
         uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
         const char* comm = reinterpret_cast<const char*>(data);
-        consumer->process_comm(ehdr, pid, tid, comm);
+        // if (ehdr->misc & PERF_RECORD_MISC_COMM_EXEC), it's a real exec
+	consumer->process_comm(ehdr, pid, tid, comm);
         break;
       }
       case PERF_RECORD_EXIT:
@@ -749,6 +767,43 @@ void StatsPerfConsumer::process(const perf_event_header* ehdr)
 
 
 
+void PerfConsumerUnwinder::process_comm(const perf_event_header *sample,
+                                  uint32_t pid, uint32_t tid, const char *comm)
+  {
+
+  }
+void PerfConsumerUnwinder::process_exit(const perf_event_header *sample,
+                                  uint32_t pid, uint32_t ppid,
+                                  uint32_t tid, uint32_t ptid)
+  {
+
+  }
+void PerfConsumerUnwinder::process_fork(const perf_event_header *sample,
+                                  uint32_t pid, uint32_t ppid,
+                                  uint32_t tid, uint32_t ptid)
+  {
+   
+  }
+void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
+                                    uint64_t ip,
+                                    uint32_t pid, uint32_t tid,
+                                    uint64_t time,
+                                    uint64_t abi,
+                                    uint32_t nregs, const uint64_t *regs,
+                                    uint64_t data_size, const uint8_t *data)
+  {
+    
+  }
+void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
+                                   uint32_t pid, uint32_t tid,
+                                   uint64_t addr, uint64_t len, uint64_t pgoff,
+                                   uint8_t build_id_size, const uint8_t *build_id,
+                                   const char *filename)
+  {
+
+  }
+
+
 
 ////////////////////////////////////////////////////////////////////////
 // unwind consumers // gprof
@@ -773,3 +828,4 @@ void UnwindStatsConsumer::process(const UnwindSample* sample)
   for (auto& p : sample->buildid_reladdrs)
     this->event_buildid_hits[p.first] ++;
 }
+
