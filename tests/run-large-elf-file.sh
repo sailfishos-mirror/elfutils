@@ -18,6 +18,9 @@
 
 . $srcdir/test-subr.sh
 
+# This test just takes way too long under valgrind
+unset VALGRIND_CMD
+
 # Only run on 64bit systems, 32bit systems don't support > 4GB
 # ELF files.
 long_bit=$(getconf LONG_BIT)

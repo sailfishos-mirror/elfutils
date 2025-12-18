@@ -17,6 +17,9 @@
 
 . $srcdir/test-subr.sh
 
+# This test just takes way too long under valgrind
+unset VALGRIND_CMD
+
 # uncompress -> gnucompress -> uncompress -> elfcompress -> uncompress
 testrun_elfcompress_file()
 {
