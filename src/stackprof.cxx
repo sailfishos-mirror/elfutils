@@ -159,12 +159,7 @@ public:
   PerfConsumerUnwinder(UnwindSampleConsumer* usc): usc(usc) {}
   virtual ~PerfConsumerUnwinder() {}
   // XXX: needs to implement most of the process_* modes to unwind
-  void process(const perf_event_header* sample) {
-    UnwindSample junk;
-    junk.pid = getpid();
-    usc->process(& junk);
-  }
-  void process(const perf_event_header* sample); // handle process lifecycle events; relay unwound call stack events to a consumer 
+  void process(const perf_event_header* sample);
 };
 
 
@@ -801,6 +796,9 @@ void StatsPerfConsumer::process(const perf_event_header* ehdr)
 
 void PerfConsumerUnwinder::process(const perf_event_header* ehdr)
 {
+  UnwindSample junk;
+  junk.pid = getpid();
+  usc->process(& junk);
 }
 
 
