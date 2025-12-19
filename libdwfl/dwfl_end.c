@@ -53,6 +53,7 @@ dwfl_end (Dwfl *dwfl)
   free (dwfl->lookup_module);
   free (dwfl->lookup_segndx);
   free (dwfl->sysroot);
+  mutex_fini (dwfl->debuginfod_lock);
 
   Dwfl_Module *next = dwfl->modulelist;
   while (next != NULL)

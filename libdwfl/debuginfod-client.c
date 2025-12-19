@@ -49,7 +49,7 @@ static void __libdwfl_debuginfod_init (void);
 
 static pthread_once_t init_control = PTHREAD_ONCE_INIT;
 
-/* NB: this is slightly thread-unsafe */
+/* dwfl->debuginfod_lock must be held when calling this function.  */
 
 debuginfod_client *
 dwfl_get_debuginfod_client (Dwfl *dwfl)
@@ -77,10 +77,12 @@ __libdwfl_debuginfod_find_executable (Dwfl *dwfl,
   int fd = -1;
   if (build_id_len > 0)
     {
+      mutex_lock (dwfl->debuginfod_lock);
       debuginfod_client *c = INTUSE (dwfl_get_debuginfod_client) (dwfl);
       if (c != NULL)
 	fd = (*fp_debuginfod_find_executable) (c, build_id_bits,
 					       build_id_len, NULL);
+      mutex_unlock (dwfl->debuginfod_lock);
     }
 
   return fd;
@@ -94,10 +96,12 @@ __libdwfl_debuginfod_find_debuginfo (Dwfl *dwfl,
   int fd = -1;
   if (build_id_len > 0)
     {
+      mutex_lock (dwfl->debuginfod_lock);
       debuginfod_client *c = INTUSE (dwfl_get_debuginfod_client) (dwfl);
       if (c != NULL)
 	fd = (*fp_debuginfod_find_debuginfo) (c, build_id_bits,
 					      build_id_len, NULL);
+      mutex_unlock (dwfl->debuginfod_lock);
     }
 
   return fd;

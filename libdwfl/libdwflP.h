@@ -141,6 +141,9 @@ struct Dwfl
   struct Dwfl_User_Core *user_core;
   char *sysroot;		/* sysroot, or NULL to search standard system
 				   paths */
+
+  /* Serialize debuginfod_client usage.  */
+  mutex_define (, debuginfod_lock);
 };
 
 #define OFFLINE_REDZONE		0x10000

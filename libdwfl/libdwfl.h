@@ -835,6 +835,9 @@ int dwfl_frame_reg (Dwfl_Frame *state, unsigned regno, Dwarf_Word *val)
    When the client connection has not yet been initialized, it will be done on the
    first call to this function. If elfutils is compiled without support for debuginfod,
    NULL will be returned.
+
+   The returned debuginfod-client handle must not be used at the same time as
+   any libdwfl function taking the client's associated DWFL as an argument.
  */
 extern debuginfod_client *dwfl_get_debuginfod_client (Dwfl *dwfl);
 
