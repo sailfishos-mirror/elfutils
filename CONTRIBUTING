@@ -12,6 +12,13 @@ Or use the form at https://sourceware.org/mailman/listinfo/elfutils-devel
 
 Please supply patches using git format-patch or using git send-email.
 
+Or look at https://forge.sourceware.org/elfutils/
+If you create an account there please send email to elfutils-devel
+to ask for a mentor who can make you an Collaborator so you can create
+a merge request against the elfutils project there. This will run
+various checks. And your mentor can help you create an email to sent
+to the mailinglist.
+
 Sign your work
 
 To facilitate tracking of who did what, we've adopted a "sign-off"
