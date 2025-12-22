@@ -90,7 +90,8 @@ public:
   
   ~PerfReader();
 
-  void process_some(); // run briefly, relay decoded perf_events to consumer  
+  void process_some(); // run briefly, relay decoded perf_events to consumer
+  int n_sample_regs() { return this->sample_regs_count; }
 };
 
 
@@ -450,6 +451,40 @@ main (int argc, char *argv[])
 
 
 ////////////////////////////////////////////////////////////////////////
+// perf_events data format
+
+class PerfReader;
+
+/* TODO: Make sure the config above matches PERF_SAMPLE_TYPE */
+#define PERF_SAMPLE_TYPE (PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME \
+			  | PERF_SAMPLE_REGS_USER | PERF_SAMPLE_STACK_USER)
+typedef struct
+{
+  struct perf_event_header header;
+  uint64_t ip;
+  uint32_t pid, tid;
+  uint64_t time;
+  uint64_t abi;
+  uint64_t regs[]; /* variable size */
+  /* uint64_t size; */
+  /* char data[]; -- variable size */
+} PerfSample;
+
+uint64_t
+perf_sample_get_size (PerfReader *reader, PerfSample *sample)
+{
+  int nregs = reader->n_sample_regs();
+  return *(uint64_t *)(sample->regs + nregs);
+}
+
+char *
+perf_sample_get_data (PerfReader *reader, PerfSample *sample)
+{
+  int nregs = reader->n_sample_regs();
+  return (char *)(sample->regs + (nregs + 1));
+}
+
+////////////////////////////////////////////////////////////////////////
 // perf reader
 
 PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
@@ -459,7 +494,7 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   this->mmap_size = this->page_size * (this->page_count + 1); // total mmap size, incl header page
   this->event_wraparound_temp.resize(this->mmap_size); // NB: never resize this object again!
   
-  Ebl *default_ebl = ebl_openbackend_machine(EM_X86_64); // XXX
+  Ebl *default_ebl = ebl_openbackend_machine(EM_X86_64); /* TODO: Generalize to architectures beyond x86. */
   this->sample_regs_user = ebl_perf_frame_regs_mask (default_ebl);
   this->sample_regs_count = bitset<64>(this->sample_regs_user).count();
   
@@ -535,6 +570,23 @@ uint64_t millis_monotonic()
 }
 
 
+
+static inline uint64_t
+ring_buffer_read_head(volatile struct perf_event_mmap_page *base)
+{
+  uint64_t head = base->data_head;
+  asm volatile("" ::: "memory"); // memory fence
+  return head;
+}
+
+static inline void
+ring_buffer_write_tail(volatile struct perf_event_mmap_page *base,
+		       uint64_t tail)
+{
+  asm volatile("" ::: "memory"); // memory fence
+  base->data_tail = tail;
+}
+
 void PerfReader::process_some()
 {
   if (! this->enabled)
@@ -561,8 +613,7 @@ void PerfReader::process_some()
         if (this->pollfds[i].revents & POLLIN) // found an fd with fresh yummy events
           {
             perf_event_mmap_page *header = perf_headers[i];
-            uint64_t data_head = header->data_head;
-            asm volatile("" ::: "memory"); // memory fence
+	    uint64_t data_head = ring_buffer_read_head(header);
             uint64_t data_tail = header->data_tail; 
             uint8_t *base = ((uint8_t *) header) + this->page_size;
             struct perf_event_header *ehdr;
@@ -575,7 +626,8 @@ void PerfReader::process_some()
                 if (verbose > 3)
                   clog << "perf head=" << (void*) data_head
                        << " tail=" << (void*) data_tail
-                       << " ehdr=" << (void*) ehdr << " size=" << ehdr_size << endl;
+                       << " ehdr=" << (void*) ehdr
+		       << " size=" << setbase(10) << ehdr_size << setbase(16) << endl;
                 
                 if (((uint8_t *)ehdr) + ehdr_size > base + ring_buffer_size) // mmap region wraparound?
                   {
@@ -593,8 +645,7 @@ void PerfReader::process_some()
                 data_tail += ehdr_size;
               }
 
-            asm volatile("" ::: "memory"); // memory fence
-            header->data_tail = data_tail;
+	    ring_buffer_write_tail(header, data_tail);
           }
     }
 }
@@ -765,8 +816,6 @@ void StatsPerfConsumer::process(const perf_event_header* ehdr)
   this->event_type_counts[ehdr->type] ++;
 }
 
-
-
 void PerfConsumerUnwinder::process_comm(const perf_event_header *sample,
                                   uint32_t pid, uint32_t tid, const char *comm)
   {
@@ -806,7 +855,7 @@ void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
 
 
 ////////////////////////////////////////////////////////////////////////
-// unwind consumers // gprof
+// UNWIND consumers // gprof
 
 
 UnwindStatsConsumer::~UnwindStatsConsumer()
