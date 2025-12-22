@@ -126,7 +126,7 @@ public:
 
 struct UnwindSample
 {
-  perf_event_header *event;
+  const perf_event_header *event;
   uint32_t pid, tid;
   vector<pair<string,Dwarf_Addr>> buildid_reladdrs;
 };
@@ -136,7 +136,8 @@ class UnwindSampleConsumer
 {
 public:
   UnwindSampleConsumer() {}
-  void process(const UnwindSample* sample);
+  virtual ~UnwindSampleConsumer() {}
+  virtual void process(const UnwindSample* sample) = 0;
 };
 
 
@@ -153,31 +154,32 @@ public:
 
 class PerfConsumerUnwinder: public PerfConsumer
 {
-  UnwindSampleConsumer *usc;
+  UnwindSampleConsumer *consumer;
 public:
-  PerfConsumerUnwinder(UnwindSampleConsumer* usc): usc(usc) {}
+  PerfConsumerUnwinder(UnwindSampleConsumer* usc): consumer(usc) {}
   virtual ~PerfConsumerUnwinder() {}
 
-  void process_comm(const perf_event_header* sample,
+  virtual void process_comm(const perf_event_header* sample,
           uint32_t pid, uint32_t tid, const char* comm);
-  void process_exit(const perf_event_header* sample,
+  virtual void process_exit(const perf_event_header* sample,
           uint32_t pid, uint32_t ppid,
           uint32_t tid, uint32_t ptid);
-  void process_fork(const perf_event_header* sample,
+  virtual void process_fork(const perf_event_header* sample,
           uint32_t pid, uint32_t ppid,
           uint32_t tid, uint32_t ptid);
-  void process_sample(const perf_event_header* sample,
+  virtual void process_sample(const perf_event_header* sample,
             uint64_t ip,
             uint32_t pid, uint32_t tid,
             uint64_t time,
             uint64_t abi,
             uint32_t nregs, const uint64_t *regs,
             uint64_t data_size, const uint8_t *data);
-  void process_mmap2(const perf_event_header* sample,
+  virtual void process_mmap2(const perf_event_header* sample,
            uint32_t pid, uint32_t tid,
            uint64_t addr, uint64_t len, uint64_t pgoff,
            uint8_t build_id_size, const uint8_t *build_id,
            const char *filename);
+  virtual void process(const perf_event_header* sample) { }
 };
 
 
@@ -451,40 +453,6 @@ main (int argc, char *argv[])
 
 
 ////////////////////////////////////////////////////////////////////////
-// perf_events data format
-
-class PerfReader;
-
-/* TODO: Make sure the config above matches PERF_SAMPLE_TYPE */
-#define PERF_SAMPLE_TYPE (PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME \
-			  | PERF_SAMPLE_REGS_USER | PERF_SAMPLE_STACK_USER)
-typedef struct
-{
-  struct perf_event_header header;
-  uint64_t ip;
-  uint32_t pid, tid;
-  uint64_t time;
-  uint64_t abi;
-  uint64_t regs[]; /* variable size */
-  /* uint64_t size; */
-  /* char data[]; -- variable size */
-} PerfSample;
-
-uint64_t
-perf_sample_get_size (PerfReader *reader, PerfSample *sample)
-{
-  int nregs = reader->n_sample_regs();
-  return *(uint64_t *)(sample->regs + nregs);
-}
-
-char *
-perf_sample_get_data (PerfReader *reader, PerfSample *sample)
-{
-  int nregs = reader->n_sample_regs();
-  return (char *)(sample->regs + (nregs + 1));
-}
-
-////////////////////////////////////////////////////////////////////////
 // perf reader
 
 PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
@@ -653,6 +621,9 @@ void PerfReader::process_some()
 
 void PerfReader::decode_event(const perf_event_header* ehdr)
   {
+    consumer->process(ehdr); // allow general processing
+
+    // and decode into individual event types
     switch (ehdr->type)
     {
       case PERF_RECORD_SAMPLE:
@@ -728,7 +699,6 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
         break;
       }
       default:
-        consumer->process(ehdr);
         break;
     }
   }
@@ -841,7 +811,10 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
                                     uint32_t nregs, const uint64_t *regs,
                                     uint64_t data_size, const uint8_t *data)
   {
-    
+    // fake: generate a fake unwindrecord and send it to our consumer
+    UnwindSample x = {.event = sample,
+		      .pid = pid, .tid = tid};
+    this->consumer->process (& x);
   }
 void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
                                    uint32_t pid, uint32_t tid,
