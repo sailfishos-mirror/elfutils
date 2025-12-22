@@ -91,7 +91,6 @@ public:
   ~PerfReader();
 
   void process_some(); // run briefly, relay decoded perf_events to consumer
-  int n_sample_regs() { return this->sample_regs_count; }
 };
 
 
@@ -101,7 +100,7 @@ public:
   PerfConsumer() {}
   virtual ~PerfConsumer() {}
   virtual void process_comm(const perf_event_header* sample,
-			    uint32_t pid, uint32_t tid, const char* comm);
+			    uint32_t pid, uint32_t tid, bool exec, const char* comm);
   virtual void process_exit(const perf_event_header* sample,
 			    uint32_t pid, uint32_t ppid,
 			    uint32_t tid, uint32_t ptid);
@@ -160,7 +159,7 @@ public:
   virtual ~PerfConsumerUnwinder() {}
 
   virtual void process_comm(const perf_event_header* sample,
-          uint32_t pid, uint32_t tid, const char* comm);
+			    uint32_t pid, uint32_t tid, bool exec, const char* comm);
   virtual void process_exit(const perf_event_header* sample,
           uint32_t pid, uint32_t ppid,
           uint32_t tid, uint32_t ptid);
@@ -179,7 +178,6 @@ public:
            uint64_t addr, uint64_t len, uint64_t pgoff,
            uint8_t build_id_size, const uint8_t *build_id,
            const char *filename);
-  virtual void process(const perf_event_header* sample) { }
 };
 
 
@@ -648,8 +646,7 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
         uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
         uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
         const char* comm = reinterpret_cast<const char*>(data);
-        // if (ehdr->misc & PERF_RECORD_MISC_COMM_EXEC), it's a real exec
-	consumer->process_comm(ehdr, pid, tid, comm);
+	consumer->process_comm(ehdr, pid, tid, (ehdr->misc & PERF_RECORD_MISC_COMM_EXEC), comm);
         break;
       }
       case PERF_RECORD_EXIT:
@@ -709,13 +706,12 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
 // perf event consumers / unwinders
 
   void PerfConsumer::process_comm(const perf_event_header *sample,
-                                  uint32_t pid, uint32_t tid, const char *comm)
+                                  uint32_t pid, uint32_t tid, bool exec, const char *comm)
   {
     if (verbose > 2)
     {
-      clog << "process_comm: pid=" << pid << " tid=" << tid << " comm=" << comm << endl;
+      clog << "process_comm: pid=" << pid << " tid=" << tid << " exec=" << exec << " comm=" << comm << endl;
     }
-    this->process(sample);
   }
   void PerfConsumer::process_exit(const perf_event_header *sample,
                                   uint32_t pid, uint32_t ppid,
@@ -725,7 +721,6 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
     {
       clog << "process_exit: pid=" << pid << " ppid=" << ppid << " tid=" << tid << " ptid=" << ptid << endl;
     }
-    this->process(sample);
   }
   void PerfConsumer::process_fork(const perf_event_header *sample,
                                   uint32_t pid, uint32_t ppid,
@@ -735,7 +730,6 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
     {
       clog << "process_fork: pid=" << pid << " ppid=" << ppid << " tid=" << tid << " ptid=" << ptid << endl;
     }
-    this->process(sample);
   }
   void PerfConsumer::process_sample(const perf_event_header *sample,
                                     uint64_t ip,
@@ -753,7 +747,6 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
            << " data_size=" << data_size << endl;
       clog.setf(oldf);
     }
-    this->process(sample);
   }
   void PerfConsumer::process_mmap2(const perf_event_header *sample,
                                    uint32_t pid, uint32_t tid,
@@ -769,7 +762,6 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
            << " filename=" << filename << endl;
       clog.setf(oldf);
     }
-    this->process(sample);
   }
 
 
@@ -787,21 +779,21 @@ void StatsPerfConsumer::process(const perf_event_header* ehdr)
 }
 
 void PerfConsumerUnwinder::process_comm(const perf_event_header *sample,
-                                  uint32_t pid, uint32_t tid, const char *comm)
+					uint32_t pid, uint32_t tid, bool exec, const char *comm)
   {
-
+    // have dwflst ditch data for process and start anew, if EXEC
   }
 void PerfConsumerUnwinder::process_exit(const perf_event_header *sample,
                                   uint32_t pid, uint32_t ppid,
                                   uint32_t tid, uint32_t ptid)
   {
-
+    // have dwflst ditch data for process
   }
 void PerfConsumerUnwinder::process_fork(const perf_event_header *sample,
                                   uint32_t pid, uint32_t ppid,
                                   uint32_t tid, uint32_t ptid)
   {
-   
+    // have dwflst begin tracking a new process
   }
 void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
                                     uint64_t ip,
@@ -822,7 +814,7 @@ void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
                                    uint8_t build_id_size, const uint8_t *build_id,
                                    const char *filename)
   {
-
+    // have dwflst for pid report new module
   }
 
 
