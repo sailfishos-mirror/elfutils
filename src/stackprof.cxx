@@ -272,6 +272,8 @@ static const struct argp_option options[] =
   { "pid", 'p', "PID", 0, N_("Profile given PID, and its future children."), 0 },
 #ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H  
   { "event", 'e', "EVENT", 0, N_("Sample given LIBPFM event specification."), 0 },
+#define ARGP_KEY_EVENT_LIST 0x1000
+  { "event-list", ARGP_KEY_EVENT_LIST, NULL, 0, N_("Sample given LIBPFM event specification."), 0 },  
 #endif
   { NULL, 0, NULL, 0, NULL, 0 }
 };
@@ -312,10 +314,47 @@ parse_opt (int key, char *arg, struct argp_state *state)
       pid = atoi(arg);
       break;
 
+#ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H  
     case 'e':
       libpfm_event = arg;
       break;
 
+    case ARGP_KEY_EVENT_LIST:
+      {
+	pfm_pmu_info_t pinfo;
+	pfm_event_info_t info;
+	
+	pfm_err_t rc = pfm_initialize();
+	if (rc != PFM_SUCCESS)
+	  {
+	    cerr << "ERROR: pfm_initialized failed"
+		 << ": " << pfm_strerror(rc) << endl;
+	    exit(1);
+	  }
+
+	memset(&pinfo, 0, sizeof(pinfo));
+	memset(&info, 0, sizeof(info));
+	pinfo.size = sizeof(pinfo);
+	info.size = sizeof(info);
+
+        for(int j= PFM_PMU_NONE ; j< PFM_PMU_MAX; j++)
+	  {
+	    pfm_err_t ret = pfm_get_pmu_info((pfm_pmu_t) j, &pinfo);
+	    if (ret != PFM_SUCCESS)
+	      continue;
+	    if (! pinfo.is_present)
+	      continue;
+	    for (int i = pinfo.first_event; i != -1; i = pfm_get_event_next(i))
+	      {
+		ret = pfm_get_event_info(i, PFM_OS_PERF_EVENT_EXT, &info);
+		if (ret == PFM_SUCCESS)
+		  cout << pinfo.name << "::" << info.name << endl;
+	      }
+	  }
+      }
+      exit(0);
+#endif
+      
     default:
       return ARGP_ERR_UNKNOWN;
     }
@@ -341,6 +380,16 @@ main (int argc, char *argv[])
   int pipefd[2] = {-1, -1}; // for CMD child process post-fork sync
   (void) argp_parse (&argp, argc, argv, 0, &remaining, NULL);
 
+  
+  if (pid > 0 && remaining < argc) // got a pid AND a cmd? reject
+    {
+      cerr << "ERROR: Must not specify both -p PID and CMD" << endl;
+      exit(1);
+    }
+  
+  bool systemwide = (pid == 0) || (remaining == argc);
+  (void) systemwide;
+  
   try
     {
       perf_event_attr attr;
@@ -357,9 +406,10 @@ main (int argc, char *argv[])
                    << ": " << pfm_strerror(rc) << endl;
               exit(1);
             }
-          pfm_perf_encode_arg_t arg = { .attr = &attr, .size = sizeof(arg) };
+	  char* fstr = nullptr;
+          pfm_perf_encode_arg_t arg = { .attr = &attr, .fstr=&fstr, .size = sizeof(arg) };
           rc = pfm_get_os_event_encoding(libpfm_event.c_str(),
-                                         PFM_PLM3, /* user level */ /* user+kernel: PFM_PLM3|PFM_PLM0 */
+                                         PFM_PLM3, /* userspace, whether systemwide or not */
                                          PFM_OS_PERF_EVENT_EXT, &arg);
           if (rc != PFM_SUCCESS)
             {
@@ -367,13 +417,23 @@ main (int argc, char *argv[])
                    << ": " << pfm_strerror(rc) << endl;
               exit(1);
             }
+	  if (verbose)
+	    {
+	      clog << "libpfm expanded " << libpfm_event << " to " << fstr << endl;
+	    }
+	  free(fstr);
 #endif
         }
       else
         {
+	  // same as: -e perf::CPU-CLOCK:freq=1000
           attr.type = PERF_TYPE_SOFTWARE;
           attr.config = PERF_COUNT_SW_CPU_CLOCK;
           attr.sample_freq = 1000;
+	  attr.freq = 1;
+	  attr.exclude_kernel = 1;
+	  attr.exclude_hv = 1;
+	  attr.exclude_guest = 1;
         }
 
 
@@ -383,11 +443,13 @@ main (int argc, char *argv[])
 	  clog << "perf_event_attr configuration" << hex << showbase
 	       << " type=" << attr.type
 	       << " config=" << attr.config
-	       << " sample_freq=" << attr.sample_freq << endl;
+	       << (attr.freq ? " sample_freq=" : " sample_period=")
+	       << (attr.freq ? attr.sample_freq : attr.sample_period)
+	       << endl;
 	  clog.setf(oldf);
 	}
       
-      if (pid == 0 && remaining < argc) // got a CMD... suffix?  ok start it
+      if (remaining < argc) // got a CMD... suffix?  ok start it
         {
           int rc = pipe (pipefd); // will use pipefd[] >= 0 as flag for synchronization just below
           if (rc < 0)
@@ -503,6 +565,8 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   this->page_count = 64; /* TODO: Decide on a large-enough power-of-2. */
   this->mmap_size = this->page_size * (this->page_count + 1); // total mmap size, incl header page
   this->event_wraparound_temp.resize(this->mmap_size); // NB: never resize this object again!
+  this->consumer = consumer;
+  this->enabled = false;
   
   Ebl *default_ebl = ebl_openbackend_machine(EM_X86_64); /* TODO: Generalize to architectures beyond x86. */
   this->sample_regs_user = ebl_perf_frame_regs_mask (default_ebl);
@@ -524,11 +588,23 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   // attr->precise_ip = 2; // request 0 skid ... but that conflicts with PERF_COUNT_HW_BRANCH_INSTRUCTIONS:freq=4000
   attr->build_id = 1; // request build ids in MMAP2 events
 
-  this->consumer = consumer;
-  
   if (pid > 0) // actually only once, to allow break in case of error
     attr->inherit = 1; // propagate to child processes
-      
+
+
+  if (verbose>3)
+    { // hexdump attr
+      auto oldf = clog.flags();	  
+      clog << "perf_event_attr hexdump:";
+      auto bytes = (unsigned char*) attr;
+      for (size_t x = 0; x<sizeof(*attr); x++)
+	cout << ((x % 8) ? "" : " ")
+	     << ((x % 32) ? "" : "\n")
+	     << hex << setw(2) << setfill('0') << (unsigned)bytes[x];
+      cout << endl;
+      clog.setf(oldf);
+    }
+  
   // Iterate over all cpus, even if attaching to a single pid, because
   // we set ->inherit=1.  That requires possible concurrency, which is
   // enabled by per-cpu ring buffers.
