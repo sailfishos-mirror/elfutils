@@ -92,6 +92,7 @@ notrans_dist_man3_MANS= elf32_checksum.3 \
 			elf_update.3 \
 			elf_version.3 \
 			gelf_fsize.3 \
+			gelf_getchdr.3 \
 			gelf_getclass.3 \
 			gelf_getehdr.3 \
 			gelf_getphdr.3 \
