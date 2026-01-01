@@ -115,6 +115,7 @@ notrans_dist_man3_MANS= elf32_checksum.3 \
 			gelf_offscn.3 \
 			gelf_update_ehdr.3 \
 			gelf_update_dyn.3 \
+			gelf_update_lib.3 \
 			gelf_update_move.3 \
 			gelf_update_phdr.3 \
 			gelf_update_shdr.3 \
