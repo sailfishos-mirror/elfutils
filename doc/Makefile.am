@@ -117,6 +117,8 @@ notrans_dist_man3_MANS= elf32_checksum.3 \
 			gelf_update_verdaux.3 \
 			gelf_update_verneed.3 \
 			gelf_update_vernaux.3 \
+			gelf_xlatetof.3 \
+			gelf_xlatetom.3 \
 			libelf.3
 
 # libdebuginfod man pages (also notrans)
