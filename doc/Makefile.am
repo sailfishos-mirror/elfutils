@@ -99,6 +99,7 @@ notrans_dist_man3_MANS= elf32_checksum.3 \
 			gelf_getrel.3 \
 			gelf_getrela.3 \
 			gelf_getsym.3 \
+			gelf_getsymshndx.3 \
 			gelf_getversym.3 \
 			gelf_getverdef.3 \
 			gelf_getverdaux.3 \
