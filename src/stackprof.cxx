@@ -84,13 +84,13 @@ private:
   int page_count;
   int mmap_size;
   vector<uint8_t> event_wraparound_temp; // for events straddling ring buffer end
-  
+
   void decode_event(const perf_event_header* ehdr);
 
 public:
   // PerfReader(perf_event_attr* attr, int pid, PerfConsumer* consumer); // attach to process hierarchy; may modify *attr
   PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid=-1);          // systemwide; may modify *attr
-  
+
   ~PerfReader();
 
   void process_some(); // run briefly, relay decoded perf_events to consumer
@@ -105,7 +105,7 @@ public:
   PerfConsumer() {}
   virtual ~PerfConsumer() {}
   virtual void process(const perf_event_header* sample) {}
-  
+
   virtual void process_comm(const perf_event_header* sample,
 			    uint32_t pid, uint32_t tid, bool exec, const char* comm) {}
   virtual void process_exit(const perf_event_header* sample,
@@ -134,7 +134,7 @@ public:
 class StatsPerfConsumer: public PerfConsumer
 {
   unordered_map<int,unsigned> event_type_counts;
-  
+
 public:
   StatsPerfConsumer() {}
   ~StatsPerfConsumer(); // report to stdout
@@ -225,8 +225,8 @@ public:
 class UnwindStatsConsumer: public UnwindSampleConsumer
 {
   unordered_map<int,unsigned> event_unwind_counts;
-  unordered_map<string,unsigned> event_buildid_hits;  
-  
+  unordered_map<string,unsigned> event_buildid_hits;
+
 public:
  UnwindStatsConsumer() {}
   ~UnwindStatsConsumer();
@@ -270,7 +270,7 @@ static const struct argp_option options[] =
   { "verbose", 'v', NULL, 0, N_ ("Increase verbosity of logging messages."), 0 },
   { "gmon", 'g', NULL, 0, N_("Generate gmon.BUILDID.out files for each binary."), 0 },
   { "pid", 'p', "PID", 0, N_("Profile given PID, and its future children."), 0 },
-#ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H  
+#ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H
   { "event", 'e', "EVENT", 0, N_("Sample given LIBPFM event specification."), 0 },
 #define ARGP_KEY_EVENT_LIST 0x1000
   { "event-list", ARGP_KEY_EVENT_LIST, NULL, 0, N_("Sample given LIBPFM event specification."), 0 },  
@@ -296,7 +296,7 @@ static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
   (void)state;
-  
+
   switch (key)
     {
     case ARGP_KEY_INIT:
@@ -314,7 +314,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       pid = atoi(arg);
       break;
 
-#ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H  
+#ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H
     case 'e':
       libpfm_event = arg;
       break;
@@ -323,7 +323,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       {
 	pfm_pmu_info_t pinfo;
 	pfm_event_info_t info;
-	
+
 	pfm_err_t rc = pfm_initialize();
 	if (rc != PFM_SUCCESS)
 	  {
@@ -354,7 +354,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       }
       exit(0);
 #endif
-      
+
     default:
       return ARGP_ERR_UNKNOWN;
     }
@@ -380,22 +380,22 @@ main (int argc, char *argv[])
   int pipefd[2] = {-1, -1}; // for CMD child process post-fork sync
   (void) argp_parse (&argp, argc, argv, 0, &remaining, NULL);
 
-  
+
   if (pid > 0 && remaining < argc) // got a pid AND a cmd? reject
     {
       cerr << "ERROR: Must not specify both -p PID and CMD" << endl;
       exit(1);
     }
-  
+
   bool systemwide = (pid == 0) || (remaining == argc);
   (void) systemwide;
-  
+
   try
     {
       perf_event_attr attr;
       memset(&attr, 0, sizeof(attr));
       attr.size = sizeof(attr);
-      
+
       if (libpfm_event != "")
         {
 #if HAVE_PERFMON_PFMLIB_PERF_EVENT_H
@@ -439,7 +439,7 @@ main (int argc, char *argv[])
 
       if (verbose>1)
 	{
-	  auto oldf = clog.flags();	  
+	  auto oldf = clog.flags();
 	  clog << "perf_event_attr configuration" << hex << showbase
 	       << " type=" << attr.type
 	       << " config=" << attr.config
@@ -448,7 +448,7 @@ main (int argc, char *argv[])
 	       << endl;
 	  clog.setf(oldf);
 	}
-      
+
       if (remaining < argc) // got a CMD... suffix?  ok start it
         {
           int rc = pipe (pipefd); // will use pipefd[] >= 0 as flag for synchronization just below
@@ -496,7 +496,7 @@ main (int argc, char *argv[])
       UnwindStatsConsumer *usc = nullptr;
       PerfConsumerUnwinder *pcu = nullptr;
       StatsPerfConsumer *spc = nullptr;
-      
+
       if (gmon)
 	{
 	  usc = new UnwindStatsConsumer();
@@ -513,9 +513,9 @@ main (int argc, char *argv[])
 	  spc = new StatsPerfConsumer();
 	  pr = new PerfReader(&attr, spc, pid);
 	}
-      
+
       signal(SIGINT, sigint_handler);
-      signal(SIGTERM, sigint_handler);      
+      signal(SIGTERM, sigint_handler);
 
       if (pid > 0 && pipefd[0]>=0) // need to release child CMD process?
         {
@@ -531,7 +531,7 @@ main (int argc, char *argv[])
           else clog << "systemwide";
           clog << endl;
         }
-      
+
       while (true) // main loop
         {
           if (interrupted) break;
@@ -544,14 +544,14 @@ main (int argc, char *argv[])
       delete usc;
       delete pcu;
       delete spc;
-      
+
       // reporting done in various destructors
     }
   catch (const exception& e)
     {
-      cerr << e.what() << endl; 
+      cerr << e.what() << endl;
     }
-  
+
   return 0;
 }
 
@@ -567,11 +567,11 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   this->event_wraparound_temp.resize(this->mmap_size); // NB: never resize this object again!
   this->consumer = consumer;
   this->enabled = false;
-  
+
   Ebl *default_ebl = ebl_openbackend_machine(EM_X86_64); /* TODO: Generalize to architectures beyond x86. */
   this->sample_regs_user = ebl_perf_frame_regs_mask (default_ebl);
   this->sample_regs_count = bitset<64>(this->sample_regs_user).count();
-  
+
   attr->sample_regs_user = this->sample_regs_user;
   attr->sample_stack_user = 8192; // enough?
   attr->sample_type = (PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME);
@@ -584,7 +584,7 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   attr->disabled = 1; /* will get enabled soon */
   attr->task = 1; // catch FORK/EXIT
   attr->comm = 1; // catch EXEC
-  attr->comm_exec = 1; // catch EXEC  
+  attr->comm_exec = 1; // catch EXEC
   // attr->precise_ip = 2; // request 0 skid ... but that conflicts with PERF_COUNT_HW_BRANCH_INSTRUCTIONS:freq=4000
   attr->build_id = 1; // request build ids in MMAP2 events
 
@@ -594,7 +594,7 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
 
   if (verbose>3)
     { // hexdump attr
-      auto oldf = clog.flags();	  
+      auto oldf = clog.flags();
       clog << "perf_event_attr hexdump:";
       auto bytes = (unsigned char*) attr;
       for (size_t x = 0; x<sizeof(*attr); x++)
@@ -604,7 +604,7 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
       cout << endl;
       clog.setf(oldf);
     }
-  
+
   // Iterate over all cpus, even if attaching to a single pid, because
   // we set ->inherit=1.  That requires possible concurrency, which is
   // enabled by per-cpu ring buffers.
@@ -685,7 +685,7 @@ void PerfReader::process_some()
   uint64_t starttime = millis_monotonic();
   uint64_t endtime = starttime + 1000; // run at most one second
   uint64_t ring_buffer_size = this->page_size * this->page_count; // just the ring buffer size
-  
+
   while (! interrupted)
     {
       uint64_t now = millis_monotonic();
@@ -699,8 +699,8 @@ void PerfReader::process_some()
         if (this->pollfds[i].revents & POLLIN) // found an fd with fresh yummy events
           {
             perf_event_mmap_page *header = perf_headers[i];
-	    uint64_t data_head = ring_buffer_read_head(header);
-            uint64_t data_tail = header->data_tail; 
+            uint64_t data_head = ring_buffer_read_head(header);
+            uint64_t data_tail = header->data_tail;
             uint8_t *base = ((uint8_t *) header) + this->page_size;
             struct perf_event_header *ehdr;
             size_t ehdr_size;
@@ -713,8 +713,8 @@ void PerfReader::process_some()
                   clog << "perf head=" << (void*) data_head
                        << " tail=" << (void*) data_tail
                        << " ehdr=" << (void*) ehdr
-		       << " size=" << setbase(10) << ehdr_size << setbase(16) << endl;
-                
+                       << " size=" << setbase(10) << ehdr_size << setbase(16) << endl;
+
                 if (((uint8_t *)ehdr) + ehdr_size > base + ring_buffer_size) // mmap region wraparound?
                   {
                     // need to copy it to a contiguous temporary
@@ -724,7 +724,7 @@ void PerfReader::process_some()
                     uint8_t *event_temp = this->event_wraparound_temp.data();
                     memcpy(event_temp, copy_start, len_first);       // part at end of mmap'd region
                     memcpy(event_temp + len_first, base, len_secnd); // part at beginning of mmap'd region
-                    ehdr = (perf_event_header*) event_temp; 
+                    ehdr = (perf_event_header*) event_temp;
                   }
 
                 this->decode_event(ehdr);
@@ -766,7 +766,7 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
         uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
         uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
         const char* comm = reinterpret_cast<const char*>(data);
-	consumer->process_comm(ehdr, pid, tid, (ehdr->misc & PERF_RECORD_MISC_COMM_EXEC), comm);
+        consumer->process_comm(ehdr, pid, tid, (ehdr->misc & PERF_RECORD_MISC_COMM_EXEC), comm);
         break;
       }
     case PERF_RECORD_EXIT:
@@ -957,7 +957,6 @@ UnwindStatsConsumer::~UnwindStatsConsumer()
   cout << "buildid / unwind-hit counts:" << endl;
   for (const auto& kv : this->event_buildid_hits)
     cout << "buildid " << kv.first << " count " << kv.second << endl;
-  
 }
 
 void UnwindStatsConsumer::process(const UnwindSample* sample)
