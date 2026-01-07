@@ -15,6 +15,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+/* TODO Run the prototype e.g.
+   sudo env LD_LIBRARY_PATH=...prefix/lib:$LD_LIBRARY_PATH ...prefix/bin/eu-stackprof --gmon -vvvv
+*/
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -33,6 +37,7 @@
 #include <cassert>
 #include <chrono>
 #include <iostream>
+#include <cinttypes>
 
 #include <sys/syscall.h>
 #include <sys/ioctl.h>
@@ -44,6 +49,9 @@
 #endif
 #include <argp.h>
 #include <fcntl.h>
+#include <dirent.h>
+
+#include <system.h>
 
 #ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H
 #include <perfmon/pfmlib_perf_event.h>
@@ -58,6 +66,47 @@
 
 using namespace std;
 
+
+////////////////////////////////////////////////////////////////////////
+// find_debuginfo callbacks
+
+#ifdef FIND_DEBUGINFO
+
+static char *debuginfo_path = NULL;
+
+static const Dwfl_Callbacks dwfl_cfi_callbacks =
+  {
+    .find_elf = dwflst_tracker_linux_proc_find_elf,
+    .find_debuginfo = dwfl_standard_find_debuginfo,
+    .debuginfo_path = &debuginfo_path,
+  };
+
+#else
+
+int
+nop_find_debuginfo (Dwfl_Module *mod __attribute__((unused)),
+		    void **userdata __attribute__((unused)),
+		    const char *modname __attribute__((unused)),
+		    GElf_Addr base __attribute__((unused)),
+		    const char *file_name __attribute__((unused)),
+		    const char *debuglink_file __attribute__((unused)),
+		    GElf_Word debuglink_crc __attribute__((unused)),
+		    char **debuginfo_file_name __attribute__((unused)))
+{
+#ifdef DEBUG_MODULES
+  fprintf(stderr, "nop_find_debuginfo: modname=%s file_name=%s debuglink_file=%s\n",
+	  modname, file_name, debuglink_file);
+#endif
+  return -1;
+}
+
+static const Dwfl_Callbacks dwfl_cfi_callbacks =
+{
+  .find_elf = dwflst_tracker_linux_proc_find_elf,
+  .find_debuginfo = nop_find_debuginfo, /* work with CFI only */
+};
+
+#endif /* FIND_DEBUGINFO */
 
 ////////////////////////////////////////////////////////////////////////
 // class decls
@@ -77,6 +126,7 @@ private:
   vector<pollfd> pollfds;
 
   PerfConsumer* consumer; // pluralize!
+  Ebl* default_ebl;
   uint64_t sample_regs_user;
   int sample_regs_count;
   bool enabled;
@@ -94,6 +144,8 @@ public:
   ~PerfReader();
 
   void process_some(); // run briefly, relay decoded perf_events to consumer
+  uint64_t regs_mask() { return this->sample_regs_user; }
+  Ebl *ebl() { return this->default_ebl; }
 };
 
 
@@ -102,7 +154,10 @@ public:
 class PerfConsumer
 {
 public:
+  /* TODO(REVIEW.1): Need a cleaner way to access PerfReader metadata than this two-way spaghetti. */
+  PerfReader *reader; /* access sample_regs_user etc. metadata */
   PerfConsumer() {}
+  PerfConsumer(PerfReader *reader) : reader(reader) {}
   virtual ~PerfConsumer() {}
   virtual void process(const perf_event_header* sample) {}
 
@@ -162,7 +217,22 @@ public:
 };
 
 
-struct UnwindSample;
+// An UnwindSample records an unwound call stack from a perf-event
+// sample.
+struct UnwindSample
+{
+  const perf_event_header *event;
+  uint32_t pid, tid;
+  vector<pair<string,Dwarf_Addr>> buildid_reladdrs;
+  vector<Dwarf_Addr> addrs;
+  int elfclass;
+  Dwarf_Addr base; /* for diagnostic purposes */
+  Dwarf_Addr sp; /* for diagnostic purposes */
+  Dwfl *dwfl; /* for diagnostic purposes */
+};
+
+
+struct DwflEntry;
 class UnwindSampleConsumer;
 
 
@@ -172,9 +242,32 @@ class UnwindSampleConsumer;
 class PerfConsumerUnwinder: public PerfConsumer
 {
   UnwindSampleConsumer *consumer;
+  UnwindSample last_us;
+  Dwflst_Process_Tracker *tracker;
+  unordered_map<pid_t, DwflEntry> dwfltab;
+
+  DwflEntry *dwfltab_find(pid_t pid);
+  const char *pid_find_comm(pid_t pid);
+  void pid_store_dwfl(pid_t pid, Dwfl *dwfl);
+  int find_procfile(Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd);
+  Dwfl *find_dwfl(pid_t pid, const uint64_t *regs, uint32_t nregs,
+		  Elf **elf, bool *cached);
+
 public:
-  PerfConsumerUnwinder(UnwindSampleConsumer* usc): consumer(usc) {}
-  ~PerfConsumerUnwinder() {}
+  PerfConsumerUnwinder(UnwindSampleConsumer* usc): consumer(usc) {
+    this->tracker = dwflst_tracker_begin (&dwfl_cfi_callbacks);
+  }
+  PerfConsumerUnwinder(UnwindSampleConsumer* usc, PerfReader *reader): consumer(usc) {
+    this->reader = reader;
+    this->tracker = dwflst_tracker_begin (&dwfl_cfi_callbacks);
+  }
+  ~PerfConsumerUnwinder() {
+    dwflst_tracker_end (this->tracker);
+  }
+
+  /* libdwfl{st} callbacks */
+  Dwfl *init_dwfl(pid_t pid);
+  int unwind_frame_cb(Dwfl_Frame *state);
 
   void process_comm(const perf_event_header* sample,
 		    uint32_t pid, uint32_t tid, bool exec, const char* comm);
@@ -197,17 +290,6 @@ public:
 		     uint8_t build_id_size, const uint8_t *build_id,
 		     const char *filename);
 };
-
-
-// An UnwindSample records an unwound call stack from a perf-event
-// sample.
-struct UnwindSample
-{
-  const perf_event_header *event;
-  uint32_t pid, tid;
-  vector<pair<string,Dwarf_Addr>> buildid_reladdrs;
-};
-
 
 // An UnwindSampleConsumer receives an UnwindSample from a PerfConsumerUnwinder.
 // Pure abstract.
@@ -287,7 +369,7 @@ static const struct argp argp =
 
 
 // Globals set based on command line options:
-static unsigned verbose;
+static unsigned verbose; /* TODO(REVIEW.2): Return the show_ETC constants, derived from verbosity level. */
 static bool gmon;
 static int pid;
 static string libpfm_event;
@@ -504,8 +586,8 @@ main (int argc, char *argv[])
 	  pr = new PerfReader(&attr, pcu, pid);
 #if 0
 	  GprofUnwindSampleConsumer usc;
-	  PerfConsumerUnwinder pcu(&usc);
 	  PerfReader pr(&attr, &pcu, pid);
+	  PerfConsumerUnwinder pcu(&usc, pr);
 #endif
 	}
       else
@@ -566,10 +648,11 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   this->mmap_size = this->page_size * (this->page_count + 1); // total mmap size, incl header page
   this->event_wraparound_temp.resize(this->mmap_size); // NB: never resize this object again!
   this->consumer = consumer;
+  consumer->reader = this;
   this->enabled = false;
 
-  Ebl *default_ebl = ebl_openbackend_machine(EM_X86_64); /* TODO: Generalize to architectures beyond x86. */
-  this->sample_regs_user = ebl_perf_frame_regs_mask (default_ebl);
+  this->default_ebl = ebl_openbackend_machine(EM_X86_64); /* TODO: Generalize to architectures beyond x86. */
+  this->sample_regs_user = ebl_perf_frame_regs_mask (this->default_ebl);
   this->sample_regs_count = bitset<64>(this->sample_regs_user).count();
 
   attr->sample_regs_user = this->sample_regs_user;
@@ -901,9 +984,364 @@ void StatsPerfConsumer::process(const perf_event_header* ehdr)
   this->event_type_counts[ehdr->type] ++;
 }
 
+////////////////////////////////////////////////////////////////////////
+// real perf consumer: unwind helpers
+
+/* TODO (REVIEW.3): Add the code to print the final statistics table neatly. */
+struct DwflEntry {
+  Dwfl *dwfl;
+  char *comm;
+  int max_frames; /* for diagnostic purposes */
+  int total_samples; /* for diagnostic purposes */
+  int lost_samples; /* for diagnostic purposes */
+  Dwfl_Unwound_Source last_unwound; /* track CFI source, for diagnostic purposes */
+  Dwfl_Unwound_Source worst_unwound; /* track CFI source, for diagnostic purposes */
+};
+
+DwflEntry *PerfConsumerUnwinder::dwfltab_find(pid_t pid)
+{
+  if (this->dwfltab.count(pid) == 0)
+    this->dwfltab.emplace(pid, DwflEntry());
+  return &this->dwfltab[pid];
+}
+
+static const char *unknown_comm = "<unknown>";
+
+/* TODO (REVIEW.4): Obtaining comm is helpful for statistics, but should be disabled on low verbosity levels. */
+const char *PerfConsumerUnwinder::pid_find_comm(pid_t pid)
+{
+  DwflEntry *entry = this->dwfltab_find(pid);
+  if (entry == NULL)
+    return unknown_comm;
+  if (entry->comm != NULL)
+    return entry->comm;
+  char name[64];
+  int i = snprintf (name, sizeof(name), "/proc/%ld/comm", (long) pid);
+  FILE *procfile = fopen(name, "r");
+  size_t linelen = 0;
+  if (procfile == NULL)
+    goto fail;
+  i = getline(&entry->comm, &linelen, procfile);
+  if (i < 0)
+    {
+      free(entry->comm);
+      goto fail;
+    }
+  for (i = linelen - 1; i > 0; i--)
+    if (entry->comm[i] == '\n')
+	entry->comm[i] = '\0';
+  fclose(procfile);
+  goto done;
+ fail:
+  entry->comm = (char *)malloc(16);
+  snprintf (entry->comm, 16, unknown_comm);
+ done:
+  return entry->comm;
+}
+
+void PerfConsumerUnwinder::pid_store_dwfl (pid_t pid, Dwfl *dwfl)
+{
+  DwflEntry *entry = this->dwfltab_find(pid);
+  if (entry == NULL)
+    return;
+  entry->dwfl = dwfl;
+  this->pid_find_comm(pid);
+  return;
+}
+
+/* TODO: Including extern "C" libdwflP.h in a C++ program is a no-go. Add dwfl_process() &c as an API? */
+struct _DwflHack
+{
+  const Dwfl_Callbacks *callbacks;
+  Dwflst_Process_Tracker *tracker;
+#ifdef ENABLE_LIBDEBUGINFOD
+  debuginfod_client *debuginfod;
+#endif
+  Dwfl_Module *modulelist;
+  void *process;
+  /* Dwfl_Error attacherr; -- private type :( */
+  /* ... */
+};
+
+void *dwfl_process(Dwfl *dwfl)
+{
+  // return dwfl->process;
+  return ((_DwflHack*)dwfl)->process;
+}
+
+// bool dwfl_has_attacherr(Dwfl *dwfl)
+// {
+//   return dwfl->attacherr != DWFL_E_NOERROR;
+// }
+
+/* TODO: Could be relocated to libdwfl/linux-pid-attach.c
+   to remove a dependency on the libdwflP.h interface. */
+int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
+{
+  char buffer[36];
+  FILE *procfile;
+  int err = 0; /* The errno to return and set for dwfl->attacherr.  */
+
+  /* Make sure to report the actual PID (thread group leader) to
+     dwfl_attach_state.  */
+  snprintf (buffer, sizeof (buffer), "/proc/%ld/status", (long) *pid);
+  procfile = fopen (buffer, "r");
+  if (procfile == NULL)
+    {
+      err = errno;
+    fail:
+      /* TODO: Including extern "C" libdwflP.h in a C++ program is a no-go. */
+      // if (dwfl->process == NULL && dwfl->attacherr == DWFL_E_NOERROR) /* XXX requires libdwflP.h */
+      // if (dwfl_process(dwfl) == NULL && !dwfl_has_attacherr(dwfl))
+      //   {
+      //     errno = err;
+      //     /* TODO: __libdwfl_canon_error not exported from libdwfl */
+      //     /* dwfl->attacherr = __libdwfl_canon_error (DWFL_E_ERRNO); */
+      //   }
+      return err;
+    }
+
+  char *line = NULL;
+  size_t linelen = 0;
+  while (getline (&line, &linelen, procfile) >= 0)
+    if (startswith (line, "Tgid:"))
+      {
+	errno = 0;
+	char *endptr;
+	long val = strtol (&line[5], &endptr, 10);
+	if ((errno == ERANGE && val == LONG_MAX)
+	    || *endptr != '\n' || val < 0 || val != (pid_t) val)
+	  *pid = 0;
+	else
+	  *pid = (pid_t) val;
+	break;
+      }
+  free (line);
+  fclose (procfile);
+
+  if (*pid == 0)
+    {
+      err = ESRCH;
+      goto fail;
+    }
+
+  char name[64];
+  int i = snprintf (name, sizeof (name), "/proc/%ld/task", (long) *pid);
+  if (i <= 0 || i >= (ssize_t) sizeof (name) - 1)
+    {
+      errno = -ENOMEM;
+      goto fail;
+    }
+  DIR *dir = opendir (name);
+  if (dir == NULL)
+    {
+      err = errno;
+      goto fail;
+    }
+  else
+    closedir(dir);
+
+  i = snprintf (name, sizeof (name), "/proc/%ld/exe", (long) *pid);
+  assert (i > 0 && i < (ssize_t) sizeof (name) - 1);
+  *elf_fd = open (name, O_RDONLY);
+  if (*elf_fd >= 0)
+    {
+      *elf = elf_begin (*elf_fd, ELF_C_READ_MMAP, NULL);
+      if (*elf == NULL)
+	{
+	  /* Just ignore, dwfl_attach_state will fall back to trying
+	     to associate the Dwfl with one of the existing Dwfl_Module
+	     ELF images (to know the machine/class backend to use).  */
+	  if (verbose > 1) /* TODO show_failures */
+	    fprintf(stderr, N_("find_procfile pid %lld: elf not found"),
+		    (long long)*pid);
+	  close (*elf_fd);
+	  *elf_fd = -1;
+	}
+    }
+  else
+    *elf = NULL;
+  return 0;
+}
+
+Dwfl *PerfConsumerUnwinder::init_dwfl(pid_t pid)
+{
+  Dwfl *dwfl = dwflst_tracker_dwfl_begin (this->tracker);
+
+  int err = dwfl_linux_proc_report (dwfl, pid);
+  if (err < 0)
+    {
+      if (verbose > 1) /* TODO show_failures */
+	fprintf(stderr, "dwfl_linux_proc_report pid %lld: %s",
+		(long long) pid, dwfl_errmsg (-1));
+      return NULL;
+    }
+  err = dwfl_report_end (dwfl, NULL, NULL);
+  if (err != 0)
+    {
+      if (verbose > 1) /* TODO show_failures */
+	fprintf(stderr, "dwfl_report_end pid %lld: %s",
+		(long long) pid, dwfl_errmsg (-1));
+      return NULL;
+    }
+
+  return dwfl;
+}
+
+Dwfl *pcu_init_dwfl_cb (Dwflst_Process_Tracker *cb_tracker __attribute__ ((unused)),
+			pid_t pid,
+			void *arg)
+{
+  PerfConsumerUnwinder *pcu = (PerfConsumerUnwinder *)arg;
+  return pcu->init_dwfl (pid);
+}
+
+Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t nregs,
+				      Elf **out_elf, bool *cached)
+{
+  /* XXX: Note that requesting the x86_64 register file from
+     perf_events will result in an array of 17 regs even for 32-bit
+     applications. */
+  if (nregs < ebl_frame_nregs(this->reader->ebl())) /* XXX expecting everything except FLAGS */
+    {
+      if (verbose > 1) /* TODO show_failures */
+	fprintf(stderr, N_("find_dwfl: nregs=%d, expected %ld\n"),
+		nregs, ebl_frame_nregs(this->reader->ebl()));
+      return NULL;
+    }
+
+  Elf *elf = NULL;
+  Dwfl *dwfl = dwflst_tracker_find_pid (this->tracker, pid, pcu_init_dwfl_cb, this);
+  int elf_fd = -1;
+  int err;
+  if (dwfl != NULL && dwfl_process(dwfl) != NULL)
+    {
+      *cached = true;
+      goto reuse;
+    }
+  err = this->find_procfile (dwfl, &pid, &elf, &elf_fd);
+  if (err < 0)
+    {
+      if (verbose > 1) /* TODO show_failures */
+	fprintf(stderr, "find_procfile pid %lld: %s",
+		(long long) pid, dwfl_errmsg (-1));
+      return NULL;
+    }
+
+ reuse:
+  /* TODO: Generalize to other architectures than x86. */
+  this->last_us.sp = regs[7];
+  this->last_us.base = this->last_us.sp;
+
+  if (!*cached)
+    this->pid_store_dwfl (pid, dwfl);
+  *out_elf = elf;
+  return dwfl;
+}
+
+int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
+{
+  /* TODO */
+  Dwarf_Addr pc;
+  bool isactivation;
+  if (! dwfl_frame_pc (state, &pc, &isactivation))
+    {
+      if (verbose > 1) /* TODO show_failures */
+	fprintf(stderr, "dwfl_frame_pc: %s\n",
+		dwfl_errmsg(-1));
+      return DWARF_CB_ABORT;
+    }
+
+  Dwarf_Addr pc_adjusted = pc - (isactivation ? 0 : 1);
+  Dwarf_Addr sp;
+
+  int is_abi32 = (this->last_us.elfclass == ELFCLASS32);
+  /* DWARF register order cf. elfutils backends/{x86_64,i386}_initreg.c: */
+  int user_regs_sp = is_abi32 ? 4 : 7;
+  int rc = dwfl_frame_reg (state, user_regs_sp, &sp);
+  if (rc < 0)
+    {
+      if (verbose > 1) /* TODO show_failures */
+	fprintf(stderr, "dwfl_frame_reg: %s\n",
+		dwfl_errmsg(-1));
+      return DWARF_CB_ABORT;
+    }
+
+#ifdef DEBUG_MODULES
+  Dwfl_Module *mod = dwfl_addrmodule(this->last_us.dwfl, pc);
+  if (mod == NULL)
+    {
+      fprintf(stderr, "* pc=%lx -> NO MODULE\n", pc);
+    }
+  else
+    {
+      const char *mainfile;
+      const char *debugfile;
+      const char *modname = dwfl_module_info (mod, NULL, NULL, NULL, NULL,
+					      NULL, &mainfile, &debugfile);
+      fprintf (stderr, "* module %s -> mainfile=%s debugfile=%s\n", modname, mainfile, debugfile);
+      Dwarf_Addr bias;
+      Dwarf_CFI *cfi_eh = dwfl_module_eh_cfi (mod, &bias);
+      if (cfi_eh == NULL)
+	fprintf(stderr, "* pc=%lx -> NO EH_CFI\n", pc);
+    }
+#endif
+
+  DwflEntry *dwfl_ent = this->dwfltab_find(this->last_us.pid);
+  if (dwfl_ent != NULL)
+    {
+      Dwfl_Unwound_Source unwound_source = dwfl_frame_unwound_source(state);
+      if (unwound_source > dwfl_ent->worst_unwound)
+	dwfl_ent->worst_unwound = unwound_source;
+      dwfl_ent->last_unwound = unwound_source;
+      if (verbose > 3) /* TODO show_frames */
+	fprintf(stderr, "* frame %ld: pc_adjusted=%lx sp=%lx+(%lx) [%s]\n",
+		this->last_us.addrs.size(), pc_adjusted, this->last_us.base, sp - this->last_us.base,
+		dwfl_unwound_source_str(unwound_source));
+    }
+  else
+    {
+      if (verbose > 3) /* TODO show_frames */
+	fprintf(stderr, N_("* frame %ld: pc_adjusted=%lx sp=%lx+(%lx) [dwfl_ent not found]\n"),
+		this->last_us.addrs.size(), pc_adjusted, this->last_us.base, sp - this->last_us.base);
+    }
+  if (verbose > 4) /* TODO show_buildid */
+    {
+      Dwfl_Module *m = dwfl_addrmodule(this->last_us.dwfl, pc);
+      const unsigned char *desc;
+      GElf_Addr vaddr;
+      int build_id_len = dwfl_module_build_id (m, &desc, &vaddr);
+      fprintf(stderr, "* pid %d build_id ", this->last_us.pid);
+      for (int i = 0; i < build_id_len; ++i)
+	fprintf(stderr, "%02" PRIx8, (uint8_t) desc[i]);
+      fprintf(stderr, "\n");
+    }
+
+#if 0
+  /* TODO */
+  if (this->last_us.addrs.size() > maxframes)
+    {
+      /* XXX very rarely, the unwinder can loop infinitely; worth investigating? */
+      if (verbose > 1) /* TODO show_frames */
+	fprintf(stderr, N_("unwind_frame_cb: sample exceeded maxframes %d\n"),
+		maxframes);
+      return DWARF_CB_ABORT;
+    }
+#endif
+
+  this->last_us.sp = sp;
+  this->last_us.addrs.push_back(pc);
+  return DWARF_CB_OK;
+}
+
+int pcu_unwind_frame_cb(Dwfl_Frame *state, void *arg)
+{
+  PerfConsumerUnwinder *pcu = (PerfConsumerUnwinder *)arg;
+  return pcu->unwind_frame_cb(state);
+}
 
 ////////////////////////////////////////////////////////////////////////
-// real perf consumer: unwinder
+// real perf consumer: event handler callbacks
 
 void PerfConsumerUnwinder::process_comm(const perf_event_header *sample,
 					uint32_t pid, uint32_t tid, bool exec, const char *comm)
@@ -930,10 +1368,72 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
 					  uint32_t nregs, const uint64_t *regs,
 					  uint64_t data_size, const uint8_t *data)
 {
-  // fake: generate a fake unwindrecord and send it to our consumer
-  UnwindSample x = {.event = sample,
-		    .pid = pid, .tid = tid};
-  this->consumer->process (& x);
+  const char *comm = this->pid_find_comm(pid);
+
+  if (verbose > 3) /* TODO show_frames */
+    cout << endl; /* extra newline for padding */
+
+  Elf *elf = NULL;
+  bool cached = false;
+  Dwfl *dwfl = this->find_dwfl (pid, regs, nregs, &elf, &cached);
+  DwflEntry *dwfl_ent = NULL;
+  if (dwfl == NULL)
+    {
+      if (verbose > 2) /* TODO show_summary */
+	{
+	  if (dwfl_ent == NULL)
+	    dwfl_ent = this->dwfltab_find(pid);
+	  dwfl_ent->total_samples++;
+	  dwfl_ent->lost_samples++;
+	}
+      if (verbose > 1) /* TODO show_failures */
+	{
+	  fprintf(stderr, "find_dwfl pid %lld (%s) (failed)\n",
+		  (long long)pid, comm);
+	}
+      return;
+    }
+
+  if (verbose > 3) /* TODO show_frames */
+    {
+      bool is_abi32 = (abi == PERF_SAMPLE_REGS_ABI_32);
+      fprintf(stderr, "find_dwfl pid %lld%s (%s): hdr_size=%d size=%ld%s pc=%lx sp=%lx+(%lx)\n",
+	      (long long)pid, cached ? " (cached)" : "", comm,
+	      sample->size, data_size, is_abi32 ? " (32-bit)" : "",
+	      ip, this->last_us.base, (long)0);
+    }
+
+  this->last_us.addrs.clear();
+  this->last_us.elfclass = (abi == PERF_SAMPLE_REGS_ABI_32 ? ELFCLASS32 : ELFCLASS64);
+  this->last_us.dwfl = dwfl;
+  this->last_us.pid = pid;
+  int rc = dwflst_perf_sample_getframes (dwfl, elf, pid, tid,
+					 data, data_size,
+					 regs, nregs,
+					 this->reader->regs_mask(), abi,
+					 pcu_unwind_frame_cb, this);
+  if (rc < 0)
+    {
+      if (verbose > 1) /* TODO show_failures */
+	{
+	  fprintf(stderr, "dwflst_perf_sample_getframes pid %lld: %s\n",
+		  (long long)pid, dwfl_errmsg(-1));
+	}
+    }
+  if (verbose > 2) /* TODO show_summary */
+    {
+      /* For final diagnostics. */
+      if (dwfl_ent == NULL)
+	dwfl_ent = this->dwfltab_find(pid);
+      if (this->last_us.addrs.size() > (unsigned long)dwfl_ent->max_frames)
+	dwfl_ent->max_frames = this->last_us.addrs.size();
+      dwfl_ent->total_samples++;
+      if (this->last_us.addrs.size() <= 2)
+	dwfl_ent->lost_samples++;
+    }
+
+  this->consumer->process (&this->last_us);
+  return;
 }
 void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
 					 uint32_t pid, uint32_t tid,
@@ -941,7 +1441,7 @@ void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
 					 uint8_t build_id_size, const uint8_t *build_id,
 					 const char *filename)
 {
-  // have dwflst for pid report new module
+  // TODO(REVIEW.5): have dwflst for pid report new module
 }
 
 
@@ -952,7 +1452,7 @@ UnwindStatsConsumer::~UnwindStatsConsumer()
 {
   cout << "pid / unwind-hit counts:" << endl;
   for (const auto& kv : this->event_unwind_counts)
-    cout << "pid " << kv.first << " count " << kv.second << endl;
+    cout << "pid " << setbase(10) << kv.first << setbase(16) << " count " << kv.second << endl;
 
   cout << "buildid / unwind-hit counts:" << endl;
   for (const auto& kv : this->event_buildid_hits)
