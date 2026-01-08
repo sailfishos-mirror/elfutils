@@ -153,11 +153,14 @@ public:
 // perf event records from a PerfReader.  Pure interface.
 class PerfConsumer
 {
-public:
-  /* TODO(REVIEW.1): Need a cleaner way to access PerfReader metadata than this two-way spaghetti. */
+protected:
   PerfReader *reader; /* access sample_regs_user etc. metadata */
+
+public:
   PerfConsumer() {}
   PerfConsumer(PerfReader *reader) : reader(reader) {}
+  void set_reader(PerfReader *reader) { this->reader = reader; }
+
   virtual ~PerfConsumer() {}
   virtual void process(const perf_event_header* sample) {}
 
@@ -369,10 +372,17 @@ static const struct argp argp =
 
 
 // Globals set based on command line options:
-static unsigned verbose; /* TODO(REVIEW.2): Return the show_ETC constants, derived from verbosity level. */
+static unsigned verbose;
 static bool gmon;
 static int pid;
+static unsigned long maxframes = 256;
 static string libpfm_event;
+
+// Verbosity beyond level 1:
+static bool show_summary = false;
+static bool show_events = false;
+static bool show_frames = false;
+static bool show_tmi = false; /* -> perf, cfi details */
 
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
@@ -394,6 +404,10 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
     case 'p':
       pid = atoi(arg);
+      break;
+
+    case 'd':
+      maxframes = atoi(arg);
       break;
 
 #ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H
@@ -462,6 +476,10 @@ main (int argc, char *argv[])
   int pipefd[2] = {-1, -1}; // for CMD child process post-fork sync
   (void) argp_parse (&argp, argc, argv, 0, &remaining, NULL);
 
+  if (verbose > 1) show_summary = true;
+  if (verbose > 2) show_events = true;
+  if (verbose > 3) show_frames = true;
+  if (verbose > 4) show_tmi = true;
 
   if (pid > 0 && remaining < argc) // got a pid AND a cmd? reject
     {
@@ -519,7 +537,7 @@ main (int argc, char *argv[])
         }
 
 
-      if (verbose>1)
+      if (show_summary)
 	{
 	  auto oldf = clog.flags();
 	  clog << "perf_event_attr configuration" << hex << showbase
@@ -648,7 +666,7 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   this->mmap_size = this->page_size * (this->page_count + 1); // total mmap size, incl header page
   this->event_wraparound_temp.resize(this->mmap_size); // NB: never resize this object again!
   this->consumer = consumer;
-  consumer->reader = this;
+  this->consumer->set_reader(this);
   this->enabled = false;
 
   this->default_ebl = ebl_openbackend_machine(EM_X86_64); /* TODO: Generalize to architectures beyond x86. */
@@ -675,7 +693,7 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
     attr->inherit = 1; // propagate to child processes
 
 
-  if (verbose>3)
+  if (show_tmi)
     { // hexdump attr
       auto oldf = clog.flags();
       clog << "perf_event_attr hexdump:";
@@ -792,7 +810,7 @@ void PerfReader::process_some()
               {
                 ehdr = (perf_event_header*) (base + (data_tail & (ring_buffer_size - 1)));
                 ehdr_size = ehdr->size;
-                if (verbose > 3)
+                if (show_tmi)
                   clog << "perf head=" << (void*) data_head
                        << " tail=" << (void*) data_tail
                        << " ehdr=" << (void*) ehdr
@@ -911,7 +929,7 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
 void StatsPerfConsumer::process_comm(const perf_event_header *sample,
 				     uint32_t pid, uint32_t tid, bool exec, const char *comm)
 {
-  if (verbose > 2)
+  if (show_events)
     {
       clog << "process_comm: pid=" << pid << " tid=" << tid << " exec=" << exec << " comm=" << comm << endl;
     }
@@ -921,7 +939,7 @@ void StatsPerfConsumer::process_exit(const perf_event_header *sample,
 				     uint32_t pid, uint32_t ppid,
 				     uint32_t tid, uint32_t ptid)
 {
-  if (verbose > 2)
+  if (show_events)
     {
       clog << "process_exit: pid=" << pid << " ppid=" << ppid << " tid=" << tid << " ptid=" << ptid << endl;
     }
@@ -931,7 +949,7 @@ void StatsPerfConsumer::process_fork(const perf_event_header *sample,
 				     uint32_t pid, uint32_t ppid,
 				     uint32_t tid, uint32_t ptid)
 {
-  if (verbose > 2)
+  if (show_events)
     {
       clog << "process_fork: pid=" << pid << " ppid=" << ppid << " tid=" << tid << " ptid=" << ptid << endl;
     }
@@ -945,7 +963,7 @@ void StatsPerfConsumer::process_sample(const perf_event_header *sample,
 				       uint32_t nregs, const uint64_t *regs,
 				       uint64_t data_size, const uint8_t *data)
 {
-  if (verbose > 2)
+  if (show_events)
     {
       auto oldf = clog.flags();
       clog << "process_sample: pid=" << pid << " tid=" << tid << " ip=" << hex << ip 
@@ -961,7 +979,7 @@ void StatsPerfConsumer::process_mmap2(const perf_event_header *sample,
 				      uint8_t build_id_size, const uint8_t *build_id,
 				      const char *filename)
 {
-  if (verbose > 2)
+  if (show_events)
     {
       auto oldf = clog.flags();
       clog << "process_mmap2: pid=" << pid << " tid=" << tid << " addr=" << hex << addr
@@ -1007,7 +1025,6 @@ DwflEntry *PerfConsumerUnwinder::dwfltab_find(pid_t pid)
 
 static const char *unknown_comm = "<unknown>";
 
-/* TODO (REVIEW.4): Obtaining comm is helpful for statistics, but should be disabled on low verbosity levels. */
 const char *PerfConsumerUnwinder::pid_find_comm(pid_t pid)
 {
   DwflEntry *entry = this->dwfltab_find(pid);
@@ -1045,7 +1062,8 @@ void PerfConsumerUnwinder::pid_store_dwfl (pid_t pid, Dwfl *dwfl)
   if (entry == NULL)
     return;
   entry->dwfl = dwfl;
-  this->pid_find_comm(pid);
+  if (show_summary)
+    this->pid_find_comm(pid);
   return;
 }
 
@@ -1152,7 +1170,7 @@ int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int 
 	  /* Just ignore, dwfl_attach_state will fall back to trying
 	     to associate the Dwfl with one of the existing Dwfl_Module
 	     ELF images (to know the machine/class backend to use).  */
-	  if (verbose > 1) /* TODO show_failures */
+	  if (verbose)
 	    fprintf(stderr, N_("find_procfile pid %lld: elf not found"),
 		    (long long)*pid);
 	  close (*elf_fd);
@@ -1171,7 +1189,7 @@ Dwfl *PerfConsumerUnwinder::init_dwfl(pid_t pid)
   int err = dwfl_linux_proc_report (dwfl, pid);
   if (err < 0)
     {
-      if (verbose > 1) /* TODO show_failures */
+      if (verbose)
 	fprintf(stderr, "dwfl_linux_proc_report pid %lld: %s",
 		(long long) pid, dwfl_errmsg (-1));
       return NULL;
@@ -1179,7 +1197,7 @@ Dwfl *PerfConsumerUnwinder::init_dwfl(pid_t pid)
   err = dwfl_report_end (dwfl, NULL, NULL);
   if (err != 0)
     {
-      if (verbose > 1) /* TODO show_failures */
+      if (verbose)
 	fprintf(stderr, "dwfl_report_end pid %lld: %s",
 		(long long) pid, dwfl_errmsg (-1));
       return NULL;
@@ -1204,7 +1222,7 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
      applications. */
   if (nregs < ebl_frame_nregs(this->reader->ebl())) /* XXX expecting everything except FLAGS */
     {
-      if (verbose > 1) /* TODO show_failures */
+      if (verbose)
 	fprintf(stderr, N_("find_dwfl: nregs=%d, expected %ld\n"),
 		nregs, ebl_frame_nregs(this->reader->ebl()));
       return NULL;
@@ -1222,7 +1240,7 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
   err = this->find_procfile (dwfl, &pid, &elf, &elf_fd);
   if (err < 0)
     {
-      if (verbose > 1) /* TODO show_failures */
+      if (verbose)
 	fprintf(stderr, "find_procfile pid %lld: %s",
 		(long long) pid, dwfl_errmsg (-1));
       return NULL;
@@ -1241,12 +1259,11 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
 
 int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 {
-  /* TODO */
   Dwarf_Addr pc;
   bool isactivation;
   if (! dwfl_frame_pc (state, &pc, &isactivation))
     {
-      if (verbose > 1) /* TODO show_failures */
+      if (verbose)
 	fprintf(stderr, "dwfl_frame_pc: %s\n",
 		dwfl_errmsg(-1));
       return DWARF_CB_ABORT;
@@ -1261,7 +1278,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
   int rc = dwfl_frame_reg (state, user_regs_sp, &sp);
   if (rc < 0)
     {
-      if (verbose > 1) /* TODO show_failures */
+      if (verbose)
 	fprintf(stderr, "dwfl_frame_reg: %s\n",
 		dwfl_errmsg(-1));
       return DWARF_CB_ABORT;
@@ -1294,18 +1311,18 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
       if (unwound_source > dwfl_ent->worst_unwound)
 	dwfl_ent->worst_unwound = unwound_source;
       dwfl_ent->last_unwound = unwound_source;
-      if (verbose > 3) /* TODO show_frames */
+      if (show_frames)
 	fprintf(stderr, "* frame %ld: pc_adjusted=%lx sp=%lx+(%lx) [%s]\n",
 		this->last_us.addrs.size(), pc_adjusted, this->last_us.base, sp - this->last_us.base,
 		dwfl_unwound_source_str(unwound_source));
     }
   else
     {
-      if (verbose > 3) /* TODO show_frames */
+      if (show_frames)
 	fprintf(stderr, N_("* frame %ld: pc_adjusted=%lx sp=%lx+(%lx) [dwfl_ent not found]\n"),
 		this->last_us.addrs.size(), pc_adjusted, this->last_us.base, sp - this->last_us.base);
     }
-  if (verbose > 4) /* TODO show_buildid */
+  if (show_tmi)
     {
       Dwfl_Module *m = dwfl_addrmodule(this->last_us.dwfl, pc);
       const unsigned char *desc;
@@ -1317,17 +1334,14 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
       fprintf(stderr, "\n");
     }
 
-#if 0
-  /* TODO */
   if (this->last_us.addrs.size() > maxframes)
     {
       /* XXX very rarely, the unwinder can loop infinitely; worth investigating? */
-      if (verbose > 1) /* TODO show_frames */
-	fprintf(stderr, N_("unwind_frame_cb: sample exceeded maxframes %d\n"),
+      if (verbose)
+	fprintf(stderr, N_("unwind_frame_cb: sample exceeded maxframes %ld\n"),
 		maxframes);
       return DWARF_CB_ABORT;
     }
-#endif
 
   this->last_us.sp = sp;
   this->last_us.addrs.push_back(pc);
@@ -1368,9 +1382,11 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
 					  uint32_t nregs, const uint64_t *regs,
 					  uint64_t data_size, const uint8_t *data)
 {
-  const char *comm = this->pid_find_comm(pid);
+  const char *comm = NULL;
+  if (show_summary)
+    comm = this->pid_find_comm(pid);
 
-  if (verbose > 3) /* TODO show_frames */
+  if (show_frames)
     cout << endl; /* extra newline for padding */
 
   Elf *elf = NULL;
@@ -1379,22 +1395,27 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
   DwflEntry *dwfl_ent = NULL;
   if (dwfl == NULL)
     {
-      if (verbose > 2) /* TODO show_summary */
+      if (show_summary)
 	{
 	  if (dwfl_ent == NULL)
 	    dwfl_ent = this->dwfltab_find(pid);
 	  dwfl_ent->total_samples++;
 	  dwfl_ent->lost_samples++;
 	}
-      if (verbose > 1) /* TODO show_failures */
+      if (verbose && show_summary)
 	{
 	  fprintf(stderr, "find_dwfl pid %lld (%s) (failed)\n",
 		  (long long)pid, comm);
 	}
+      else
+	{
+	  fprintf(stderr, "find_dwfl pid %lld (failed)\n",
+		  (long long)pid);
+	}
       return;
     }
 
-  if (verbose > 3) /* TODO show_frames */
+  if (show_events)
     {
       bool is_abi32 = (abi == PERF_SAMPLE_REGS_ABI_32);
       fprintf(stderr, "find_dwfl pid %lld%s (%s): hdr_size=%d size=%ld%s pc=%lx sp=%lx+(%lx)\n",
@@ -1414,13 +1435,13 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
 					 pcu_unwind_frame_cb, this);
   if (rc < 0)
     {
-      if (verbose > 1) /* TODO show_failures */
+      if (verbose)
 	{
 	  fprintf(stderr, "dwflst_perf_sample_getframes pid %lld: %s\n",
 		  (long long)pid, dwfl_errmsg(-1));
 	}
     }
-  if (verbose > 2) /* TODO show_summary */
+  if (show_summary)
     {
       /* For final diagnostics. */
       if (dwfl_ent == NULL)
@@ -1452,7 +1473,7 @@ UnwindStatsConsumer::~UnwindStatsConsumer()
 {
   cout << "pid / unwind-hit counts:" << endl;
   for (const auto& kv : this->event_unwind_counts)
-    cout << "pid " << setbase(10) << kv.first << setbase(16) << " count " << kv.second << endl;
+    cout << "pid " << setbase(10) << kv.first << " count " << kv.second << setbase(16) << endl;
 
   cout << "buildid / unwind-hit counts:" << endl;
   for (const auto& kv : this->event_buildid_hits)
