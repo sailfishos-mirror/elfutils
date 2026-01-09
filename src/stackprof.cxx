@@ -249,8 +249,9 @@ class PerfConsumerUnwinder: public PerfConsumer
   Dwflst_Process_Tracker *tracker;
   unordered_map<pid_t, DwflEntry> dwfltab;
 
-  DwflEntry *dwfltab_find(pid_t pid);
+  DwflEntry *dwfltab_find_or_create(pid_t pid);
   const char *pid_find_comm(pid_t pid);
+  Dwfl *pid_find_dwfl(pid_t pid);
   void pid_store_dwfl(pid_t pid, Dwfl *dwfl);
   int find_procfile(Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd);
   Dwfl *find_dwfl(pid_t pid, const uint64_t *regs, uint32_t nregs,
@@ -1005,7 +1006,6 @@ void StatsPerfConsumer::process(const perf_event_header* ehdr)
 ////////////////////////////////////////////////////////////////////////
 // real perf consumer: unwind helpers
 
-/* TODO (REVIEW.3): Add the code to print the final statistics table neatly. */
 struct DwflEntry {
   Dwfl *dwfl;
   char *comm;
@@ -1016,7 +1016,7 @@ struct DwflEntry {
   Dwfl_Unwound_Source worst_unwound; /* track CFI source, for diagnostic purposes */
 };
 
-DwflEntry *PerfConsumerUnwinder::dwfltab_find(pid_t pid)
+DwflEntry *PerfConsumerUnwinder::dwfltab_find_or_create (pid_t pid)
 {
   if (this->dwfltab.count(pid) == 0)
     this->dwfltab.emplace(pid, DwflEntry());
@@ -1025,9 +1025,9 @@ DwflEntry *PerfConsumerUnwinder::dwfltab_find(pid_t pid)
 
 static const char *unknown_comm = "<unknown>";
 
-const char *PerfConsumerUnwinder::pid_find_comm(pid_t pid)
+const char *PerfConsumerUnwinder::pid_find_comm (pid_t pid)
 {
-  DwflEntry *entry = this->dwfltab_find(pid);
+  DwflEntry *entry = this->dwfltab_find_or_create(pid);
   if (entry == NULL)
     return unknown_comm;
   if (entry->comm != NULL)
@@ -1056,9 +1056,16 @@ const char *PerfConsumerUnwinder::pid_find_comm(pid_t pid)
   return entry->comm;
 }
 
+Dwfl *PerfConsumerUnwinder::pid_find_dwfl (pid_t pid)
+{
+  if (this->dwfltab.count(pid) == 0)
+    return NULL;
+  return this->dwfltab[pid].dwfl;
+}
+
 void PerfConsumerUnwinder::pid_store_dwfl (pid_t pid, Dwfl *dwfl)
 {
-  DwflEntry *entry = this->dwfltab_find(pid);
+  DwflEntry *entry = this->dwfltab_find_or_create(pid);
   if (entry == NULL)
     return;
   entry->dwfl = dwfl;
@@ -1304,7 +1311,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
     }
 #endif
 
-  DwflEntry *dwfl_ent = this->dwfltab_find(this->last_us.pid);
+  DwflEntry *dwfl_ent = this->dwfltab_find_or_create(this->last_us.pid);
   if (dwfl_ent != NULL)
     {
       Dwfl_Unwound_Source unwound_source = dwfl_frame_unwound_source(state);
@@ -1398,7 +1405,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
       if (show_summary)
 	{
 	  if (dwfl_ent == NULL)
-	    dwfl_ent = this->dwfltab_find(pid);
+	    dwfl_ent = this->dwfltab_find_or_create(pid);
 	  dwfl_ent->total_samples++;
 	  dwfl_ent->lost_samples++;
 	}
@@ -1445,7 +1452,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
     {
       /* For final diagnostics. */
       if (dwfl_ent == NULL)
-	dwfl_ent = this->dwfltab_find(pid);
+	dwfl_ent = this->dwfltab_find_or_create(pid);
       if (this->last_us.addrs.size() > (unsigned long)dwfl_ent->max_frames)
 	dwfl_ent->max_frames = this->last_us.addrs.size();
       dwfl_ent->total_samples++;
@@ -1462,7 +1469,13 @@ void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
 					 uint8_t build_id_size, const uint8_t *build_id,
 					 const char *filename)
 {
-  // TODO(REVIEW.5): have dwflst for pid report new module
+  Dwfl *dwfl = this->pid_find_dwfl(pid);
+  if (dwfl != NULL)
+    {
+      dwfl_report_begin_add(dwfl);
+      dwfl_report_module(dwfl, filename, /*start*/ addr, /*end*/ addr + len);
+      dwfl_report_end(dwfl, NULL, NULL);
+    }
 }
 
 
@@ -1471,6 +1484,7 @@ void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
 
 UnwindStatsConsumer::~UnwindStatsConsumer()
 {
+  /* TODO (REVIEW.3): Add the code to print the final statistics table neatly. */
   cout << "pid / unwind-hit counts:" << endl;
   for (const auto& kv : this->event_unwind_counts)
     cout << "pid " << setbase(10) << kv.first << " count " << kv.second << setbase(16) << endl;
