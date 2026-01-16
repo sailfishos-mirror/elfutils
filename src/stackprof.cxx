@@ -111,8 +111,41 @@ static const Dwfl_Callbacks dwfl_cfi_callbacks =
 ////////////////////////////////////////////////////////////////////////
 // class decls
 
-class PerfConsumer;
+// Unwind statistics for a Dwfl and associated process.
+struct UnwindDwflStats {
+  Dwfl *dwfl;
+  char *comm;
+  int max_frames; /* for diagnostic purposes */
+  int total_samples; /* for diagnostic purposes */
+  int lost_samples; /* for diagnostic purposes */
+  Dwfl_Unwound_Source last_unwound; /* track CFI source, for diagnostic purposes */
+  Dwfl_Unwound_Source worst_unwound; /* track CFI source, for diagnostic purposes */
+};
 
+// Unwind statistics for a single module identified by build-id.
+struct UnwindModuleStats {
+  /* TODO: For gmon.out: histogram. */
+  /* TODO: For gmon.out: callgraph arcs. */
+};
+
+struct UnwindStatsTable
+{
+  unordered_map<pid_t, UnwindDwflStats> dwfl_tab;
+  unordered_map<string, UnwindModuleStats> buildid_tab;
+
+  UnwindStatsTable () {}
+  ~UnwindStatsTable () {}
+
+  UnwindDwflStats *pid_find(pid_t pid);
+  UnwindDwflStats *pid_find_or_create(pid_t pid);
+  const char *pid_find_comm(pid_t pid);
+  Dwfl *pid_find_dwfl(pid_t pid);
+  void pid_store_dwfl(pid_t pid, Dwfl *dwfl);
+
+  /* TODO buildid functions :: buildid_find{,_or_create} */
+};
+
+class PerfConsumer;
 
 // A PerfReader creates perf_events file descriptors, monitors the
 // mmap'd ring buffers for events, and dispatches decoded forms to a
@@ -226,7 +259,7 @@ struct UnwindSample
 {
   const perf_event_header *event;
   uint32_t pid, tid;
-  vector<pair<string,Dwarf_Addr>> buildid_reladdrs;
+  vector<pair<string,Dwarf_Addr>> buildid_reladdrs; /* TODO: Populate. */
   vector<Dwarf_Addr> addrs;
   int elfclass;
   Dwarf_Addr base; /* for diagnostic purposes */
@@ -235,7 +268,6 @@ struct UnwindSample
 };
 
 
-struct DwflEntry;
 class UnwindSampleConsumer;
 
 
@@ -247,21 +279,19 @@ class PerfConsumerUnwinder: public PerfConsumer
   UnwindSampleConsumer *consumer;
   UnwindSample last_us;
   Dwflst_Process_Tracker *tracker;
-  unordered_map<pid_t, DwflEntry> dwfltab;
+  UnwindStatsTable *stats;
 
-  DwflEntry *dwfltab_find_or_create(pid_t pid);
-  const char *pid_find_comm(pid_t pid);
-  Dwfl *pid_find_dwfl(pid_t pid);
-  void pid_store_dwfl(pid_t pid, Dwfl *dwfl);
   int find_procfile(Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd);
   Dwfl *find_dwfl(pid_t pid, const uint64_t *regs, uint32_t nregs,
 		  Elf **elf, bool *cached);
 
 public:
-  PerfConsumerUnwinder(UnwindSampleConsumer* usc): consumer(usc) {
+  PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust)
+    : consumer(usc), stats(ust) {
     this->tracker = dwflst_tracker_begin (&dwfl_cfi_callbacks);
   }
-  PerfConsumerUnwinder(UnwindSampleConsumer* usc, PerfReader *reader): consumer(usc) {
+  PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust, PerfReader *reader)
+    : consumer(usc), stats(ust) {
     this->reader = reader;
     this->tracker = dwflst_tracker_begin (&dwfl_cfi_callbacks);
   }
@@ -310,11 +340,14 @@ public:
 // a received stream of UnwindSamples.
 class UnwindStatsConsumer: public UnwindSampleConsumer
 {
-  unordered_map<int,unsigned> event_unwind_counts;
-  unordered_map<string,unsigned> event_buildid_hits;
+  UnwindStatsTable *stats;
+
+  /* TODO subsumed by stats? */
+  unordered_map<int,unsigned> event_unwind_counts; /* TODO by pid? */
+  unordered_map<string,unsigned> event_buildid_hits; /* by buildid */
 
 public:
- UnwindStatsConsumer() {}
+  UnwindStatsConsumer(UnwindStatsTable *usc) : stats(usc) {}
   ~UnwindStatsConsumer();
   void process(const UnwindSample* sample);
 };
@@ -324,8 +357,9 @@ public:
 // them by buildid, for eventual writing out into gmon.out format files.
 class GprofUnwindSampleConsumer: public UnwindSampleConsumer
 {
+  UnwindStatsTable *stats;
 public:
-  GprofUnwindSampleConsumer() {}
+  GprofUnwindSampleConsumer(UnwindStatsTable *usc) : stats(usc) {}
   ~GprofUnwindSampleConsumer(); // write out all the gmon.$BUILDID.out files
   void process(const UnwindSample* sample); // accumulate hits / callgraph edges (need maxdepth=1 only)
 };
@@ -594,25 +628,28 @@ main (int argc, char *argv[])
 
       // Create the perf processing pipeline as per command line options
       PerfReader *pr = nullptr;
-      UnwindStatsConsumer *usc = nullptr;
+      UnwindStatsTable *tab = nullptr;
+      UnwindSampleConsumer *usc = nullptr;
       PerfConsumerUnwinder *pcu = nullptr;
       StatsPerfConsumer *spc = nullptr;
 
       if (gmon)
 	{
-	  usc = new UnwindStatsConsumer();
-	  pcu = new PerfConsumerUnwinder(usc);
+	  tab = new UnwindStatsTable();
+	  usc = new GprofUnwindSampleConsumer(tab); /* TODO also reduce maxdepth */
+	  pcu = new PerfConsumerUnwinder(usc, tab);
 	  pr = new PerfReader(&attr, pcu, pid);
-#if 0
-	  GprofUnwindSampleConsumer usc;
-	  PerfReader pr(&attr, &pcu, pid);
-	  PerfConsumerUnwinder pcu(&usc, pr);
-#endif
 	}
       else
 	{
+	  tab = new UnwindStatsTable();
+	  usc = new UnwindStatsConsumer(tab);
+	  pcu = new PerfConsumerUnwinder (usc, tab);
+	  pr = new PerfReader(&attr, pcu, pid);
+#if 0
 	  spc = new StatsPerfConsumer();
 	  pr = new PerfReader(&attr, spc, pid);
+#endif
 	}
 
       signal(SIGINT, sigint_handler);
@@ -1003,31 +1040,28 @@ void StatsPerfConsumer::process(const perf_event_header* ehdr)
   this->event_type_counts[ehdr->type] ++;
 }
 
-////////////////////////////////////////////////////////////////////////
-// real perf consumer: unwind helpers
+//////////////////////////////////////////////////////////////////////
+// unwind stats table for PerfConsumerUnwinder + downstream consumers
 
-struct DwflEntry {
-  Dwfl *dwfl;
-  char *comm;
-  int max_frames; /* for diagnostic purposes */
-  int total_samples; /* for diagnostic purposes */
-  int lost_samples; /* for diagnostic purposes */
-  Dwfl_Unwound_Source last_unwound; /* track CFI source, for diagnostic purposes */
-  Dwfl_Unwound_Source worst_unwound; /* track CFI source, for diagnostic purposes */
-};
-
-DwflEntry *PerfConsumerUnwinder::dwfltab_find_or_create (pid_t pid)
+UnwindDwflStats *UnwindStatsTable::pid_find (pid_t pid)
 {
-  if (this->dwfltab.count(pid) == 0)
-    this->dwfltab.emplace(pid, DwflEntry());
-  return &this->dwfltab[pid];
+  if (this->dwfl_tab.count(pid) == 0)
+    this->dwfl_tab.emplace(pid, UnwindDwflStats());
+  return &this->dwfl_tab[pid];
+}
+
+UnwindDwflStats *UnwindStatsTable::pid_find_or_create (pid_t pid)
+{
+  if (this->dwfl_tab.count(pid) == 0)
+    this->dwfl_tab.emplace(pid, UnwindDwflStats());
+  return &this->dwfl_tab[pid];
 }
 
 static const char *unknown_comm = "<unknown>";
 
-const char *PerfConsumerUnwinder::pid_find_comm (pid_t pid)
+const char *UnwindStatsTable::pid_find_comm (pid_t pid)
 {
-  DwflEntry *entry = this->dwfltab_find_or_create(pid);
+  UnwindDwflStats *entry = this->pid_find_or_create(pid);
   if (entry == NULL)
     return unknown_comm;
   if (entry->comm != NULL)
@@ -1056,16 +1090,16 @@ const char *PerfConsumerUnwinder::pid_find_comm (pid_t pid)
   return entry->comm;
 }
 
-Dwfl *PerfConsumerUnwinder::pid_find_dwfl (pid_t pid)
+Dwfl *UnwindStatsTable::pid_find_dwfl (pid_t pid)
 {
-  if (this->dwfltab.count(pid) == 0)
+  if (this->dwfl_tab.count(pid) == 0)
     return NULL;
-  return this->dwfltab[pid].dwfl;
+  return this->dwfl_tab[pid].dwfl;
 }
 
-void PerfConsumerUnwinder::pid_store_dwfl (pid_t pid, Dwfl *dwfl)
+void UnwindStatsTable::pid_store_dwfl (pid_t pid, Dwfl *dwfl)
 {
-  DwflEntry *entry = this->dwfltab_find_or_create(pid);
+  UnwindDwflStats *entry = this->pid_find_or_create(pid);
   if (entry == NULL)
     return;
   entry->dwfl = dwfl;
@@ -1073,6 +1107,9 @@ void PerfConsumerUnwinder::pid_store_dwfl (pid_t pid, Dwfl *dwfl)
     this->pid_find_comm(pid);
   return;
 }
+
+////////////////////////////////////////////////////////////////////////
+// real perf consumer: unwind helpers
 
 /* TODO: Including extern "C" libdwflP.h in a C++ program is a no-go. Add dwfl_process() &c as an API? */
 struct _DwflHack
@@ -1259,7 +1296,7 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
   this->last_us.base = this->last_us.sp;
 
   if (!*cached)
-    this->pid_store_dwfl (pid, dwfl);
+    this->stats->pid_store_dwfl (pid, dwfl);
   *out_elf = elf;
   return dwfl;
 }
@@ -1311,7 +1348,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
     }
 #endif
 
-  DwflEntry *dwfl_ent = this->dwfltab_find_or_create(this->last_us.pid);
+  UnwindDwflStats *dwfl_ent = this->stats->pid_find_or_create(this->last_us.pid);
   if (dwfl_ent != NULL)
     {
       Dwfl_Unwound_Source unwound_source = dwfl_frame_unwound_source(state);
@@ -1391,7 +1428,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
 {
   const char *comm = NULL;
   if (show_summary)
-    comm = this->pid_find_comm(pid);
+    comm = this->stats->pid_find_comm(pid);
 
   if (show_frames)
     cout << endl; /* extra newline for padding */
@@ -1399,13 +1436,13 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
   Elf *elf = NULL;
   bool cached = false;
   Dwfl *dwfl = this->find_dwfl (pid, regs, nregs, &elf, &cached);
-  DwflEntry *dwfl_ent = NULL;
+  UnwindDwflStats *dwfl_ent = NULL;
   if (dwfl == NULL)
     {
       if (show_summary)
 	{
 	  if (dwfl_ent == NULL)
-	    dwfl_ent = this->dwfltab_find_or_create(pid);
+	    dwfl_ent = this->stats->pid_find_or_create(pid);
 	  dwfl_ent->total_samples++;
 	  dwfl_ent->lost_samples++;
 	}
@@ -1452,7 +1489,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
     {
       /* For final diagnostics. */
       if (dwfl_ent == NULL)
-	dwfl_ent = this->dwfltab_find_or_create(pid);
+	dwfl_ent = this->stats->pid_find_or_create(pid);
       if (this->last_us.addrs.size() > (unsigned long)dwfl_ent->max_frames)
 	dwfl_ent->max_frames = this->last_us.addrs.size();
       dwfl_ent->total_samples++;
@@ -1469,7 +1506,7 @@ void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
 					 uint8_t build_id_size, const uint8_t *build_id,
 					 const char *filename)
 {
-  Dwfl *dwfl = this->pid_find_dwfl(pid);
+  Dwfl *dwfl = this->stats->pid_find_dwfl(pid);
   if (dwfl != NULL)
     {
       dwfl_report_begin_add(dwfl);
@@ -1480,18 +1517,41 @@ void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
 
 
 ////////////////////////////////////////////////////////////////////////
-// unwind data consumers // gprof
+// unwind data consumers // basic statistics
 
 UnwindStatsConsumer::~UnwindStatsConsumer()
 {
-  /* TODO (REVIEW.3): Add the code to print the final statistics table neatly. */
-  cout << "pid / unwind-hit counts:" << endl;
-  for (const auto& kv : this->event_unwind_counts)
-    cout << "pid " << setbase(10) << kv.first << " count " << kv.second << setbase(16) << endl;
+  /* TODO: Perhaps move this to a this->stats->show_summary() method, also invokable from GmonUnwindSampleConsumer? */
+  if (show_summary)
+    {
+#define PERCENT(x,tot) ((x+tot == 0)?0.0:((double)x)/((double)tot)*100.0)
+      int total_samples = 0;
+      int total_lost_samples = 0;
+      cout << endl << "=== pid / sample counts ===" << endl;
+      for (auto& p : this->stats->dwfl_tab)
+	{
+	  pid_t pid = p.first;
+	  UnwindDwflStats& d = p.second;
+	  fprintf (stdout, N_("%d %s -- max %d frames, received %d samples, lost %d samples (%.1f%%) (last %s, worst %s)\n"),
+		   pid, d.comm, d.max_frames,
+		   d.total_samples, d.lost_samples,
+		   PERCENT(d.lost_samples, d.total_samples),
+		   dwfl_unwound_source_str(d.last_unwound),
+		   dwfl_unwound_source_str(d.worst_unwound));
+	  total_samples += d.total_samples;
+	  total_lost_samples += d.lost_samples;
+	}
+      fprintf(stdout, "===\n");
+      fprintf(stdout, N_("TOTAL -- received %d samples, lost %d samples, loaded %ld processes\n"),
+	      total_samples, total_lost_samples,
+	      this->stats->dwfl_tab.size() /* TODO: If implementing eviction, need to maintain a separate count of evicted pids. */);
+      cout << endl;
 
-  cout << "buildid / unwind-hit counts:" << endl;
-  for (const auto& kv : this->event_buildid_hits)
-    cout << "buildid " << kv.first << " count " << kv.second << endl;
+      /* TODO: Implement in terms of the build-id table. */
+      cout << "=== buildid / unwind-hit counts ===" << endl;
+      for (const auto& kv : this->event_buildid_hits)
+	cout << "buildid " << kv.first << " -- received " << kv.second << " samples" << endl;
+    }
 }
 
 void UnwindStatsConsumer::process(const UnwindSample* sample)
@@ -1502,3 +1562,16 @@ void UnwindStatsConsumer::process(const UnwindSample* sample)
     this->event_buildid_hits[p.first] ++;
 }
 
+////////////////////////////////////////////////////////////////////////
+// unwind data consumers // gprof
+
+GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
+{
+  /* TODO write gmon.out files */
+}
+
+void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
+{
+  /* TODO: Record pc in histogram */
+  /* TODO: Record callgraph arc in histogram */
+}
