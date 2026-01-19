@@ -37,6 +37,7 @@
 #include <cassert>
 #include <chrono>
 #include <iostream>
+#include <sstream>
 #include <cinttypes>
 
 #include <sys/syscall.h>
@@ -122,10 +123,30 @@ struct UnwindDwflStats {
   Dwfl_Unwound_Source worst_unwound; /* track CFI source, for diagnostic purposes */
 };
 
+struct hash_arc {
+  template <class T1, class T2>
+  size_t operator()(const std::pair<T1, T2> &p) const {
+    return std::hash<T1>()(p.first) ^ std::hash<T2>()(p.second);
+  }
+};
+
 // Unwind statistics for a single module identified by build-id.
 struct UnwindModuleStats {
-  /* TODO: For gmon.out: histogram. */
-  /* TODO: For gmon.out: callgraph arcs. */
+  /* TODO: Verify histogram granularity */
+  unordered_map<uint64_t, uint32_t> histogram;
+  unordered_map<pair<uint64_t, uint64_t>, uint32_t, hash_arc> callgraph;
+
+  void record_pc(Dwarf_Addr pc) {
+    if (histogram.count(pc) == 0)
+      histogram[pc] = 0;
+    histogram[pc]++;
+  }
+  void record_callgraph_arc(Dwarf_Addr from, Dwarf_Addr to) {
+    std::pair<uint64_t, uint64_t> arc(from, to);
+    if (callgraph.count(arc) == 0)
+      callgraph[arc] = 0;
+    callgraph[arc]++;
+  }
 };
 
 struct UnwindStatsTable
@@ -142,7 +163,8 @@ struct UnwindStatsTable
   Dwfl *pid_find_dwfl(pid_t pid);
   void pid_store_dwfl(pid_t pid, Dwfl *dwfl);
 
-  /* TODO buildid functions :: buildid_find{,_or_create} */
+  UnwindModuleStats *buildid_find(string buildid);
+  UnwindModuleStats *buildid_find_or_create(string buildid, Dwfl_Module *mod);
 };
 
 class PerfConsumer;
@@ -258,13 +280,14 @@ public:
 struct UnwindSample
 {
   const perf_event_header *event;
+  Dwfl *dwfl;
   uint32_t pid, tid;
   vector<pair<string,Dwarf_Addr>> buildid_reladdrs; /* TODO: Populate. */
   vector<Dwarf_Addr> addrs;
   int elfclass;
+
   Dwarf_Addr base; /* for diagnostic purposes */
   Dwarf_Addr sp; /* for diagnostic purposes */
-  Dwfl *dwfl; /* for diagnostic purposes */
 };
 
 
@@ -1108,6 +1131,24 @@ void UnwindStatsTable::pid_store_dwfl (pid_t pid, Dwfl *dwfl)
   return;
 }
 
+UnwindModuleStats *UnwindStatsTable::buildid_find (string buildid)
+{
+  if (this->buildid_tab.count(buildid) == 0)
+    return NULL;
+  return &this->buildid_tab[buildid];
+}
+
+UnwindModuleStats *UnwindStatsTable::buildid_find_or_create (string buildid, Dwfl_Module *mod)
+{
+  if (this->buildid_tab.count(buildid) == 0)
+    {
+      this->buildid_tab.emplace(buildid, UnwindModuleStats());
+      /* TODO: Guess text range for mod? */
+      (void)mod;
+    }
+  return &this->buildid_tab[buildid];
+}
+
 ////////////////////////////////////////////////////////////////////////
 // real perf consumer: unwind helpers
 
@@ -1567,11 +1608,46 @@ void UnwindStatsConsumer::process(const UnwindSample* sample)
 
 GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
 {
-  /* TODO write gmon.out files */
+  cout << endl << "=== buildid / sample counts ===" << endl;
+  for (auto& p : this->stats->buildid_tab)
+    {
+      const string& buildid = p.first;
+      UnwindModuleStats& m = p.second;
+      fprintf (stdout, N_("buildid %s -- received %ld distinct pcs, %ld callgraph arcs\n"), /* TODO also count samples */
+	       buildid.c_str(), m.histogram.size(), m.callgraph.size());
+      /* TODO write gmon.out file always, only fprintf on show_summary */
+    }
+  fprintf(stdout, "===\n");
+  fprintf(stdout, N_("TOTAL -- received %ld buildids\n"), this->stats->buildid_tab.size());
+  cout << endl;
 }
 
 void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
 {
-  /* TODO: Record pc in histogram */
-  /* TODO: Record callgraph arc in histogram */
+  if (sample->addrs.size() < 2)
+    return; /* no callgraph arc */
+
+  Dwarf_Addr pc = sample->addrs[0];
+  Dwarf_Addr pc2 = sample->addrs[1];
+
+  Dwfl_Module *mod = dwfl_addrmodule(sample->dwfl, pc);
+  if (mod == NULL)
+    return;
+
+  const unsigned char *desc = nullptr;
+  GElf_Addr vaddr;
+  int build_id_len = dwfl_module_build_id(mod, &desc, &vaddr);
+  if (build_id_len <= 0)
+    return;
+
+  /* TODO(REVIEW.1): Is it better to use the uncoverted build_id_desc as hash key? */
+  std::stringstream bs;
+  bs << std::hex << std::setw(2) << std::setfill('0');
+  for (int i = 0; i < build_id_len; ++i)
+    bs << static_cast<int>(desc[i]);
+  string buildid = bs.str();
+
+  UnwindModuleStats *buildid_ent = this->stats->buildid_find_or_create(buildid, mod);
+  buildid_ent->record_pc(pc);
+  buildid_ent->record_callgraph_arc(pc2, pc);
 }
