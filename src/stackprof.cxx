@@ -37,6 +37,7 @@
 #include <cassert>
 #include <chrono>
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <cinttypes>
 
@@ -132,14 +133,24 @@ struct hash_arc {
 
 // Unwind statistics for a single module identified by build-id.
 struct UnwindModuleStats {
-  /* TODO: Verify histogram granularity */
   unordered_map<uint64_t, uint32_t> histogram;
+  uint64_t hist_low_pc, hist_high_pc;
   unordered_map<pair<uint64_t, uint64_t>, uint32_t, hash_arc> callgraph;
 
+  UnwindModuleStats() {
+    hist_low_pc = 0;
+    hist_high_pc = 0;
+  }
   void record_pc(Dwarf_Addr pc) {
     if (histogram.count(pc) == 0)
       histogram[pc] = 0;
     histogram[pc]++;
+    if (hist_low_pc == hist_high_pc && hist_high_pc == 0)
+      hist_low_pc = hist_high_pc = pc;
+    else if (hist_low_pc > pc)
+      hist_low_pc = pc;
+    if (hist_high_pc < pc)
+      hist_high_pc = pc;
   }
   void record_callgraph_arc(Dwarf_Addr from, Dwarf_Addr to) {
     std::pair<uint64_t, uint64_t> arc(from, to);
@@ -384,6 +395,7 @@ class GprofUnwindSampleConsumer: public UnwindSampleConsumer
 public:
   GprofUnwindSampleConsumer(UnwindStatsTable *usc) : stats(usc) {}
   ~GprofUnwindSampleConsumer(); // write out all the gmon.$BUILDID.out files
+  void record_gmon_out(const string& buildid, UnwindModuleStats& m); // write out one gmon.$BUILDID.out file
   void process(const UnwindSample* sample); // accumulate hits / callgraph edges (need maxdepth=1 only)
 };
 
@@ -1606,19 +1618,145 @@ void UnwindStatsConsumer::process(const UnwindSample* sample)
 ////////////////////////////////////////////////////////////////////////
 // unwind data consumers // gprof
 
+/* gmon.out file format bits */
+extern "C" {
+
+#define GMON_MAGIC "gmon"
+#define GMON_EUS_MAGIC "elfutils"
+#define GMON_VERSION 1
+
+#define GMON_BIN_SIZE sizeof(uint16_t)
+
+struct gmon_hdr {
+  char cookie[4];
+  char version[4];
+  char spare[3 * 4];
+};
+
+enum gmon_entry_tag {
+  GMON_TAG_TIME_HIST = 0,
+  GMON_TAG_CG_ARC = 1,
+  GMON_TAG_BB_COUNT = 2,
+};
+
+struct gmon_hist_hdr {
+  uint8_t tag; /* GMON_TAG_TIME_HIST */
+  uint8_t unused[3];
+  uint64_t low_pc;
+  uint64_t high_pc;
+  uint32_t hist_scale;
+  uint32_t hist_size;
+};
+
+struct gmon_callgraph_arc {
+  uint8_t tag; /* GMON_TAG_CG_ARC */
+  uint8_t unused[3];
+  uint64_t from_pc;
+  uint64_t self_pc;
+  uint64_t count;
+};
+
+/* TODO(REVIEW.1) gprof gmon_io.c uses a host of bfd bit-twiddling
+   operations when writing to file. Probably ok to leave these as the
+   simplest no-op case, but this is up for review/recheck. */
+#define gmon_bfd_8(k) (k)
+#define gmon_bfd_16(k) (k)
+#define gmon_bfd_32(k) (k)
+#define gmon_bfd_vma(k) (k)
+
+};
+
+void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindModuleStats& m)
+{
+  std::stringstream fs;
+  fs << "gmon." << buildid << ".out"; /* TODO Refine naming scheme, test for / avoid collisions. */
+  string filename = fs.str();
+
+  std::ofstream of (filename, std::ios::binary);
+  if (!of)
+    {
+      fprintf (stderr, N_("buildid %s -- could not open '%s' for writing\n"),
+	       buildid.c_str(), filename.c_str());
+    }
+
+  /* Write gmon header. */
+  struct gmon_hdr ghdr;
+  memcpy (&ghdr.cookie[0], GMON_MAGIC, 4);
+  uint32_t version = gmon_bfd_32(GMON_VERSION); /* XXX gprof uses bfd_put_32() here */
+  memcpy (&ghdr.version[0], reinterpret_cast<const char *>(&version), 4);
+  memcpy (&ghdr.spare[0], GMON_EUS_MAGIC, 9); /* XXX out of 3 * 4 spare bytes */
+  /* TODO: Also include libpfm event info -- in a separate file? */
+  of.write(reinterpret_cast<const char *>(&ghdr), sizeof(ghdr));
+
+  /* Write program counter histogram.
+
+     TODO(REVIEW.2): This is a single histogram covering all samples;
+     this is *way* too big for scattered pc values -- need to add
+     intelligent splitting. I think the existing profiler is almost
+     one-histogram-per-function. */
+#if 0
+  struct gmon_hist_hdr hist;
+  hist.tag = gmon_bfd_8(GMON_TAG_TIME_HIST);
+  hist.hist_scale = 1;
+  /* TODO (REVIEW.3): Need to double-check the alignment logic here. */
+  uint64_t alignment = GMON_BIN_SIZE * hist.hist_scale;
+  hist.low_pc = gmon_bfd_vma(m.hist_low_pc & ~(alignment - 1));
+  hist.high_pc = gmon_bfd_vma((m.hist_high_pc + alignment + 1) & ~(alignment - 1));
+  hist.hist_size = (hist.high_pc - hist.low_pc) / alignment;
+  of.write(reinterpret_cast<const char *>(&hist), sizeof(hist));
+
+  std::vector<uint16_t> bins(hist.hist_size);
+  for (const auto& p : m.histogram)
+    {
+      uint64_t pc = p.first;
+      if (pc < hist.low_pc || pc > hist.high_pc)
+	continue;
+      uint32_t k = (pc - hist.low_pc) / alignment;
+      if (k > hist.hist_size)
+	continue;
+      uint32_t count = bins[k] + p.second;
+      bins[k] = (count > UINT16_MAX) ? UINT16_MAX : count;
+    }
+  for (uint16_t count : bins)
+    {
+      uint16_t count_adj = gmon_bfd_16(count);
+      of.write(reinterpret_cast<const char *>(&count_adj), sizeof(count_adj));
+    }
+#endif
+
+  /* Write call graph arcs. */
+  for (auto& p : m.callgraph)
+    {
+      struct gmon_callgraph_arc arc;
+      arc.tag = gmon_bfd_8(GMON_TAG_CG_ARC);
+      /* p is (from,to) -> count */
+      arc.from_pc = gmon_bfd_vma(p.first.first);
+      arc.self_pc = gmon_bfd_vma(p.first.second);
+      arc.count = gmon_bfd_32(p.second);
+      of.write(reinterpret_cast<const char *>(&arc), sizeof(arc));
+    }
+
+  of.close();
+}
+
 GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
 {
-  cout << endl << "=== buildid / sample counts ===" << endl;
+  if (show_summary)
+    cout << endl << "=== buildid / sample counts ===" << endl;
   for (auto& p : this->stats->buildid_tab)
     {
       const string& buildid = p.first;
       UnwindModuleStats& m = p.second;
-      fprintf (stdout, N_("buildid %s -- received %ld distinct pcs, %ld callgraph arcs\n"), /* TODO also count samples */
-	       buildid.c_str(), m.histogram.size(), m.callgraph.size());
-      /* TODO write gmon.out file always, only fprintf on show_summary */
+      if (show_summary)
+	fprintf (stdout, N_("buildid %s -- received %ld distinct pcs, %ld callgraph arcs\n"), /* TODO also count samples? */
+		 buildid.c_str(), m.histogram.size(), m.callgraph.size());
+      this->record_gmon_out(buildid, m);
     }
-  fprintf(stdout, "===\n");
-  fprintf(stdout, N_("TOTAL -- received %ld buildids\n"), this->stats->buildid_tab.size());
+  if (show_summary)
+    {
+      fprintf(stdout, "===\n");
+      fprintf(stdout, N_("TOTAL -- received %ld buildids\n"), this->stats->buildid_tab.size());
+    }
   cout << endl;
 }
 
@@ -1640,7 +1778,7 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   if (build_id_len <= 0)
     return;
 
-  /* TODO(REVIEW.1): Is it better to use the uncoverted build_id_desc as hash key? */
+  /* TODO(REVIEW.4): Is it better to use the unconverted build_id_desc as hash key? */
   std::stringstream bs;
   bs << std::hex << std::setw(2) << std::setfill('0');
   for (int i = 0; i < build_id_len; ++i)
