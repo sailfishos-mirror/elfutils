@@ -28,6 +28,7 @@
 #include <string>
 #include <memory>
 #include <iomanip>
+#include <map>
 #include <unordered_map>
 #include <vector>
 #include <bitset>
@@ -133,24 +134,13 @@ struct hash_arc {
 
 // Unwind statistics for a single module identified by build-id.
 struct UnwindModuleStats {
-  unordered_map<uint64_t, uint32_t> histogram;
-  uint64_t hist_low_pc, hist_high_pc;
+  map<uint64_t, uint32_t> histogram; /* XXX must be sorted by pc */
   unordered_map<pair<uint64_t, uint64_t>, uint32_t, hash_arc> callgraph;
 
-  UnwindModuleStats() {
-    hist_low_pc = 0;
-    hist_high_pc = 0;
-  }
   void record_pc(Dwarf_Addr pc) {
     if (histogram.count(pc) == 0)
       histogram[pc] = 0;
     histogram[pc]++;
-    if (hist_low_pc == hist_high_pc && hist_high_pc == 0)
-      hist_low_pc = hist_high_pc = pc;
-    else if (hist_low_pc > pc)
-      hist_low_pc = pc;
-    if (hist_high_pc < pc)
-      hist_high_pc = pc;
   }
   void record_callgraph_arc(Dwarf_Addr from, Dwarf_Addr to) {
     std::pair<uint64_t, uint64_t> arc(from, to);
@@ -387,11 +377,16 @@ public:
 };
 
 
+extern "C" {
+struct gmon_hist_hdr;
+}
+
 // An GprofUnwindSampleConsumer instance consumes UnwindSamples and tabulates
 // them by buildid, for eventual writing out into gmon.out format files.
 class GprofUnwindSampleConsumer: public UnwindSampleConsumer
 {
   UnwindStatsTable *stats;
+  void record_gmon_hist(std::ostream &of, struct gmon_hist_hdr& hist, unordered_map<uint64_t, uint32_t>& bins, uint64_t alignment);
 public:
   GprofUnwindSampleConsumer(UnwindStatsTable *usc) : stats(usc) {}
   ~GprofUnwindSampleConsumer(); // write out all the gmon.$BUILDID.out files
@@ -1664,7 +1659,36 @@ struct gmon_callgraph_arc {
 #define gmon_bfd_32(k) (k)
 #define gmon_bfd_vma(k) (k)
 
+/* TODO(REVIEW.2) Need to doublecheck the histogram alignment logic. */
+#define GMON_HIST_ALIGN_LO(vma, al) (gmon_bfd_vma(vma & ~(al - 1)))
+#define GMON_HIST_ALIGN_HI(vma, al) (gmon_bfd_vma((vma + al + 1) & ~(al - 1)))
+
 };
+
+void GprofUnwindSampleConsumer::record_gmon_hist(std::ostream &of, struct gmon_hist_hdr& hist, unordered_map<uint64_t, uint32_t>& bins, uint64_t alignment)
+{
+  // fprintf(stderr, "DEBUG +hist %lx..%lx (size %d) of %ld entries\n",
+  //         hist.low_pc, hist.high_pc, hist.hist_size, bins.size());
+  of.write(reinterpret_cast<const char *>(&hist), sizeof(hist));
+
+  std::vector<uint16_t> raw_bins(hist.hist_size);
+  for (const auto &p : bins)
+    {
+      uint64_t pc = p.first;
+      if (pc < hist.low_pc || pc > hist.high_pc)
+	continue;
+      uint32_t k = (pc - hist.low_pc) / alignment;
+      if (k > hist.hist_size)
+	continue;
+      uint32_t count = bins[k] + p.second;
+      bins[k] = (count > UINT16_MAX) ? UINT16_MAX : count;
+    }
+  for (uint16_t count : raw_bins)
+    {
+      uint16_t raw_count = gmon_bfd_16(count);
+      of.write(reinterpret_cast<const char *>(&raw_count), sizeof(raw_count));
+    }
+}
 
 void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindModuleStats& m)
 {
@@ -1690,39 +1714,47 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 
   /* Write program counter histogram.
 
-     TODO(REVIEW.2): This is a single histogram covering all samples;
-     this is *way* too big for scattered pc values -- need to add
-     intelligent splitting. I think the existing profiler is almost
-     one-histogram-per-function. */
-#if 0
+     The map m.histogram is iterated in order; any time we come to a
+     gap that exceeds sizeof(gmon_hist_hdr)/sizeof(uint16_t), we
+     issue a fresh gmon_hist_hdr to conserve space.
+   */
+
   struct gmon_hist_hdr hist;
+
+  /* These hist fields do not change: */
   hist.tag = gmon_bfd_8(GMON_TAG_TIME_HIST);
   hist.hist_scale = 1;
-  /* TODO (REVIEW.3): Need to double-check the alignment logic here. */
   uint64_t alignment = GMON_BIN_SIZE * hist.hist_scale;
-  hist.low_pc = gmon_bfd_vma(m.hist_low_pc & ~(alignment - 1));
-  hist.high_pc = gmon_bfd_vma((m.hist_high_pc + alignment + 1) & ~(alignment - 1));
-  hist.hist_size = (hist.high_pc - hist.low_pc) / alignment;
-  of.write(reinterpret_cast<const char *>(&hist), sizeof(hist));
 
-  std::vector<uint16_t> bins(hist.hist_size);
-  for (const auto& p : m.histogram)
+  unordered_map<uint64_t, uint32_t> local_bins;
+  hist.low_pc = 0;
+  uint64_t prev_pc = 0;
+  for (const auto& p : m.histogram) /* XXX iterate in ascending order */
     {
       uint64_t pc = p.first;
-      if (pc < hist.low_pc || pc > hist.high_pc)
-	continue;
-      uint32_t k = (pc - hist.low_pc) / alignment;
-      if (k > hist.hist_size)
-	continue;
-      uint32_t count = bins[k] + p.second;
-      bins[k] = (count > UINT16_MAX) ? UINT16_MAX : count;
+      uint64_t bin_dist = (pc - prev_pc) / alignment;
+      if (bin_dist > sizeof(hist) && local_bins.size() > 0)
+	{
+	  hist.high_pc = GMON_HIST_ALIGN_HI(prev_pc, alignment);
+	  hist.hist_size = (hist.high_pc - hist.low_pc) / alignment;
+	  this->record_gmon_hist(of, hist, local_bins, alignment);
+
+	  hist.low_pc = GMON_HIST_ALIGN_LO(pc, alignment);
+	  local_bins.clear();
+	}
+
+      uint32_t count = p.second;
+      local_bins[pc] = count;
+      prev_pc = pc;
+      if (hist.low_pc == 0)
+	hist.low_pc = GMON_HIST_ALIGN_LO(pc, alignment);
     }
-  for (uint16_t count : bins)
+  if (local_bins.size() > 0)
     {
-      uint16_t count_adj = gmon_bfd_16(count);
-      of.write(reinterpret_cast<const char *>(&count_adj), sizeof(count_adj));
+      hist.high_pc = prev_pc;
+      hist.hist_size = (hist.high_pc - hist.low_pc) / alignment;
+      this->record_gmon_hist(of, hist, local_bins, alignment);
     }
-#endif
 
   /* Write call graph arcs. */
   for (auto& p : m.callgraph)
@@ -1778,7 +1810,7 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   if (build_id_len <= 0)
     return;
 
-  /* TODO(REVIEW.4): Is it better to use the unconverted build_id_desc as hash key? */
+  /* TODO(REVIEW.3): Is it better to use the unconverted build_id_desc as hash key? */
   std::stringstream bs;
   bs << std::hex << std::setw(2) << std::setfill('0');
   for (int i = 0; i < build_id_len; ++i)
