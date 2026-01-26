@@ -1376,26 +1376,6 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
       return DWARF_CB_ABORT;
     }
 
-#ifdef DEBUG_MODULES
-  Dwfl_Module *mod = dwfl_addrmodule(this->last_us.dwfl, pc);
-  if (mod == NULL)
-    {
-      fprintf(stderr, "* pc=%lx -> NO MODULE\n", pc);
-    }
-  else
-    {
-      const char *mainfile;
-      const char *debugfile;
-      const char *modname = dwfl_module_info (mod, NULL, NULL, NULL, NULL,
-					      NULL, &mainfile, &debugfile);
-      fprintf (stderr, "* module %s -> mainfile=%s debugfile=%s\n", modname, mainfile, debugfile);
-      Dwarf_Addr bias;
-      Dwarf_CFI *cfi_eh = dwfl_module_eh_cfi (mod, &bias);
-      if (cfi_eh == NULL)
-	fprintf(stderr, "* pc=%lx -> NO EH_CFI\n", pc);
-    }
-#endif
-
   UnwindDwflStats *dwfl_ent = this->stats->pid_find_or_create(this->last_us.pid);
   if (dwfl_ent != NULL)
     {
@@ -1417,13 +1397,26 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
   if (show_tmi)
     {
       Dwfl_Module *m = dwfl_addrmodule(this->last_us.dwfl, pc);
+      /* TODO: Handle (m == NULL)? */
       const unsigned char *desc;
       GElf_Addr vaddr;
       int build_id_len = dwfl_module_build_id (m, &desc, &vaddr);
-      fprintf(stderr, "* pid %d build_id ", this->last_us.pid);
+      fprintf(stderr, "* pid %d build_id=", this->last_us.pid);
       for (int i = 0; i < build_id_len; ++i)
 	fprintf(stderr, "%02" PRIx8, (uint8_t) desc[i]);
-      fprintf(stderr, "\n");
+      /* TODO also extract mainfile= debugfile= */
+      const char *mainfile;
+      const char *debugfile;
+      const char *modname = dwfl_module_info (m, NULL, NULL, NULL, NULL,
+					      NULL, &mainfile, &debugfile);
+      fprintf(stderr, " module=%s mainfile=%s debugfile=%s\n", modname, mainfile, debugfile);
+      /* TODO: Also store this data for the final buildid summary? */
+#ifdef DEBUG_MODULES
+      Dwarf_Addr bias;
+      Dwarf_CFI *cfi_eh = dwfl_module_eh_cfi (mod, &bias);
+      if (cfi_eh == NULL)
+	fprintf(stderr, "* pc=%lx -> NO EH_CFI\n", pc);
+#endif
     }
 
   if (this->last_us.addrs.size() > maxframes)
