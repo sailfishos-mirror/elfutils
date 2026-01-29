@@ -238,7 +238,10 @@ dwflst_sample_getframes (Dwfl *dwfl, Elf *elf,
   if (! attached
       && ! INTUSE(dwfl_attach_state) (dwfl, elf, pid,
 				      &sample_thread_callbacks, sample_arg))
-    return -1;
+    {
+      free(sample_arg);
+      return -1;
+    }
 
   Dwfl_Process *process = dwfl->process;
   Ebl *ebl = process->ebl;
@@ -289,7 +292,10 @@ dwflst_perf_sample_getframes (Dwfl *dwfl, Elf *elf,
   if (! attached
       && ! INTUSE(dwfl_attach_state) (dwfl, elf, pid,
 				      &sample_thread_callbacks, sample_arg))
-    return -1;
+    {
+      free(sample_arg);
+      return -1;
+    }
 
   /* Select the regs_mapping based on architecture.  This will be
      cached in ebl to avoid having to recompute the regs_mapping array
