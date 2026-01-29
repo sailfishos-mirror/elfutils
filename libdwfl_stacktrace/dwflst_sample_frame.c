@@ -238,7 +238,10 @@ dwflst_sample_getframes (Dwfl *dwfl, Elf *elf,
   if (! attached
       && ! INTUSE(dwfl_attach_state) (dwfl, elf, pid,
 				      &sample_thread_callbacks, sample_arg))
-    return -1;
+    {
+      free(sample_arg);
+      return -1;
+    }
 
   Dwfl_Process *process = dwfl->process;
   Ebl *ebl = process->ebl;
@@ -259,26 +262,58 @@ dwflst_perf_sample_getframes (Dwfl *dwfl, Elf *elf,
 			      int (*callback) (Dwfl_Frame *state, void *arg),
 			      void *arg)
 {
+  /* TODO: Lock the dwfl to ensure attach_state does not interfere
+     with other dwfl_perf_sample_getframes calls. */
+
+  struct sample_info *sample_arg;
+  bool attached = false;
+  if (dwfl->process != NULL)
+    {
+      sample_arg = dwfl->process->callbacks_arg;
+      attached = true;
+    }
+  else
+    {
+      sample_arg = malloc (sizeof *sample_arg);
+      if (sample_arg == NULL)
+	{
+	  __libdwfl_seterrno(DWFL_E_NOMEM);
+	  return -1;
+	}
+    }
+
+  sample_arg->pid = pid;
+  sample_arg->tid = tid;
+  sample_arg->stack = (const uint8_t *)stack;
+  sample_arg->stack_size = stack_size;
+  sample_arg->regs = regs;
+  sample_arg->n_regs = n_regs;
+
+  if (! attached
+      && ! INTUSE(dwfl_attach_state) (dwfl, elf, pid,
+				      &sample_thread_callbacks, sample_arg))
+    {
+      free(sample_arg);
+      return -1;
+    }
+
   /* Select the regs_mapping based on architecture.  This will be
      cached in ebl to avoid having to recompute the regs_mapping array
      when perf_regs_mask is consistent for the entire session: */
-  const int *regs_mapping;
-  size_t n_regs_mapping;
   Dwfl_Process *process = dwfl->process;
   Ebl *ebl = process->ebl;
-  /* XXX May want to check if abi matches ebl_get_elfclass(ebl). */
   if (!ebl_sample_perf_regs_mapping(ebl,
 				    perf_regs_mask, abi,
-				    &regs_mapping, &n_regs_mapping))
+				    &sample_arg->regs_mapping, &sample_arg->n_regs_mapping))
     {
       __libdwfl_seterrno(DWFL_E_LIBEBL_BAD);
       return -1;
     }
+  sample_arg->elfclass = ebl_get_elfclass(ebl);
+  ebl_sample_sp_pc(ebl, regs, n_regs,
+                   sample_arg->regs_mapping, sample_arg->n_regs_mapping,
+                   &sample_arg->base_addr, &sample_arg->pc);
 
-  /* Then we can call dwflst_sample_getframes: */
-  return dwflst_sample_getframes (dwfl, elf, pid, tid,
-				  stack, stack_size,
-				  regs, n_regs,
-				  regs_mapping, n_regs_mapping,
-				  callback, arg);
+  /* XXX May want to check if abi matches ebl_get_elfclass(ebl). */
+  return INTUSE(dwfl_getthread_frames) (dwfl, tid, callback, arg);
 }
