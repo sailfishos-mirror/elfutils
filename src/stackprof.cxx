@@ -1801,13 +1801,13 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   Elf *elf = dwfl_module_getelf (mod, &bias);
   (void)elf;
 #endif
-  
+
   Dwfl_Module *mod2 = dwfl_addrmodule(sample->dwfl, pc2);
   if (mod2 == NULL)
     return;
   // If caller & callee are in different modules, this is a cross-shared-library
   // call, so we can't track it as a call-graph arc.  XXX: at least count them 
-  
+
   // extract buildid for pc (hit callee)
   const unsigned char *desc = nullptr;
   GElf_Addr vaddr;
@@ -1824,9 +1824,10 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
 
   UnwindModuleStats *buildid_ent = this->stats->buildid_find_or_create(buildid, mod);
 
-  // int i = dwfl_module_relocate_address (mod, &pc);
+  int i = dwfl_module_relocate_address (mod, &pc);
+  (void) i;
   #if 0
-  (void) i; // XXX: for now, ignore relocation-basis section name or whatever
+  // XXX: for now, ignore relocation-basis section name or whatever
   const char *name;
   if (i >= 0)
     name = dwfl_module_relocation_info (mod, i, NULL);
@@ -1835,7 +1836,8 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
 
   if (mod == mod2) // intra-module call
     {
-      // int j = dwfl_module_relocate_address (mod, &pc2); // map pc2 also
+      int j = dwfl_module_relocate_address (mod, &pc2); // map pc2 also
+      (void) j;
       buildid_ent->record_callgraph_arc(pc2, pc);
     }
 }
