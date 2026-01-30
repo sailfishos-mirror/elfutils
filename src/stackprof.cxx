@@ -134,15 +134,32 @@ struct hash_arc {
 
 // Unwind statistics for a single module identified by build-id.
 struct UnwindModuleStats {
+  Dwfl_Module *mod;
   map<uint64_t, uint32_t> histogram; /* sorted by pc */
   unordered_map<pair<uint64_t, uint64_t>, uint32_t, hash_arc> callgraph;
 
-  void record_pc(Dwarf_Addr pc) {
+  UnwindModuleStats() : mod(NULL) {}
+  void record_pc(Dwfl_Module *mod2, Dwarf_Addr pc) {
+    if (mod == NULL) mod = mod2;
+#if 0
+    /* TODO(REVIEW.1): 'duplicate modules for buildid' should not be an
+       issue (libdwflst caching is done on the underlying Elf
+       structs), but it might be worth tracking to see if the paths
+       are ever different. */
+    if (mod != mod2)
+      fprintf(stderr, "XXX duplicate modules for buildid\n");
+#endif
     if (histogram.count(pc) == 0)
       histogram[pc] = 0;
     histogram[pc]++;
   }
-  void record_callgraph_arc(Dwarf_Addr from, Dwarf_Addr to) {
+  void record_callgraph_arc(Dwfl_Module *mod2, Dwarf_Addr from, Dwarf_Addr to) {
+    if (mod == NULL) mod = mod2;
+#if 0
+    /* TODO(REVIEW.1): ditto. */
+    if (mod != mod2)
+      fprintf(stderr, "XXX duplicate modules for buildid\n");
+#endif
     std::pair<uint64_t, uint64_t> arc(from, to);
     if (callgraph.count(arc) == 0)
       callgraph[arc] = 0;
@@ -1158,7 +1175,7 @@ UnwindModuleStats *UnwindStatsTable::buildid_find_or_create (string buildid, Dwf
 ////////////////////////////////////////////////////////////////////////
 // real perf consumer: unwind helpers
 
-/* TODO: Including extern "C" libdwflP.h in a C++ program is a no-go. Add dwfl_process() &c as an API? */
+/* TODO(REVIEW.2): Including extern "C" libdwflP.h in a C++ program is a no-go. Add dwfl_process() &c as an API? */
 struct _DwflHack
 {
   const Dwfl_Callbacks *callbacks;
@@ -1606,6 +1623,7 @@ void UnwindStatsConsumer::process(const UnwindSample* sample)
 // unwind data consumers // gprof
 
 /* gmon.out file format bits */
+/* TODO(REVIEW.3) These are now unused after the fixup patch? */
 extern "C" {
 
 #define GMON_MAGIC "gmon"
@@ -1643,15 +1661,11 @@ struct gmon_callgraph_arc {
   uint64_t count;
 };
 
-/* TODO(REVIEW.1) gprof gmon_io.c uses a host of bfd bit-twiddling
-   operations when writing to file. Probably ok to leave these as the
-   simplest no-op case, but this is up for review/recheck. */
 #define gmon_bfd_8(k) (k)
 #define gmon_bfd_16(k) (k)
 #define gmon_bfd_32(k) (k)
 #define gmon_bfd_vma(k) (k)
 
-/* TODO(REVIEW.2) Need to doublecheck the histogram alignment logic. */
 #define GMON_HIST_ALIGN_LO(vma, al) (gmon_bfd_vma(vma & ~(al - 1)))
 #define GMON_HIST_ALIGN_HI(vma, al) (gmon_bfd_vma((vma + al + 1) & ~(al - 1)))
 
@@ -1772,9 +1786,24 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
     {
       const string& buildid = p.first;
       UnwindModuleStats& m = p.second;
+      /* TODO(REVIEW.4): Write the buildid-->path mapping to a secondary
+         (json?) metadata file.  That makes for a reasonable hint;
+         debuginfod-find can be used as a mostly-functional fallback
+         (for packaged rather than locally built executables) if the
+         results are moved to another system. */
+      const char *mainfile;
+      const char *debugfile;
+      const char *modname = dwfl_module_info (m.mod, NULL, NULL, NULL, NULL,
+					      NULL, &mainfile, &debugfile);
+      (void) modname;
       if (show_summary)
-	fprintf (stdout, N_("buildid %s -- received %ld distinct pcs, %ld callgraph arcs\n"), /* TODO also count samples? */
-		 buildid.c_str(), m.histogram.size(), m.callgraph.size());
+	fprintf (stdout, N_("buildid %s (%s%s%s) -- received %ld distinct pcs, %ld callgraph arcs\n"), /* TODO also count samples / estimated histogram size? */
+		 buildid.c_str(),
+		 mainfile == NULL ? "<unknown>" : mainfile,
+		 debugfile == NULL ? "" : " +debugfile ",
+		 debugfile == NULL ? "" : debugfile,
+		 m.histogram.size(),
+		 m.callgraph.size());
       this->record_gmon_out(buildid, m);
     }
   if (show_summary)
@@ -1815,7 +1844,7 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   if (build_id_len <= 0)
     return; // XXX: report/tabulate hit outside known modules
 
-  /* TODO(REVIEW.3): Is it better to use the unconverted build_id_desc as hash key? */
+  /* TODO(REVIEW.5): Is it better to use the unconverted build_id_desc as hash key? */
   std::stringstream bs;
   bs << std::hex << std::setw(2) << std::setfill('0');
   for (int i = 0; i < build_id_len; ++i)
@@ -1832,12 +1861,12 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   if (i >= 0)
     name = dwfl_module_relocation_info (mod, i, NULL);
   #endif
-  buildid_ent->record_pc(pc);
+  buildid_ent->record_pc(mod, pc);
 
   if (mod == mod2) // intra-module call
     {
       int j = dwfl_module_relocate_address (mod, &pc2); // map pc2 also
       (void) j;
-      buildid_ent->record_callgraph_arc(pc2, pc);
+      buildid_ent->record_callgraph_arc(mod, pc2, pc);
     }
 }
