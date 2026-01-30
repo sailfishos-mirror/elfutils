@@ -1,5 +1,5 @@
 /* Collect stack-trace profiles of running program(s).
-   Copyright (C) 2025 Red Hat, Inc.
+   Copyright (C) 2025-2026 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -134,7 +134,7 @@ struct hash_arc {
 
 // Unwind statistics for a single module identified by build-id.
 struct UnwindModuleStats {
-  map<uint64_t, uint32_t> histogram; /* XXX must be sorted by pc */
+  map<uint64_t, uint32_t> histogram; /* sorted by pc */
   unordered_map<pair<uint64_t, uint64_t>, uint32_t, hash_arc> callgraph;
 
   void record_pc(Dwarf_Addr pc) {
@@ -386,7 +386,6 @@ struct gmon_hist_hdr;
 class GprofUnwindSampleConsumer: public UnwindSampleConsumer
 {
   UnwindStatsTable *stats;
-  void record_gmon_hist(std::ostream &of, struct gmon_hist_hdr& hist, unordered_map<uint64_t, uint32_t>& bins, uint64_t alignment);
 public:
   GprofUnwindSampleConsumer(UnwindStatsTable *usc) : stats(usc) {}
   ~GprofUnwindSampleConsumer(); // write out all the gmon.$BUILDID.out files
@@ -442,6 +441,7 @@ static bool gmon;
 static int pid;
 static unsigned long maxframes = 256;
 static string libpfm_event;
+static perf_event_attr attr;
 
 // Verbosity beyond level 1:
 static bool show_summary = false;
@@ -557,7 +557,6 @@ main (int argc, char *argv[])
 
   try
     {
-      perf_event_attr attr;
       memset(&attr, 0, sizeof(attr));
       attr.size = sizeof(attr);
 
@@ -1658,30 +1657,6 @@ struct gmon_callgraph_arc {
 
 };
 
-void GprofUnwindSampleConsumer::record_gmon_hist(std::ostream &of, struct gmon_hist_hdr& hist, unordered_map<uint64_t, uint32_t>& bins, uint64_t alignment)
-{
-  // fprintf(stderr, "DEBUG +hist %lx..%lx (size %d) of %ld entries\n",
-  //         hist.low_pc, hist.high_pc, hist.hist_size, bins.size());
-  of.write(reinterpret_cast<const char *>(&hist), sizeof(hist));
-
-  std::vector<uint16_t> raw_bins(hist.hist_size);
-  for (const auto &p : bins)
-    {
-      uint64_t pc = p.first;
-      if (pc < hist.low_pc || pc > hist.high_pc)
-	continue;
-      uint32_t k = (pc - hist.low_pc) / alignment;
-      if (k > hist.hist_size)
-	continue;
-      uint32_t count = bins[k] + p.second;
-      bins[k] = (count > UINT16_MAX) ? UINT16_MAX : count;
-    }
-  for (uint16_t count : raw_bins)
-    {
-      uint16_t raw_count = gmon_bfd_16(count);
-      of.write(reinterpret_cast<const char *>(&raw_count), sizeof(raw_count));
-    }
-}
 
 void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindModuleStats& m)
 {
@@ -1696,69 +1671,94 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 	       buildid.c_str(), filename.c_str());
     }
 
-  /* Write gmon header. */
+  /* Write gmon header.  It and other headers mostly hold
+     native-endian and fixed (or native) bitwidth values.  In
+     principle, we should get the bitness/endianness from the
+     particular executable associated with the buildid.  But, being a
+     live profiler, we don't really have to deal with CROSS
+     architecture work, and for now can just hard-code the bitness to
+     match this host program. XXX
+   */
+  int wordsize = (sizeof (void *) == 8) ? 8 : 4;
   struct gmon_hdr ghdr;
   memcpy (&ghdr.cookie[0], GMON_MAGIC, 4);
-  uint32_t version = gmon_bfd_32(GMON_VERSION); /* XXX gprof uses bfd_put_32() here */
+  uint32_t version = GMON_VERSION;
   memcpy (&ghdr.version[0], reinterpret_cast<const char *>(&version), 4);
-  memcpy (&ghdr.spare[0], GMON_EUS_MAGIC, 9); /* XXX out of 3 * 4 spare bytes */
+  memset (&ghdr.spare[0], 0, sizeof(ghdr.spare));
   /* TODO: Also include libpfm event info -- in a separate file? */
   of.write(reinterpret_cast<const char *>(&ghdr), sizeof(ghdr));
 
-  /* Write program counter histogram.
-
-     The map m.histogram is iterated in order; any time we come to a
-     gap that exceeds sizeof(gmon_hist_hdr)/sizeof(uint16_t), we
-     issue a fresh gmon_hist_hdr to conserve space.
-   */
-
-  struct gmon_hist_hdr hist;
-
-  /* These hist fields do not change: */
-  hist.tag = gmon_bfd_8(GMON_TAG_TIME_HIST);
-  hist.hist_scale = 1;
-  uint64_t alignment = GMON_BIN_SIZE * hist.hist_scale;
-
-  unordered_map<uint64_t, uint32_t> local_bins;
-  hist.low_pc = 0;
-  uint64_t prev_pc = 0;
-  for (const auto& p : m.histogram) /* XXX iterate in ascending order */
+  if (m.histogram.size() > 0)
     {
-      uint64_t pc = p.first;
-      uint64_t bin_dist = (pc - prev_pc) / alignment;
-      if (bin_dist > sizeof(hist) && local_bins.size() > 0)
-	{
-	  hist.high_pc = GMON_HIST_ALIGN_HI(prev_pc, alignment);
-	  hist.hist_size = (hist.high_pc - hist.low_pc) / alignment;
-	  this->record_gmon_hist(of, hist, local_bins, alignment);
+      // write one histogram from low_pc ... high_pc
+      
+      // XXX: the histogram bucket counts are 16-bits wide, so if we have
+      // collected more than 2**16 hits, we need additional histogram(s)
+      // to accumulate those excess counts
 
-	  hist.low_pc = GMON_HIST_ALIGN_LO(pc, alignment);
-	  local_bins.clear();
-	}
+      uint64_t first_pc = m.histogram.begin()->first;
+      uint64_t last_pc = m.histogram.rbegin()->first;
+      uint64_t alignment = (last_pc - first_pc + 1) / UINT_MAX + 1; // compute an alignment that fits 2**32 buckets
+      uint32_t num_buckets = (last_pc-first_pc)/alignment + 1;
 
-      uint32_t count = p.second;
-      local_bins[pc] = count;
-      prev_pc = pc;
-      if (hist.low_pc == 0)
-	hist.low_pc = GMON_HIST_ALIGN_LO(pc, alignment);
-    }
-  if (local_bins.size() > 0)
-    {
-      hist.high_pc = prev_pc;
-      hist.hist_size = (hist.high_pc - hist.low_pc) / alignment;
-      this->record_gmon_hist(of, hist, local_bins, alignment);
-    }
+      // write histogram record header
+      unsigned char tag = GMON_TAG_TIME_HIST;
+      of.write(reinterpret_cast<const char *>(&tag), sizeof(tag));
+      if (wordsize == 4) {
+        uint32_t addr = first_pc;
+        of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
+        addr = last_pc;
+        of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
+      } else {
+        of.write(reinterpret_cast<const char *>(&first_pc), sizeof(first_pc));
+        of.write(reinterpret_cast<const char *>(&last_pc), sizeof(last_pc));
+      }
+      of.write(reinterpret_cast<const char *>(&num_buckets), sizeof(num_buckets));
+      uint32_t prof_rate = attr.sample_freq;
+      of.write(reinterpret_cast<const char *>(&prof_rate), sizeof(prof_rate));
+      // dimension string is 15 chars long (not null terminated)
+      char dimension_string[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+      if (libpfm_event != "")
+        strncpy(dimension_string, libpfm_event.c_str(), 15);
+      else
+        strcpy(dimension_string, "ticks");
+      of.write(reinterpret_cast<const char *>(dimension_string), 15);
+      // dimension character abbreviation: just take the first char of above
+      of.write(reinterpret_cast<const char *>(dimension_string), 1);
+
+      // write histogram buckets
+      uint64_t bucket_addr = first_pc;
+      for (uint32_t bucket = 0; bucket < num_buckets; bucket++)
+        {
+          uint16_t count = 0;
+          for (auto it = m.histogram.lower_bound(bucket_addr);
+               it != m.histogram.upper_bound(bucket_addr+alignment-1);
+               it ++)
+            count += it->second; // XXX: check for overflow here!
+          bucket_addr += alignment;
+          of.write(reinterpret_cast<const char *>(&count), sizeof(count));
+        }
+    } // had a histogram
 
   /* Write call graph arcs. */
   for (auto& p : m.callgraph)
     {
-      struct gmon_callgraph_arc arc;
-      arc.tag = gmon_bfd_8(GMON_TAG_CG_ARC);
+      unsigned char tag = GMON_TAG_CG_ARC;
+      of.write(reinterpret_cast<const char *>(&tag), sizeof(tag));
+      if (wordsize == 4) {
+        uint32_t addr = p.first.first;
+        of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
+        addr = p.first.second;
+        of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
+      } else {
+        uint64_t addr = p.first.first;
+        of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
+        addr = p.first.second;
+        of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
+      }
       /* p is (from,to) -> count */
-      arc.from_pc = gmon_bfd_vma(p.first.first);
-      arc.self_pc = gmon_bfd_vma(p.first.second);
-      arc.count = gmon_bfd_32(p.second);
-      of.write(reinterpret_cast<const char *>(&arc), sizeof(arc));
+      uint32_t count = p.second;
+      of.write(reinterpret_cast<const char *>(&count), sizeof(count));
     }
 
   of.close();
@@ -1788,7 +1788,7 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
 void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
 {
   if (sample->addrs.size() < 2)
-    return; /* no callgraph arc */
+    return; /* no callgraph arc */ // XXX: accumulate at least histogram hit even without callgraph
 
   Dwarf_Addr pc = sample->addrs[0];
   Dwarf_Addr pc2 = sample->addrs[1];
@@ -1796,12 +1796,24 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   Dwfl_Module *mod = dwfl_addrmodule(sample->dwfl, pc);
   if (mod == NULL)
     return;
-
+#if 0
+  Dwarf_Addr bias;
+  Elf *elf = dwfl_module_getelf (mod, &bias);
+  (void)elf;
+#endif
+  
+  Dwfl_Module *mod2 = dwfl_addrmodule(sample->dwfl, pc2);
+  if (mod2 == NULL)
+    return;
+  // If caller & callee are in different modules, this is a cross-shared-library
+  // call, so we can't track it as a call-graph arc.  XXX: at least count them 
+  
+  // extract buildid for pc (hit callee)
   const unsigned char *desc = nullptr;
   GElf_Addr vaddr;
   int build_id_len = dwfl_module_build_id(mod, &desc, &vaddr);
   if (build_id_len <= 0)
-    return;
+    return; // XXX: report/tabulate hit outside known modules
 
   /* TODO(REVIEW.3): Is it better to use the unconverted build_id_desc as hash key? */
   std::stringstream bs;
@@ -1811,6 +1823,19 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   string buildid = bs.str();
 
   UnwindModuleStats *buildid_ent = this->stats->buildid_find_or_create(buildid, mod);
+
+  // int i = dwfl_module_relocate_address (mod, &pc);
+  #if 0
+  (void) i; // XXX: for now, ignore relocation-basis section name or whatever
+  const char *name;
+  if (i >= 0)
+    name = dwfl_module_relocation_info (mod, i, NULL);
+  #endif
   buildid_ent->record_pc(pc);
-  buildid_ent->record_callgraph_arc(pc2, pc);
+
+  if (mod == mod2) // intra-module call
+    {
+      // int j = dwfl_module_relocate_address (mod, &pc2); // map pc2 also
+      buildid_ent->record_callgraph_arc(pc2, pc);
+    }
 }
