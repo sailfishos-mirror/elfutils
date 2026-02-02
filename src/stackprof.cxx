@@ -41,6 +41,7 @@
 #include <fstream>
 #include <sstream>
 #include <cinttypes>
+#include <sys/utsname.h>
 
 #include <sys/syscall.h>
 #include <sys/ioctl.h>
@@ -97,8 +98,7 @@ nop_find_debuginfo (Dwfl_Module *mod __attribute__((unused)),
 		    char **debuginfo_file_name __attribute__((unused)))
 {
 #ifdef DEBUG_MODULES
-  fprintf(stderr, "nop_find_debuginfo: modname=%s file_name=%s debuglink_file=%s\n",
-	  modname, file_name, debuglink_file);
+  cerr << "nop_find_debuginfo: modname=" << modname << " file_name=" << file_name << " debuglink_file=" << debuglink_file << endl;
 #endif
   return -1;
 }
@@ -171,7 +171,8 @@ struct UnwindStatsTable
 {
   unordered_map<pid_t, UnwindDwflStats> dwfl_tab;
   unordered_map<string, UnwindModuleStats> buildid_tab;
-
+  typedef map<string, UnwindModuleStats> buildid_map_t;
+  
   UnwindStatsTable () {}
   ~UnwindStatsTable () {}
 
@@ -326,6 +327,8 @@ class PerfConsumerUnwinder: public PerfConsumer
   Dwfl *find_dwfl(pid_t pid, const uint64_t *regs, uint32_t nregs,
 		  Elf **elf, bool *cached);
 
+  int get_sp_reg(bool is_abi32);
+
 public:
   PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust)
     : consumer(usc), stats(ust) {
@@ -403,6 +406,8 @@ struct gmon_hist_hdr;
 class GprofUnwindSampleConsumer: public UnwindSampleConsumer
 {
   UnwindStatsTable *stats;
+  unordered_map<string, string> buildid_to_path;
+
 public:
   GprofUnwindSampleConsumer(UnwindStatsTable *usc) : stats(usc) {}
   ~GprofUnwindSampleConsumer(); // write out all the gmon.$BUILDID.out files
@@ -435,6 +440,7 @@ static const struct argp_option options[] =
   { NULL, 0, NULL, OPTION_DOC, N_("Output options:"), 1 },
   { "verbose", 'v', NULL, 0, N_ ("Increase verbosity of logging messages."), 0 },
   { "gmon", 'g', NULL, 0, N_("Generate gmon.BUILDID.out files for each binary."), 0 },
+  { "output", 'o', "DIR", 0, N_("Output directory for gmon files."), 0 },
   { "pid", 'p', "PID", 0, N_("Profile given PID, and its future children."), 0 },
 #ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H
   { "event", 'e', "EVENT", 0, N_("Sample given LIBPFM event specification."), 0 },
@@ -455,6 +461,7 @@ static const struct argp argp =
 // Globals set based on command line options:
 static unsigned verbose;
 static bool gmon;
+static string output_dir = ".";
 static int pid;
 static unsigned long maxframes = 256;
 static string libpfm_event;
@@ -482,6 +489,10 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
     case 'g':
       gmon = true;
+      break;
+
+    case 'o':
+      output_dir = arg;
       break;
 
     case 'p':
@@ -556,6 +567,7 @@ main (int argc, char *argv[])
 {
   int remaining;
   int pipefd[2] = {-1, -1}; // for CMD child process post-fork sync
+  bool has_cmd = false;
   (void) argp_parse (&argp, argc, argv, 0, &remaining, NULL);
 
   if (verbose > 1) show_summary = true;
@@ -632,6 +644,7 @@ main (int argc, char *argv[])
 
       if (remaining < argc) // got a CMD... suffix?  ok start it
         {
+          has_cmd = true;
           int rc = pipe (pipefd); // will use pipefd[] >= 0 as flag for synchronization just below
           if (rc < 0)
             {
@@ -701,7 +714,7 @@ main (int argc, char *argv[])
       signal(SIGINT, sigint_handler);
       signal(SIGTERM, sigint_handler);
 
-      if (pid > 0 && pipefd[0]>=0) // need to release child CMD process?
+      if (pid > 0 && has_cmd) // need to release child CMD process?
         {
           int rc = write(pipefd[1], "x", 1); // unblock child
           assert (rc == 1);
@@ -753,7 +766,16 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   this->consumer->set_reader(this);
   this->enabled = false;
 
-  this->default_ebl = ebl_openbackend_machine(EM_X86_64); /* TODO: Generalize to architectures beyond x86. */
+  struct utsname u;
+  uname(&u);
+  int em = EM_NONE;
+  if (strcmp(u.machine, "x86_64") == 0) em = EM_X86_64;
+  else if (strcmp(u.machine, "i686") == 0 || strcmp(u.machine, "i386") == 0) em = EM_386;
+  else {
+    cerr << "Unsupported architecture: " << u.machine << endl;
+    exit(1);
+  }
+  this->default_ebl = ebl_openbackend_machine(em);
   this->sample_regs_user = ebl_perf_frame_regs_mask (this->default_ebl);
   this->sample_regs_count = bitset<64>(this->sample_regs_user).count();
 
@@ -1356,13 +1378,20 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
 
  reuse:
   /* TODO: Generalize to other architectures than x86. */
-  this->last_us.sp = regs[7];
+  this->last_us.sp = regs[this->get_sp_reg(this->last_us.elfclass == ELFCLASS32)];
   this->last_us.base = this->last_us.sp;
 
   if (!*cached)
     this->stats->pid_store_dwfl (pid, dwfl);
   *out_elf = elf;
   return dwfl;
+}
+
+int PerfConsumerUnwinder::get_sp_reg(bool is_abi32)
+{
+  int machine = ebl_get_elfmachine(this->reader->ebl());
+  if (machine == EM_X86_64 || machine == EM_386) return is_abi32 ? 4 : 7;
+  else { assert(0); return 7; }
 }
 
 int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
@@ -1381,8 +1410,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
   Dwarf_Addr sp;
 
   int is_abi32 = (this->last_us.elfclass == ELFCLASS32);
-  /* DWARF register order cf. elfutils backends/{x86_64,i386}_initreg.c: */
-  int user_regs_sp = is_abi32 ? 4 : 7;
+  int user_regs_sp = this->get_sp_reg(is_abi32);
   int rc = dwfl_frame_reg (state, user_regs_sp, &sp);
   if (rc < 0)
     {
@@ -1624,8 +1652,6 @@ void UnwindStatsConsumer::process(const UnwindSample* sample)
 
 /* gmon.out file format bits */
 /* TODO(REVIEW.3) These are now unused after the fixup patch? */
-extern "C" {
-
 #define GMON_MAGIC "gmon"
 #define GMON_EUS_MAGIC "elfutils"
 #define GMON_VERSION 1
@@ -1644,39 +1670,14 @@ enum gmon_entry_tag {
   GMON_TAG_BB_COUNT = 2,
 };
 
-struct gmon_hist_hdr {
-  uint8_t tag; /* GMON_TAG_TIME_HIST */
-  uint8_t unused[3];
-  uint64_t low_pc;
-  uint64_t high_pc;
-  uint32_t hist_scale;
-  uint32_t hist_size;
-};
-
-struct gmon_callgraph_arc {
-  uint8_t tag; /* GMON_TAG_CG_ARC */
-  uint8_t unused[3];
-  uint64_t from_pc;
-  uint64_t self_pc;
-  uint64_t count;
-};
-
-#define gmon_bfd_8(k) (k)
-#define gmon_bfd_16(k) (k)
-#define gmon_bfd_32(k) (k)
-#define gmon_bfd_vma(k) (k)
-
-#define GMON_HIST_ALIGN_LO(vma, al) (gmon_bfd_vma(vma & ~(al - 1)))
-#define GMON_HIST_ALIGN_HI(vma, al) (gmon_bfd_vma((vma + al + 1) & ~(al - 1)))
-
-};
-
 
 void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindModuleStats& m)
 {
   std::stringstream fs;
-  fs << "gmon." << buildid << ".out"; /* TODO Refine naming scheme, test for / avoid collisions. */
+  fs << output_dir << "/" << "gmon." << buildid << ".out"; /* TODO Refine naming scheme, test for / avoid collisions. */
   string filename = fs.str();
+
+  // plop buildid_to_path bits into per-gmon-out json files
 
   std::ofstream of (filename, std::ios::binary);
   if (!of)
@@ -1782,7 +1783,9 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
 {
   if (show_summary)
     cout << endl << "=== buildid / sample counts ===" << endl;
-  for (auto& p : this->stats->buildid_tab)
+  
+  UnwindStatsTable::buildid_map_t m (this->stats->buildid_tab.begin(), this->stats->buildid_tab.end());
+  for (auto& p : m) // traverse in sorted order
     {
       const string& buildid = p.first;
       UnwindModuleStats& m = p.second;
@@ -1846,10 +1849,16 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
 
   /* TODO(REVIEW.5): Is it better to use the unconverted build_id_desc as hash key? */
   std::stringstream bs;
-  bs << std::hex << std::setw(2) << std::setfill('0');
+  bs << std::hex << std::setfill('0');
   for (int i = 0; i < build_id_len; ++i)
-    bs << static_cast<int>(desc[i]);
+    bs << std::setw(2) << static_cast<int>(desc[i]);
   string buildid = bs.str();
+
+  const char *mainfile;
+  const char *debugfile;
+  dwfl_module_info (mod, NULL, NULL, NULL, NULL,
+		    NULL, &mainfile, &debugfile);
+  if (mainfile && !buildid_to_path.count(buildid)) buildid_to_path[buildid] = mainfile;
 
   UnwindModuleStats *buildid_ent = this->stats->buildid_find_or_create(buildid, mod);
 
@@ -1870,3 +1879,4 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
       buildid_ent->record_callgraph_arc(mod, pc2, pc);
     }
 }
+
