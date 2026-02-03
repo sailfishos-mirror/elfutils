@@ -127,8 +127,8 @@ struct UnwindDwflStats {
 
 struct hash_arc {
   template <class T1, class T2>
-  size_t operator()(const std::pair<T1, T2> &p) const {
-    return std::hash<T1>()(p.first) ^ std::hash<T2>()(p.second);
+  size_t operator()(const pair<T1, T2> &p) const {
+    return hash<T1>()(p.first) ^ hash<T2>()(p.second);
   }
 };
 
@@ -160,7 +160,7 @@ struct UnwindModuleStats {
     if (mod != mod2)
       cerr << "XXX duplicate modules for buildid" << endl;
 #endif
-    std::pair<uint64_t, uint64_t> arc(from, to);
+    pair<uint64_t, uint64_t> arc(from, to);
     if (callgraph.count(arc) == 0)
       callgraph[arc] = 0;
     callgraph[arc]++;
@@ -1624,13 +1624,19 @@ enum gmon_entry_tag {
 
 void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindModuleStats& m)
 {
-  std::stringstream fs;
-  fs << output_dir << "/" << "gmon." << buildid << ".out"; /* TODO Refine naming scheme, test for / avoid collisions. */
-  string filename = fs.str();
+  string filename = output_dir + "/" + "gmon." + buildid + ".out";
+  string exe_symlink_path = output_dir + "/" + "gmon." + buildid + ".exe";
+  
+  string target_path = buildid_to_path[buildid];
+  if (symlink(target_path.c_str(), exe_symlink_path.c_str()) == -1) {
+    // Handle error, e.g., print errno or throw exception
+    cerr << "symlink failed: " << strerror(errno) << endl;
+    return;
+  }
 
   // plop buildid_to_path bits into per-gmon-out json files
 
-  std::ofstream of (filename, std::ios::binary);
+  ofstream of (filename, ios::binary);
   if (!of)
     {
       cerr << N_("buildid ") << buildid << " -- could not open '" << filename << "' for writing" << endl;
@@ -1798,10 +1804,10 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
     return; // XXX: report/tabulate hit outside known modules
 
   /* TODO(REVIEW.5): Is it better to use the unconverted build_id_desc as hash key? */
-  std::stringstream bs;
-  bs << std::hex << std::setfill('0');
+  stringstream bs;
+  bs << hex << setfill('0');
   for (int i = 0; i < build_id_len; ++i)
-    bs << std::setw(2) << static_cast<int>(desc[i]);
+    bs << setw(2) << static_cast<int>(desc[i]);
   string buildid = bs.str();
 
   const char *mainfile;
