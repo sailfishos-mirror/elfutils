@@ -66,7 +66,7 @@
 #include <libdwfl.h>
 #include <libdw.h>
 #include "../libebl/libebl.h"
-#include ELFUTILS_HEADER(dwfl_stacktrace)
+#include "../libdwfl_stacktrace/libdwfl_stacktrace.h"
 
 using namespace std;
 
@@ -147,7 +147,7 @@ struct UnwindModuleStats {
        structs), but it might be worth tracking to see if the paths
        are ever different. */
     if (mod != mod2)
-      fprintf(stderr, "XXX duplicate modules for buildid\n");
+      cerr << "XXX duplicate modules for buildid" << endl;
 #endif
     if (histogram.count(pc) == 0)
       histogram[pc] = 0;
@@ -158,7 +158,7 @@ struct UnwindModuleStats {
 #if 0
     /* TODO(REVIEW.1): ditto. */
     if (mod != mod2)
-      fprintf(stderr, "XXX duplicate modules for buildid\n");
+      cerr << "XXX duplicate modules for buildid" << endl;
 #endif
     std::pair<uint64_t, uint64_t> arc(from, to);
     if (callgraph.count(arc) == 0)
@@ -1268,8 +1268,7 @@ int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int 
 	     to associate the Dwfl with one of the existing Dwfl_Module
 	     ELF images (to know the machine/class backend to use).  */
 	  if (verbose)
-	    fprintf(stderr, N_("find_procfile pid %lld: elf not found"),
-		    (long long)*pid);
+	    cerr << N_("find_procfile pid ") << (long long)*pid << ": elf not found" << endl;
 	  close (*elf_fd);
 	  *elf_fd = -1;
 	}
@@ -1287,16 +1286,14 @@ Dwfl *PerfConsumerUnwinder::init_dwfl(pid_t pid)
   if (err < 0)
     {
       if (verbose)
-	fprintf(stderr, "dwfl_linux_proc_report pid %lld: %s",
-		(long long) pid, dwfl_errmsg (-1));
+	cerr << "dwfl_linux_proc_report pid " << (long long) pid << ": " << dwfl_errmsg (-1) << endl;
       return NULL;
     }
   err = dwfl_report_end (dwfl, NULL, NULL);
   if (err != 0)
     {
       if (verbose)
-	fprintf(stderr, "dwfl_report_end pid %lld: %s",
-		(long long) pid, dwfl_errmsg (-1));
+	cerr << "dwfl_report_end pid " << (long long) pid << ": " << dwfl_errmsg (-1) << endl;
       return NULL;
     }
 
@@ -1320,8 +1317,7 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
   if (nregs < ebl_frame_nregs(this->reader->ebl())) /* XXX expecting everything except FLAGS */
     {
       if (verbose)
-	fprintf(stderr, N_("find_dwfl: nregs=%d, expected %ld\n"),
-		nregs, ebl_frame_nregs(this->reader->ebl()));
+	cerr << N_("find_dwfl: nregs=") << nregs << ", expected " << ebl_frame_nregs(this->reader->ebl()) << endl;
       return NULL;
     }
 
@@ -1338,8 +1334,7 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
   if (err < 0)
     {
       if (verbose)
-	fprintf(stderr, "find_procfile pid %lld: %s",
-		(long long) pid, dwfl_errmsg (-1));
+	cerr << "find_procfile pid " << (long long) pid << ": " << dwfl_errmsg (-1) << endl;
       return NULL;
     }
 
@@ -1368,8 +1363,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
   if (! dwfl_frame_pc (state, &pc, &isactivation))
     {
       if (verbose)
-	fprintf(stderr, "dwfl_frame_pc: %s\n",
-		dwfl_errmsg(-1));
+	cerr << "dwfl_frame_pc: " << dwfl_errmsg(-1) << endl;
       return DWARF_CB_ABORT;
     }
 
@@ -1382,8 +1376,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
   if (rc < 0)
     {
       if (verbose)
-	fprintf(stderr, "dwfl_frame_reg: %s\n",
-		dwfl_errmsg(-1));
+	cerr << "dwfl_frame_reg: " << dwfl_errmsg(-1) << endl;
       return DWARF_CB_ABORT;
     }
 
@@ -1395,15 +1388,13 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 	dwfl_ent->worst_unwound = unwound_source;
       dwfl_ent->last_unwound = unwound_source;
       if (show_frames)
-	fprintf(stderr, "* frame %ld: pc_adjusted=%lx sp=%lx+(%lx) [%s]\n",
-		this->last_us.addrs.size(), pc_adjusted, this->last_us.base, sp - this->last_us.base,
-		dwfl_unwound_source_str(unwound_source));
+	cerr << "* frame " << this->last_us.addrs.size() << ": pc_adjusted=" << hex << pc_adjusted << " sp=" << this->last_us.base << "+" << (sp - this->last_us.base)
+	     << " [" << dwfl_unwound_source_str(unwound_source) << "]" << endl;
     }
   else
     {
       if (show_frames)
-	fprintf(stderr, N_("* frame %ld: pc_adjusted=%lx sp=%lx+(%lx) [dwfl_ent not found]\n"),
-		this->last_us.addrs.size(), pc_adjusted, this->last_us.base, sp - this->last_us.base);
+	cerr << N_("* frame ") << this->last_us.addrs.size() << ": pc_adjusted=" << hex << pc_adjusted << " sp=" << this->last_us.base << "+" << (sp - this->last_us.base) << " [dwfl_ent not found]" << endl;
     }
   if (show_tmi)
     {
@@ -1412,21 +1403,21 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
       const unsigned char *desc;
       GElf_Addr vaddr;
       int build_id_len = dwfl_module_build_id (m, &desc, &vaddr);
-      fprintf(stderr, "* pid %d build_id=", this->last_us.pid);
+      cerr << "* pid " << this->last_us.pid << " build_id=";
       for (int i = 0; i < build_id_len; ++i)
-	fprintf(stderr, "%02" PRIx8, (uint8_t) desc[i]);
+	cerr << hex << setw(2) << setfill('0') << (uint8_t) desc[i];
       /* TODO also extract mainfile= debugfile= */
       const char *mainfile;
       const char *debugfile;
       const char *modname = dwfl_module_info (m, NULL, NULL, NULL, NULL,
 					      NULL, &mainfile, &debugfile);
-      fprintf(stderr, " module=%s mainfile=%s debugfile=%s\n", modname, mainfile, debugfile);
+      cerr << " module=" << modname << " mainfile=" << mainfile << " debugfile=" << debugfile << endl;
       /* TODO: Also store this data for the final buildid summary? */
 #ifdef DEBUG_MODULES
       Dwarf_Addr bias;
-      Dwarf_CFI *cfi_eh = dwfl_module_eh_cfi (mod, &bias);
+      Dwarf_CFI *cfi_eh = dwfl_module_eh_cfi (m, &bias);
       if (cfi_eh == NULL)
-	fprintf(stderr, "* pc=%lx -> NO EH_CFI\n", pc);
+	cerr << "* pc=" << hex << pc << " -> NO EH_CFI" << endl;
 #endif
     }
 
@@ -1434,8 +1425,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
     {
       /* XXX very rarely, the unwinder can loop infinitely; worth investigating? */
       if (verbose)
-	fprintf(stderr, N_("unwind_frame_cb: sample exceeded maxframes %ld\n"),
-		maxframes);
+	cerr << N_("unwind_frame_cb: sample exceeded maxframes ") << maxframes << endl;
       return DWARF_CB_ABORT;
     }
 
@@ -1500,13 +1490,11 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
 	}
       if (verbose && show_summary)
 	{
-	  fprintf(stderr, "find_dwfl pid %lld (%s) (failed)\n",
-		  (long long)pid, comm);
+	  cerr << "find_dwfl pid " << (long long)pid << " (" << comm << ") (failed)" << endl;
 	}
       else
 	{
-	  fprintf(stderr, "find_dwfl pid %lld (failed)\n",
-		  (long long)pid);
+	  cerr << "find_dwfl pid " << (long long)pid << " (failed)" << endl;
 	}
       return;
     }
@@ -1514,10 +1502,8 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
   if (show_events)
     {
       bool is_abi32 = (abi == PERF_SAMPLE_REGS_ABI_32);
-      fprintf(stderr, "find_dwfl pid %lld%s (%s): hdr_size=%d size=%ld%s pc=%lx sp=%lx+(%lx)\n",
-	      (long long)pid, cached ? " (cached)" : "", comm,
-	      sample->size, data_size, is_abi32 ? " (32-bit)" : "",
-	      ip, this->last_us.base, (long)0);
+      cerr << "find_dwfl pid " << (long long)pid << (cached ? " (cached)" : "") << " (" << comm << "): hdr_size=" << sample->size << " size=" << data_size << (is_abi32 ? " (32-bit)" : "")
+	   << " pc=" << hex << ip << " sp=" << this->last_us.base << "+" << 0 << endl;
     }
 
   this->last_us.addrs.clear();
@@ -1533,8 +1519,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
     {
       if (verbose)
 	{
-	  fprintf(stderr, "dwflst_perf_sample_getframes pid %lld: %s\n",
-		  (long long)pid, dwfl_errmsg(-1));
+	  cerr << "dwflst_perf_sample_getframes pid " << (long long)pid << ": " << dwfl_errmsg(-1) << endl;
 	}
     }
   if (show_summary)
@@ -1648,8 +1633,7 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
   std::ofstream of (filename, std::ios::binary);
   if (!of)
     {
-      fprintf (stderr, N_("buildid %s -- could not open '%s' for writing\n"),
-	       buildid.c_str(), filename.c_str());
+      cerr << N_("buildid ") << buildid << " -- could not open '" << filename << "' for writing" << endl;
     }
 
   /* Write gmon header.  It and other headers mostly hold
@@ -1845,4 +1829,3 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
       buildid_ent->record_callgraph_arc(mod, pc2, pc);
     }
 }
-
