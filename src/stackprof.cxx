@@ -1205,7 +1205,7 @@ int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int 
 	break;
       }
   free (line);
-  fclose (procfile);
+  fclose(procfile);
 
   if (*pid == 0)
     {
@@ -1545,7 +1545,7 @@ UnwindStatsConsumer::~UnwindStatsConsumer()
 	{
 	  pid_t pid = p.first;
 	  UnwindDwflStats& d = p.second;
-	  fprintf (stdout, N_("%d %s -- max %d frames, received %d samples, lost %d samples (%.1f%%) (last %s, worst %s)\n"),
+	  clog << format(N_("{} {} -- max {} frames, received {} samples, lost {} samples ({:.1f}%) (last {}, worst {})\n"),
 		   pid, d.comm, d.max_frames,
 		   d.total_samples, d.lost_samples,
 		   PERCENT(d.lost_samples, d.total_samples),
@@ -1554,8 +1554,8 @@ UnwindStatsConsumer::~UnwindStatsConsumer()
 	  total_samples += d.total_samples;
 	  total_lost_samples += d.lost_samples;
 	}
-      fprintf(stdout, "===\n");
-      fprintf(stdout, N_("TOTAL -- received %d samples, lost %d samples, loaded %ld processes\n"),
+      clog << "===\n";
+      clog << format(N_("TOTAL -- received {} samples, lost {} samples, loaded {} processes\n"),
 	      total_samples, total_lost_samples,
 	      this->stats->dwfl_tab.size() /* TODO: If implementing eviction, need to maintain a separate count of evicted pids. */);
       cout << endl;
@@ -1766,7 +1766,7 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
       if (buildid_to_debugfile.count(buildid) != 0)
 	debugfile = buildid_to_debugfile[buildid].c_str();
       if (show_summary)
-	fprintf (stdout, N_("buildid %s (%s%s%s) -- received %ld distinct pcs, %ld callgraph arcs\n"), /* TODO also count samples / estimated histogram size? */
+	clog << format(N_("buildid {} ({} {}{}) -- received {} distinct pcs, {} callgraph arcs\n"), /* TODO also count samples / estimated histogram size? */
 		 buildid.c_str(),
 		 mainfile == NULL ? "<unknown>" : mainfile,
 		 debugfile == NULL ? "" : " +debugfile ",
@@ -1777,8 +1777,8 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
     }
   if (show_summary)
     {
-      fprintf(stdout, "===\n");
-      fprintf(stdout, N_("TOTAL -- received %ld buildids\n"), this->stats->buildid_tab.size());
+      clog << "===\n";
+      clog << format(N_("TOTAL -- received {} buildids\n"), this->stats->buildid_tab.size());
     }
   cout << endl;
 }
