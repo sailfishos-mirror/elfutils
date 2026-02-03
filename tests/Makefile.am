@@ -311,7 +311,7 @@ TESTS += run-debuginfod-ima-verification.sh
 endif
 endif
 
-if HAVE_CXX11
+if HAVE_CXX20
 check_PROGRAMS += funcretval_test++11
 funcretval_test__11_SOURCES = funcretval_test++11.cxx
 TESTS += run-funcretval++11.sh

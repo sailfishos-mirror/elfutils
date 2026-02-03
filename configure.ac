@@ -832,10 +832,11 @@ fi
 AC_CHECK_PROG(HAVE_ZSTD, zstd, yes, no)
 AM_CONDITIONAL([HAVE_ZSTD],[test "x$HAVE_ZSTD" = "xyes"])
 
-# For tests that need to use C++11
-AX_CXX_COMPILE_STDCXX(11, noext, optional)
-AS_IF([test "x$HAVE_CXX11" = "x1"], [HAVE_CXX11=yes], [HAVE_CXX11=no])
-AM_CONDITIONAL([HAVE_CXX11],[test "x$HAVE_CXX11" = "xyes"])
+# For tests that need to use C++20
+AX_CXX_COMPILE_STDCXX(20, noext, optional)
+AS_IF([test "x$HAVE_CXX20" = "x1"], [HAVE_CXX20=yes], [HAVE_CXX20=no])
+AM_CONDITIONAL([HAVE_CXX20],[test "x$HAVE_CXX20" = "xyes"])
+
 
 # For eu-stackprof
 # optional:
@@ -843,7 +844,7 @@ AC_CHECK_HEADERS([perfmon/pfmlib_perf_event.h])
 AC_CHECK_LIB(pfm, pfm_get_os_event_encoding, [AC_SUBST(libpfm_LIBS, '-lpfm')])
 # required:
 AC_CHECK_HEADERS([linux/perf_event.h])
-AM_CONDITIONAL([ENABLE_STACKPROF],[test "x${ac_cv_header_linux_perf_event_h}x${HAVE_CXX11}" = "xyesxyes" ])
+AM_CONDITIONAL([ENABLE_STACKPROF],[test "x${ac_cv_header_linux_perf_event_h}x${HAVE_CXX20}" = "xyesxyes" ])
 
 
 AC_CHECK_HEADERS([execinfo.h])
@@ -880,7 +881,7 @@ PKG_CHECK_MODULES([libarchive],[libarchive >= 3.1.2],[have_libarchive=yes],[have
 # pronounce judgement on ability to build server, overridden by =yes/=no
 if test "x$enable_debuginfod" = "xno"; then
    true
-elif test "x$have_jsonc$HAVE_CXX11$have_libarchive$have_sqlite3" = "xyesyesyesyes"; then
+elif test "x$have_jsonc$HAVE_CXX20$have_libarchive$have_sqlite3" = "xyesyesyesyes"; then
    enable_debuginfod=yes
 elif test "x$enable_debuginfod" = "xyes"; then
    AC_MSG_ERROR([unable to build debuginfod, missing libmicrohttpd, sqlite3 or libarchive])
@@ -1037,7 +1038,7 @@ AC_MSG_NOTICE([
   EXTRA TEST FEATURES (used with make check)
     have bunzip2 installed (required)  : ${HAVE_BUNZIP2}
     have zstd installed                : ${HAVE_ZSTD}
-    C++11                              : ${HAVE_CXX11}
+    C++20                              : ${HAVE_CXX20}
     debug branch prediction            : ${use_debugpred}
     gprof support                      : ${use_gprof}
     gcov support                       : ${use_gcov}
