@@ -116,8 +116,8 @@ elfclassify_LDADD = $(libelf) $(libdw) $(libeu) $(argp_LDADD)
 srcfiles_SOURCES = srcfiles.cxx
 srcfiles_LDADD = $(libdw) $(libelf) $(libeu) $(argp_LDADD) $(libarchive_LIBS) $(libdebuginfod)
 stackprof_SOURCES = stackprof.cxx
-stackprof_CPPFLAGS = $(jsonc_CXXFLAGS)
-stackprof_CXXFLAGS = -std=c++11 -Wall
+stackprof_CPPFLAGS = $(AM_CPPFLAGS) $(jsonc_CXXFLAGS)
+stackprof_CXXFLAGS = -Wall
 stackprof_LDADD = $(libebl) $(libdw) $(libelf) $(libeu) $(argp_LDADD) $(libpfm_LIBS) $(jsonc_LIBS)
 
 installcheck-binPROGRAMS: $(bin_PROGRAMS)

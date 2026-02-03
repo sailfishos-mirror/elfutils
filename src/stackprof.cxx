@@ -41,6 +41,7 @@
 #include <fstream>
 #include <sstream>
 #include <cinttypes>
+#include <format>
 #include <sys/utsname.h>
 
 #include <sys/syscall.h>
@@ -793,7 +794,7 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
       for (size_t x = 0; x<sizeof(*attr); x++)
 	cout << ((x % 8) ? "" : " ")
 	     << ((x % 32) ? "" : "\n")
-	     << hex << setw(2) << setfill('0') << (unsigned)bytes[x];
+	     << format("{:02x}", (unsigned)bytes[x]);
       cout << endl;
       clog.setf(oldf);
     }
