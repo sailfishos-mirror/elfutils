@@ -120,7 +120,7 @@ static const Dwfl_Callbacks dwfl_cfi_callbacks =
 // Unwind statistics for a Dwfl and associated process.
 struct UnwindDwflStats {
   Dwfl *dwfl;
-  char *comm;
+  char *comm;  // XXX need dtor to free?  or std::string?
   int max_frames; /* for diagnostic purposes */
   int total_samples; /* for diagnostic purposes */
   int lost_samples; /* for diagnostic purposes */
@@ -724,6 +724,7 @@ main (int argc, char *argv[])
       delete usc;
       delete pcu;
       delete spc;
+      delete tab;
 
       // reporting done in various destructors
     }
@@ -834,6 +835,7 @@ PerfReader::~PerfReader()
     close(fd);
   for (auto m : this->perf_headers)
     munmap((void*) m, this->mmap_size);
+  ebl_closebackend (this->default_ebl);
 }
 
 
@@ -1122,6 +1124,7 @@ const char *UnwindStatsTable::pid_find_comm (pid_t pid)
   for (i = linelen - 1; i > 0; i--)
     if (entry->comm[i] == '\n')
 	entry->comm[i] = '\0';
+
   fclose(procfile);
   goto done;
  fail:
@@ -1451,7 +1454,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
   if (show_frames)
     cout << endl; /* extra newline for padding */
 
-  Elf *elf = NULL;
+  Elf *elf = NULL; // XXX: when is this released?
   bool cached = false;
   Dwfl *dwfl = this->find_dwfl (pid, regs, nregs, &elf, &cached);
   UnwindDwflStats *dwfl_ent = NULL;
@@ -1644,7 +1647,8 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
   ofstream of_js (json_path);
   of_js << metadata_str;
   of_js.close();
-
+  json_object_put (metadata);
+    
   ofstream of (filename, ios::binary);
   if (!of)
     {
