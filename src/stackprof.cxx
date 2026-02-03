@@ -1197,38 +1197,13 @@ UnwindModuleStats *UnwindStatsTable::buildid_find_or_create (string buildid, Dwf
 ////////////////////////////////////////////////////////////////////////
 // real perf consumer: unwind helpers
 
-/* TODO(REVIEW.2): Including extern "C" libdwflP.h in a C++ program is a no-go. Add dwfl_process() &c as an API? */
-struct _DwflHack
-{
-  const Dwfl_Callbacks *callbacks;
-  Dwflst_Process_Tracker *tracker;
-#ifdef ENABLE_LIBDEBUGINFOD
-  debuginfod_client *debuginfod;
-#endif
-  Dwfl_Module *modulelist;
-  void *process;
-  /* Dwfl_Error attacherr; -- private type :( */
-  /* ... */
-};
-
-void *dwfl_process(Dwfl *dwfl)
-{
-  // return dwfl->process;
-  return ((_DwflHack*)dwfl)->process;
-}
-
-// bool dwfl_has_attacherr(Dwfl *dwfl)
-// {
-//   return dwfl->attacherr != DWFL_E_NOERROR;
-// }
-
 /* TODO: Could be relocated to libdwfl/linux-pid-attach.c
-   to remove a dependency on the libdwflP.h interface. */
+   to remove some duplication of existing linux-pid-attach code. */
 int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
 {
   char buffer[36];
   FILE *procfile;
-  int err = 0; /* The errno to return and set for dwfl->attacherr.  */
+  int err = 0; /* The errno to return. XXX libdwfl would also set this for dwfl->attacherr.  */
 
   /* Make sure to report the actual PID (thread group leader) to
      dwfl_attach_state.  */
@@ -1238,14 +1213,6 @@ int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int 
     {
       err = errno;
     fail:
-      /* TODO: Including extern "C" libdwflP.h in a C++ program is a no-go. */
-      // if (dwfl->process == NULL && dwfl->attacherr == DWFL_E_NOERROR) /* XXX requires libdwflP.h */
-      // if (dwfl_process(dwfl) == NULL && !dwfl_has_attacherr(dwfl))
-      //   {
-      //     errno = err;
-      //     /* TODO: __libdwfl_canon_error not exported from libdwfl */
-      //     /* dwfl->attacherr = __libdwfl_canon_error (DWFL_E_ERRNO); */
-      //   }
       return err;
     }
 
@@ -1362,7 +1329,7 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
   Dwfl *dwfl = dwflst_tracker_find_pid (this->tracker, pid, pcu_init_dwfl_cb, this);
   int elf_fd = -1;
   int err;
-  if (dwfl != NULL && dwfl_process(dwfl) != NULL)
+  if (dwfl != NULL && dwfl_pid(dwfl) != -1 /* dwfl is attached */)
     {
       *cached = true;
       goto reuse;
@@ -1651,12 +1618,10 @@ void UnwindStatsConsumer::process(const UnwindSample* sample)
 // unwind data consumers // gprof
 
 /* gmon.out file format bits */
-/* TODO(REVIEW.3) These are now unused after the fixup patch? */
-#define GMON_MAGIC "gmon"
-#define GMON_EUS_MAGIC "elfutils"
-#define GMON_VERSION 1
+extern "C" {
 
-#define GMON_BIN_SIZE sizeof(uint16_t)
+#define GMON_MAGIC "gmon"
+#define GMON_VERSION 1
 
 struct gmon_hdr {
   char cookie[4];
@@ -1670,6 +1635,7 @@ enum gmon_entry_tag {
   GMON_TAG_BB_COUNT = 2,
 };
 
+};
 
 void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindModuleStats& m)
 {
