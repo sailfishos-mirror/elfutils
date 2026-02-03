@@ -61,6 +61,8 @@
 #include <perfmon/pfmlib_perf_event.h>
 #endif
 
+#include <json-c/json.h>
+
 #include <gelf.h>
 #include <dwarf.h>
 #include <libdwfl.h>
@@ -134,33 +136,16 @@ struct hash_arc {
 
 // Unwind statistics for a single module identified by build-id.
 struct UnwindModuleStats {
-  Dwfl_Module *mod;
   map<uint64_t, uint32_t> histogram; /* sorted by pc */
   unordered_map<pair<uint64_t, uint64_t>, uint32_t, hash_arc> callgraph;
 
-  UnwindModuleStats() : mod(NULL) {}
-  void record_pc(Dwfl_Module *mod2, Dwarf_Addr pc) {
-    if (mod == NULL) mod = mod2;
-#if 0
-    /* TODO(REVIEW.1): 'duplicate modules for buildid' should not be an
-       issue (libdwflst caching is done on the underlying Elf
-       structs), but it might be worth tracking to see if the paths
-       are ever different. */
-    if (mod != mod2)
-      cerr << "XXX duplicate modules for buildid" << endl;
-#endif
+  void record_pc(Dwarf_Addr pc) {
     if (histogram.count(pc) == 0)
       histogram[pc] = 0;
     histogram[pc]++;
   }
-  void record_callgraph_arc(Dwfl_Module *mod2, Dwarf_Addr from, Dwarf_Addr to) {
-    if (mod == NULL) mod = mod2;
-#if 0
-    /* TODO(REVIEW.1): ditto. */
-    if (mod != mod2)
-      cerr << "XXX duplicate modules for buildid" << endl;
-#endif
-    pair<uint64_t, uint64_t> arc(from, to);
+  void record_callgraph_arc(Dwarf_Addr from, Dwarf_Addr to) {
+    std::pair<uint64_t, uint64_t> arc(from, to);
     if (callgraph.count(arc) == 0)
       callgraph[arc] = 0;
     callgraph[arc]++;
@@ -406,7 +391,8 @@ struct gmon_hist_hdr;
 class GprofUnwindSampleConsumer: public UnwindSampleConsumer
 {
   UnwindStatsTable *stats;
-  unordered_map<string, string> buildid_to_path;
+  unordered_map<string, string> buildid_to_mainfile;
+  unordered_map<string, string> buildid_to_debugfile;
 
 public:
   GprofUnwindSampleConsumer(UnwindStatsTable *usc) : stats(usc) {}
@@ -1626,15 +1612,49 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 {
   string filename = output_dir + "/" + "gmon." + buildid + ".out";
   string exe_symlink_path = output_dir + "/" + "gmon." + buildid + ".exe";
-  
-  string target_path = buildid_to_path[buildid];
+  string json_path = output_dir + "/" + "gmon." + buildid + ".json";
+
+  string target_path = buildid_to_mainfile[buildid];
   if (symlink(target_path.c_str(), exe_symlink_path.c_str()) == -1) {
     // Handle error, e.g., print errno or throw exception
     cerr << "symlink failed: " << strerror(errno) << endl;
-    return;
+    //return; /* TODO: We may want to re-create the symlink on repeated runs. */
   }
 
-  // plop buildid_to_path bits into per-gmon-out json files
+  // TODO(REVIEW.4): plop buildid_to_{mainfile,debugfile} bits into per-gmon-out json files
+  json_object *metadata = json_object_new_object();
+  if (!metadata) {
+  json_fail:
+    cerr << "json allocation failed: " << strerror(errno) << endl;
+    return;
+  }
+  json_object *buildid_js = json_object_new_string(buildid.c_str());
+  if (NULL == buildid_js) goto json_fail;
+  json_object_object_add(metadata, "buildid", buildid_js);
+  const char *mainfile = NULL;
+  if (buildid_to_mainfile.count(buildid) != 0)
+    mainfile = buildid_to_mainfile[buildid].c_str();
+  if (mainfile != NULL)
+    {
+      json_object *mainfile_js = json_object_new_string(mainfile);
+      if (NULL == mainfile_js) goto json_fail;
+      json_object_object_add(metadata, "mainfile", mainfile_js);
+    }
+  const char *debugfile = NULL;
+  if (buildid_to_debugfile.count(buildid) != 0)
+    debugfile = buildid_to_debugfile[buildid].c_str();
+  if (debugfile != NULL)
+    {
+      json_object *debugfile_js = json_object_new_string(debugfile);
+      if (NULL == debugfile_js) goto json_fail;
+      json_object_object_add(metadata, "debugfile", debugfile_js);
+    }
+  const char *metadata_str = json_object_to_json_string(metadata);
+  if (!metadata_str) goto json_fail;
+  ofstream of_js (json_path);
+  cerr << metadata_str;
+  of_js << metadata_str;
+  of_js.close();
 
   ofstream of (filename, ios::binary);
   if (!of)
@@ -1750,11 +1770,12 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
          debuginfod-find can be used as a mostly-functional fallback
          (for packaged rather than locally built executables) if the
          results are moved to another system. */
-      const char *mainfile;
-      const char *debugfile;
-      const char *modname = dwfl_module_info (m.mod, NULL, NULL, NULL, NULL,
-					      NULL, &mainfile, &debugfile);
-      (void) modname;
+      const char *mainfile = NULL;
+      if (buildid_to_mainfile.count(buildid) != 0)
+	mainfile = buildid_to_mainfile[buildid].c_str();
+      const char *debugfile = NULL;
+      if (buildid_to_debugfile.count(buildid) != 0)
+	debugfile = buildid_to_debugfile[buildid].c_str();
       if (show_summary)
 	fprintf (stdout, N_("buildid %s (%s%s%s) -- received %ld distinct pcs, %ld callgraph arcs\n"), /* TODO also count samples / estimated histogram size? */
 		 buildid.c_str(),
@@ -1814,7 +1835,11 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   const char *debugfile;
   dwfl_module_info (mod, NULL, NULL, NULL, NULL,
 		    NULL, &mainfile, &debugfile);
-  if (mainfile && !buildid_to_path.count(buildid)) buildid_to_path[buildid] = mainfile;
+  if (mainfile && !buildid_to_mainfile.count(buildid))
+    buildid_to_mainfile[buildid] = mainfile;
+  if (debugfile && !buildid_to_debugfile.count(buildid))
+    buildid_to_debugfile[buildid] = debugfile;
+  /* TODO(REVIEW.6): Also monitor for collisions. */
 
   UnwindModuleStats *buildid_ent = this->stats->buildid_find_or_create(buildid, mod);
 
@@ -1826,12 +1851,12 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   if (i >= 0)
     name = dwfl_module_relocation_info (mod, i, NULL);
   #endif
-  buildid_ent->record_pc(mod, pc);
+  buildid_ent->record_pc(pc);
 
   if (mod == mod2) // intra-module call
     {
       int j = dwfl_module_relocate_address (mod, &pc2); // map pc2 also
       (void) j;
-      buildid_ent->record_callgraph_arc(mod, pc2, pc);
+      buildid_ent->record_callgraph_arc(pc2, pc);
     }
 }
