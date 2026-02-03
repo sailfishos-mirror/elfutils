@@ -619,14 +619,10 @@ main (int argc, char *argv[])
 
       if (show_summary)
 	{
-	  auto oldf = clog.flags();
-	  clog << "perf_event_attr configuration" << hex << showbase
-	       << " type=" << attr.type
-	       << " config=" << attr.config
-	       << (attr.freq ? " sample_freq=" : " sample_period=")
-	       << (attr.freq ? attr.sample_freq : attr.sample_period)
-	       << endl;
-	  clog.setf(oldf);
+	  clog << format("perf_event_attr configuration type={:x} config={:x} {}{} \n",
+			      attr.type, attr.config,
+			      (attr.freq ? "sample_freq=" : "sample_period="),
+			      (attr.freq ? attr.sample_freq : attr.sample_period));
 	}
 
       if (remaining < argc) // got a CMD... suffix?  ok start it
@@ -788,15 +784,13 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
 
   if (show_tmi)
     { // hexdump attr
-      auto oldf = clog.flags();
-      clog << "perf_event_attr hexdump:";
+      clog << "perf_event_attr hexdump: ";
       auto bytes = (unsigned char*) attr;
       for (size_t x = 0; x<sizeof(*attr); x++)
-	cout << ((x % 8) ? "" : " ")
+	clog << ((x % 8) ? "" : " ")
 	     << ((x % 32) ? "" : "\n")
 	     << format("{:02x}", (unsigned)bytes[x]);
-      cout << endl;
-      clog.setf(oldf);
+      clog << endl;
     }
 
   // Iterate over all cpus, even if attaching to a single pid, because
@@ -904,10 +898,8 @@ void PerfReader::process_some()
                 ehdr = (perf_event_header*) (base + (data_tail & (ring_buffer_size - 1)));
                 ehdr_size = ehdr->size;
                 if (show_tmi)
-                  clog << "perf head=" << (void*) data_head
-                       << " tail=" << (void*) data_tail
-                       << " ehdr=" << (void*) ehdr
-                       << " size=" << setbase(10) << ehdr_size << setbase(16) << endl;
+                  clog << format("perf head={:p} tail={:p} ehdr={:p} size={:d}{:x}\n",
+				      (void*) data_head, (void*) data_tail, (void*) ehdr, ehdr_size, 0);
 
                 if (((uint8_t *)ehdr) + ehdr_size > base + ring_buffer_size) // mmap region wraparound?
                   {
@@ -1058,11 +1050,8 @@ void StatsPerfConsumer::process_sample(const perf_event_header *sample,
 {
   if (show_events)
     {
-      auto oldf = clog.flags();
-      clog << "process_sample: pid=" << pid << " tid=" << tid << " ip=" << hex << ip 
-           << " time=" << time << " abi=" << abi << " nregs=" << nregs
-           << " data_size=" << data_size << endl;
-      clog.setf(oldf);
+      clog << format("process_sample: pid={:d} tid={:d} ip={:x} time={:d} abi={:d} nregs={:d} data_size={:d}\n",
+			  pid, tid, ip, time, abi, nregs, data_size);
     }
 }
 
@@ -1074,11 +1063,8 @@ void StatsPerfConsumer::process_mmap2(const perf_event_header *sample,
 {
   if (show_events)
     {
-      auto oldf = clog.flags();
-      clog << "process_mmap2: pid=" << pid << " tid=" << tid << " addr=" << hex << addr
-           << " len=" << len << " pgoff=" << pgoff << " build_id_size=" << (unsigned)build_id_size
-           << " filename=" << filename << endl;
-      clog.setf(oldf);
+      clog << format("process_mmap2: pid={:d} tid={:d} addr={:x} len={:x} pgoff={:x} build_id_size={:d} filename={:s}\n",
+			  pid, tid, addr, len, pgoff, (unsigned)build_id_size, filename);
     }
 }
 
@@ -1375,13 +1361,14 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 	dwfl_ent->worst_unwound = unwound_source;
       dwfl_ent->last_unwound = unwound_source;
       if (show_frames)
-	cerr << "* frame " << this->last_us.addrs.size() << ": pc_adjusted=" << hex << pc_adjusted << " sp=" << this->last_us.base << "+" << (sp - this->last_us.base)
-	     << " [" << dwfl_unwound_source_str(unwound_source) << "]" << endl;
+	cerr << format("* frame {:d}: pc_adjusted={:x} sp={:x}+{:x} [{}]\n",
+			    this->last_us.addrs.size(), pc_adjusted, this->last_us.base, (sp - this->last_us.base), dwfl_unwound_source_str(unwound_source));
     }
   else
     {
       if (show_frames)
-	cerr << N_("* frame ") << this->last_us.addrs.size() << ": pc_adjusted=" << hex << pc_adjusted << " sp=" << this->last_us.base << "+" << (sp - this->last_us.base) << " [dwfl_ent not found]" << endl;
+	cerr << format(N_("* frame {:d}: pc_adjusted={:x} sp={:x}+{:x} [dwfl_ent not found]\n"),
+			    this->last_us.addrs.size(), pc_adjusted, this->last_us.base, (sp - this->last_us.base));
     }
   if (show_tmi)
     {
@@ -1390,21 +1377,23 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
       const unsigned char *desc;
       GElf_Addr vaddr;
       int build_id_len = dwfl_module_build_id (m, &desc, &vaddr);
-      cerr << "* pid " << this->last_us.pid << " build_id=";
+      cerr << format("* pid {:d} build_id=", this->last_us.pid);
       for (int i = 0; i < build_id_len; ++i)
-	cerr << hex << setw(2) << setfill('0') << (uint8_t) desc[i];
+        cerr << format("{:02x}", static_cast<int>(desc[i]));
+
       /* TODO also extract mainfile= debugfile= */
       const char *mainfile;
       const char *debugfile;
       const char *modname = dwfl_module_info (m, NULL, NULL, NULL, NULL,
 					      NULL, &mainfile, &debugfile);
-      cerr << " module=" << modname << " mainfile=" << mainfile << " debugfile=" << debugfile << endl;
+      cerr << format(" module={} mainfile={} debugfile={}\n",
+			  modname, mainfile, debugfile);
       /* TODO: Also store this data for the final buildid summary? */
 #ifdef DEBUG_MODULES
       Dwarf_Addr bias;
       Dwarf_CFI *cfi_eh = dwfl_module_eh_cfi (m, &bias);
       if (cfi_eh == NULL)
-	cerr << "* pc=" << hex << pc << " -> NO EH_CFI" << endl;
+	cerr << format("* pc={:x} -> NO EH_CFI\n", pc);
 #endif
     }
 
@@ -1412,7 +1401,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
     {
       /* XXX very rarely, the unwinder can loop infinitely; worth investigating? */
       if (verbose)
-	cerr << N_("unwind_frame_cb: sample exceeded maxframes ") << maxframes << endl;
+	cerr << format(N_("unwind_frame_cb: sample exceeded maxframes {:d}\n"), maxframes);
       return DWARF_CB_ABORT;
     }
 
@@ -1489,8 +1478,8 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
   if (show_events)
     {
       bool is_abi32 = (abi == PERF_SAMPLE_REGS_ABI_32);
-      cerr << "find_dwfl pid " << (long long)pid << (cached ? " (cached)" : "") << " (" << comm << "): hdr_size=" << sample->size << " size=" << data_size << (is_abi32 ? " (32-bit)" : "")
-	   << " pc=" << hex << ip << " sp=" << this->last_us.base << "+" << 0 << endl;
+      cerr << format("find_dwfl pid {:d} {} ({}): hdr_size={:d} size={:d} {} pc={:x} sp={:x}+{:d}\n",
+			  (long long)pid, (cached ? "(cached)" : ""), comm, sample->size, data_size, (is_abi32 ? "(32-bit)" : ""), ip, this->last_us.base, 0);
     }
 
   this->last_us.addrs.clear();
@@ -1653,14 +1642,13 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
   const char *metadata_str = json_object_to_json_string(metadata);
   if (!metadata_str) goto json_fail;
   ofstream of_js (json_path);
-  cerr << metadata_str;
   of_js << metadata_str;
   of_js.close();
 
   ofstream of (filename, ios::binary);
   if (!of)
     {
-      cerr << N_("buildid ") << buildid << " -- could not open '" << filename << "' for writing" << endl;
+      cerr << format(N_("buildid {} -- could not open '{}' for writing\n"), buildid, filename);
     }
 
   /* Write gmon header.  It and other headers mostly hold
@@ -1826,11 +1814,10 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
     return; // XXX: report/tabulate hit outside known modules
 
   /* TODO(REVIEW.5): Is it better to use the unconverted build_id_desc as hash key? */
-  stringstream bs;
-  bs << hex << setfill('0');
-  for (int i = 0; i < build_id_len; ++i)
-    bs << setw(2) << static_cast<int>(desc[i]);
-  string buildid = bs.str();
+  string buildid;
+  for (int i = 0; i < build_id_len; ++i) {
+    buildid += format("{:02x}", static_cast<int>(desc[i]));
+  }
 
   const char *mainfile;
   const char *debugfile;
