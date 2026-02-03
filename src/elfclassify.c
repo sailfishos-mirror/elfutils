@@ -866,6 +866,8 @@ check_ar_members (void)
 	      bad_ar = true;
 	      break;
 	    }
+
+	  free (full_path);
 	  full_path = new_path;
 	}
 
