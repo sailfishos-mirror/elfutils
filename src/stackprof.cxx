@@ -42,6 +42,8 @@
 #include <sstream>
 #include <cinttypes>
 #include <format>
+#include <filesystem>
+
 #include <sys/utsname.h>
 
 #include <sys/syscall.h>
@@ -142,14 +144,16 @@ struct UnwindModuleStats {
 
   void record_pc(Dwarf_Addr pc) {
     if (histogram.count(pc) == 0)
-      histogram[pc] = 0;
-    histogram[pc]++;
+      histogram[pc]=1;
+    else
+      histogram[pc]++;
   }
   void record_callgraph_arc(Dwarf_Addr from, Dwarf_Addr to) {
     std::pair<uint64_t, uint64_t> arc(from, to);
     if (callgraph.count(arc) == 0)
-      callgraph[arc] = 0;
-    callgraph[arc]++;
+      callgraph[arc]=1;
+    else
+      callgraph[arc]++;
   }
 };
 
@@ -287,7 +291,6 @@ struct UnwindSample
   const perf_event_header *event;
   Dwfl *dwfl;
   uint32_t pid, tid;
-  vector<pair<string,Dwarf_Addr>> buildid_reladdrs; /* TODO: Populate. */
   vector<Dwarf_Addr> addrs;
   int elfclass;
 
@@ -305,9 +308,10 @@ class UnwindSampleConsumer;
 class PerfConsumerUnwinder: public PerfConsumer
 {
   UnwindSampleConsumer *consumer;
-  UnwindSample last_us;
+  UnwindSample last_us; // XXX: why & is this safe to hang onto?
   Dwflst_Process_Tracker *tracker;
   UnwindStatsTable *stats;
+  unsigned maxframes;
 
   int find_procfile(Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd);
   Dwfl *find_dwfl(pid_t pid, const uint64_t *regs, uint32_t nregs,
@@ -316,18 +320,9 @@ class PerfConsumerUnwinder: public PerfConsumer
   int get_sp_reg(bool is_abi32);
 
 public:
-  PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust)
-    : consumer(usc), stats(ust) {
-    this->tracker = dwflst_tracker_begin (&dwfl_cfi_callbacks);
-  }
-  PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust, PerfReader *reader)
-    : consumer(usc), stats(ust) {
-    this->reader = reader;
-    this->tracker = dwflst_tracker_begin (&dwfl_cfi_callbacks);
-  }
-  ~PerfConsumerUnwinder() {
-    dwflst_tracker_end (this->tracker);
-  }
+  PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust);
+  PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust, PerfReader *reader);
+  ~PerfConsumerUnwinder();
 
   /* libdwfl{st} callbacks */
   Dwfl *init_dwfl(pid_t pid);
@@ -363,6 +358,7 @@ public:
   UnwindSampleConsumer() {}
   virtual ~UnwindSampleConsumer() {}
   virtual void process(const UnwindSample* sample) = 0;
+  virtual int maxframes() = 0;
 };
 
 
@@ -374,12 +370,12 @@ class UnwindStatsConsumer: public UnwindSampleConsumer
 
   /* TODO subsumed by stats? */
   unordered_map<int,unsigned> event_unwind_counts; /* TODO by pid? */
-  unordered_map<string,unsigned> event_buildid_hits; /* by buildid */
 
 public:
   UnwindStatsConsumer(UnwindStatsTable *usc) : stats(usc) {}
   ~UnwindStatsConsumer();
   void process(const UnwindSample* sample);
+  int maxframes();
 };
 
 
@@ -400,6 +396,7 @@ public:
   ~GprofUnwindSampleConsumer(); // write out all the gmon.$BUILDID.out files
   void record_gmon_out(const string& buildid, UnwindModuleStats& m); // write out one gmon.$BUILDID.out file
   void process(const UnwindSample* sample); // accumulate hits / callgraph edges (need maxdepth=1 only)
+  int maxframes() { return 1; }
 };
 
 
@@ -428,6 +425,7 @@ static const struct argp_option options[] =
   { "verbose", 'v', NULL, 0, N_ ("Increase verbosity of logging messages."), 0 },
   { "gmon", 'g', NULL, 0, N_("Generate gmon.BUILDID.out files for each binary."), 0 },
   { "output", 'o', "DIR", 0, N_("Output directory for gmon files."), 0 },
+  { "force", 'f', NULL, 0, N_("Unlink output files to force writing as new."), 0 },
   { "pid", 'p', "PID", 0, N_("Profile given PID, and its future children."), 0 },
 #ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H
   { "event", 'e', "EVENT", 0, N_("Sample given LIBPFM event specification."), 0 },
@@ -449,10 +447,13 @@ static const struct argp argp =
 static unsigned verbose;
 static bool gmon;
 static string output_dir = ".";
+static bool output_force = false; // overwrite preexisting output files?
 static int pid;
-static unsigned long maxframes = 256;
+static unsigned long def_maxframes = 256;
 static string libpfm_event;
+static string libpfm_event_decoded;
 static perf_event_attr attr;
+static bool branch_record = false; // using accurate branch recording for call-graph arcs rather than backtrace heuristics
 
 // Verbosity beyond level 1:
 static bool show_summary = false;
@@ -487,9 +488,13 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
 
     case 'd':
-      maxframes = atoi(arg);
+      def_maxframes = atoi(arg);
       break;
 
+    case 'f':
+      output_force = true;
+      break;
+      
 #ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H
     case 'e':
       libpfm_event = arg;
@@ -601,6 +606,7 @@ main (int argc, char *argv[])
 	    {
 	      clog << "libpfm expanded " << libpfm_event << " to " << fstr << endl;
 	    }
+          libpfm_event_decoded = fstr; // overwrite 
 	  free(fstr);
 #endif
         }
@@ -1173,6 +1179,25 @@ UnwindModuleStats *UnwindStatsTable::buildid_find_or_create (string buildid, Dwf
 ////////////////////////////////////////////////////////////////////////
 // real perf consumer: unwind helpers
 
+
+PerfConsumerUnwinder::PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust)
+    : consumer(usc), stats(ust) {
+  maxframes = usc->maxframes();
+  this->tracker = dwflst_tracker_begin (&dwfl_cfi_callbacks);
+}
+
+PerfConsumerUnwinder::PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust, PerfReader *reader)
+  : consumer(usc), stats(ust) {
+  maxframes = usc->maxframes();    
+  this->reader = reader;
+  this->tracker = dwflst_tracker_begin (&dwfl_cfi_callbacks);
+}
+
+PerfConsumerUnwinder::~PerfConsumerUnwinder() {
+  dwflst_tracker_end (this->tracker);
+}
+
+
 /* TODO: Could be relocated to libdwfl/linux-pid-attach.c
    to remove some duplication of existing linux-pid-attach code. */
 int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
@@ -1400,11 +1425,10 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 #endif
     }
 
-  if (this->last_us.addrs.size() > maxframes)
+  // e.g. gmon callgraphs only requires maxframes=1 (caller ID only)
+  if (this->last_us.addrs.size() > this->maxframes)
     {
       /* XXX very rarely, the unwinder can loop infinitely; worth investigating? */
-      if (verbose)
-	cerr << format(N_("unwind_frame_cb: sample exceeded maxframes {:d}\n"), maxframes);
       return DWARF_CB_ABORT;
     }
 
@@ -1516,6 +1540,8 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
   this->consumer->process (&this->last_us);
   return;
 }
+
+
 void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
 					 uint32_t pid, uint32_t tid,
 					 uint64_t addr, uint64_t len, uint64_t pgoff,
@@ -1562,21 +1588,20 @@ UnwindStatsConsumer::~UnwindStatsConsumer()
 	      total_samples, total_lost_samples,
 	      this->stats->dwfl_tab.size() /* TODO: If implementing eviction, need to maintain a separate count of evicted pids. */);
       cout << endl;
-
-      /* TODO: Implement in terms of the build-id table. */
-      cout << "=== buildid / unwind-hit counts ===" << endl;
-      for (const auto& kv : this->event_buildid_hits)
-	cout << "buildid " << kv.first << " -- received " << kv.second << " samples" << endl;
     }
 }
 
 void UnwindStatsConsumer::process(const UnwindSample* sample)
 {
   this->event_unwind_counts[sample->pid] ++;
-
-  for (auto& p : sample->buildid_reladdrs)
-    this->event_buildid_hits[p.first] ++;
 }
+
+
+int UnwindStatsConsumer::maxframes()
+{
+  return def_maxframes;
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 // unwind data consumers // gprof
@@ -1607,6 +1632,12 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
   string exe_symlink_path = output_dir + "/" + "gmon." + buildid + ".exe";
   string json_path = output_dir + "/" + "gmon." + buildid + ".json";
 
+  if (output_force) {
+    filesystem::remove(filename);
+    filesystem::remove(exe_symlink_path);
+    filesystem::remove(json_path);
+  }
+
   string target_path = buildid_to_mainfile[buildid];
   if (symlink(target_path.c_str(), exe_symlink_path.c_str()) == -1) {
     // Handle error, e.g., print errno or throw exception
@@ -1624,24 +1655,34 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
   json_object *buildid_js = json_object_new_string(buildid.c_str());
   if (NULL == buildid_js) goto json_fail;
   json_object_object_add(metadata, "buildid", buildid_js);
-  const char *mainfile = NULL;
-  if (buildid_to_mainfile.count(buildid) != 0)
-    mainfile = buildid_to_mainfile[buildid].c_str();
-  if (mainfile != NULL)
-    {
-      json_object *mainfile_js = json_object_new_string(mainfile);
-      if (NULL == mainfile_js) goto json_fail;
-      json_object_object_add(metadata, "mainfile", mainfile_js);
-    }
-  const char *debugfile = NULL;
-  if (buildid_to_debugfile.count(buildid) != 0)
-    debugfile = buildid_to_debugfile[buildid].c_str();
-  if (debugfile != NULL)
-    {
-      json_object *debugfile_js = json_object_new_string(debugfile);
-      if (NULL == debugfile_js) goto json_fail;
-      json_object_object_add(metadata, "debugfile", debugfile_js);
-    }
+  if (buildid_to_mainfile.count(buildid) != 0) {
+    const char *mainfile = buildid_to_mainfile[buildid].c_str();
+    json_object *mainfile_js = json_object_new_string(mainfile);
+    if (NULL == mainfile_js) goto json_fail;
+    json_object_object_add(metadata, "mainfile", mainfile_js);
+  }
+  if (buildid_to_debugfile.count(buildid) != 0) {
+    const char *debugfile = buildid_to_debugfile[buildid].c_str();
+    json_object *debugfile_js = json_object_new_string(debugfile);
+    if (NULL == debugfile_js) goto json_fail;
+    json_object_object_add(metadata, "debugfile", debugfile_js);
+  }
+  if (libpfm_event != "") {
+    json_object *event_js = json_object_new_string(libpfm_event.c_str());
+    if (NULL == event_js) goto json_fail;
+    json_object_object_add(metadata, "libpfm-event", event_js);
+  }
+  if (libpfm_event_decoded != "") {
+    json_object *event_js = json_object_new_string(libpfm_event_decoded.c_str());
+    if (NULL == event_js) goto json_fail;
+    json_object_object_add(metadata, "libpfm-event-decoded", event_js);
+  }
+  {
+    json_object *br_js = json_object_new_boolean(branch_record);
+    if (NULL == br_js) goto json_fail;
+    json_object_object_add(metadata, "branch-record", br_js);
+  }
+  
   const char *metadata_str = json_object_to_json_string(metadata);
   if (!metadata_str) goto json_fail;
   ofstream of_js (json_path);
