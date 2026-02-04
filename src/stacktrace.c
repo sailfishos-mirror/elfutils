@@ -1135,7 +1135,7 @@ sysprof_unwind_cb (SysprofCaptureFrame *frame, void *arg)
  ****************/
 
 /* Required to match our signal handling with that of a sysprof parent process. */
-static void sigint_handler (int /* signo */)
+static void sigint_handler (int signo __attribute__ ((unused)))
 {
   if (signal_count >= 2)
     {
