@@ -6053,7 +6053,13 @@ print_debug_addr_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 
       fprintf (out, "Table at offset %" PRIx64 " ", off);
 
-      struct listptr *listptr = get_listptr (&known_addrbases, idx++);
+      /* Find the first CU that could plausibly be associated with
+	 this address base offset. Skip CUs that point their addr_base
+	 before this table.  */
+      struct listptr *listptr = get_listptr (&known_addrbases, idx);
+      while (listptr != NULL && listptr->offset < off)
+	listptr = get_listptr (&known_addrbases, ++idx);
+
       const unsigned char *next_unitp;
 
       uint64_t unit_length;
@@ -6087,7 +6093,7 @@ print_debug_addr_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	      version = 4;
 
 	      /* The addresses start here, but where do they end?  */
-	      listptr = get_listptr (&known_addrbases, idx);
+	      listptr = get_listptr (&known_addrbases, idx + 1);
 	      if (listptr == NULL)
 		next_unitp = readendp;
 	      else if (listptr->cu->version < 5)
@@ -11402,7 +11408,13 @@ print_debug_str_offsets_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 
       fprintf (out, "Table at offset %" PRIx64 " ", off);
 
-      struct listptr *listptr = get_listptr (&known_stroffbases, idx++);
+      /* Find the first CU that could plausibly be associated with
+	 this string offsets index. Skip CUs that point
+	 str_offsets_base before this table.  */
+      struct listptr *listptr = get_listptr (&known_stroffbases, idx);
+      while (listptr != NULL && listptr->offset < off)
+	listptr = get_listptr (&known_stroffbases, ++idx);
+
       const unsigned char *next_unitp = readendp;
       uint8_t offset_size;
       bool has_header;
