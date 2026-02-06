@@ -1389,14 +1389,26 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 	dwfl_ent->worst_unwound = unwound_source;
       dwfl_ent->last_unwound = unwound_source;
       if (show_frames)
-	cerr << format("* frame {:d}: pc_adjusted={:x} sp={:x}+{:x} [{}]\n",
-			    this->last_us.addrs.size(), pc_adjusted, this->last_us.base, (sp - this->last_us.base), dwfl_unwound_source_str(unwound_source));
+	{
+	  Dwfl_Module *m = dwfl_addrmodule(this->last_us.dwfl, pc);
+	  uint64_t rel_pc = pc_adjusted;
+	  int j = dwfl_module_relocate_address (m, &rel_pc);
+	  (void) j;
+	  cerr << format("* frame {:d}: rel_pc={:x} raw_pc={:x} sp={:x}+{:x} [{}]\n",
+			 this->last_us.addrs.size(), rel_pc, pc_adjusted, this->last_us.base, (sp - this->last_us.base), dwfl_unwound_source_str(unwound_source));
+	}
     }
   else
     {
       if (show_frames)
-	cerr << format(N_("* frame {:d}: pc_adjusted={:x} sp={:x}+{:x} [dwfl_ent not found]\n"),
-			    this->last_us.addrs.size(), pc_adjusted, this->last_us.base, (sp - this->last_us.base));
+	{
+	  Dwfl_Module *m = dwfl_addrmodule(this->last_us.dwfl, pc);
+	  uint64_t rel_pc = pc_adjusted;
+	  int j = dwfl_module_relocate_address (m, &rel_pc);
+	  (void) j;
+	  cerr << format(N_("* frame {:d}: rel_pc={:x} raw_pc={:x} sp={:x}+{:x} [dwfl_ent not found]\n"),
+			 this->last_us.addrs.size(), rel_pc, pc_adjusted, this->last_us.base, (sp - this->last_us.base));
+	}
     }
   if (show_tmi)
     {
@@ -1725,6 +1737,8 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
       uint64_t last_pc = m.histogram.rbegin()->first;
       uint64_t alignment = (last_pc - first_pc + 1) / UINT_MAX + 1; // compute an alignment that fits 2**32 buckets
       uint32_t num_buckets = (last_pc-first_pc)/alignment + 1;
+      clog << format("DEBUG +hist {:x}..{:x} (alignment {}) of {} entries\n",
+                     first_pc, last_pc, alignment, num_buckets);
 
       // write histogram record header
       unsigned char tag = GMON_TAG_TIME_HIST;
