@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl Configure input file for elfutils.                     -*-autoconf-*-
 dnl
 dnl Copyright (C) 1996-2019, 2025 Red Hat, Inc.
-dnl Copyright (C) 2022, 2023 Mark J. Wielaard <mark@klomp.org>
+dnl Copyright (C) 2022, 2023, 2026 Mark J. Wielaard <mark@klomp.org>
 dnl
 dnl This file is part of elfutils.
 dnl
@@ -674,6 +674,26 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE([])],
 CFLAGS="$old_CFLAGS"])
 AM_CONDITIONAL(HAVE_MISSING_PARAMETER_NAME_WARNING,
 	       [test "x$ac_cv_missing_parameter_name" != "xno"])
+
+AC_CACHE_CHECK([whether the compiler accepts -Wdeprecated-non-prototype], ac_cv_deprecated_non_prototype, [dnl
+old_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Wdeprecated-non-prototype -Werror"
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([])],
+		  ac_cv_deprecated_non_prototype=yes,
+		  ac_cv_deprecated_non_prototype=no)
+CFLAGS="$old_CFLAGS"])
+AM_CONDITIONAL(HAVE_DEPRECATED_NON_PROTOTYPE_WARNING,
+	       [test "x$ac_cv_deprecated_non_prototype" != "xno"])
+
+AC_CACHE_CHECK([whether the compiler accepts -Wfree_labels], ac_cv_free_labels, [dnl
+old_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Wfree-labels -Werror"
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([])],
+		  ac_cv_free_labels=yes,
+		  ac_cv_free_labels=no)
+CFLAGS="$old_CFLAGS"])
+AM_CONDITIONAL(HAVE_FREE_LABELS_WARNING,
+	       [test "x$ac_cv_free_labels" != "xno"])
 
 AC_CACHE_CHECK([whether the compiler accepts -fno-addrsig], ac_cv_fno_addrsig, [dnl
 old_CFLAGS="$CFLAGS"
