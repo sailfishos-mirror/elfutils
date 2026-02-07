@@ -665,6 +665,16 @@ CFLAGS="$old_CFLAGS"])
 AM_CONDITIONAL(HAVE_USE_AFTER_FREE3_WARNING,
 	       [test "x$ac_cv_use_after_free3" != "xno"])
 
+AC_CACHE_CHECK([whether the compiler accepts -Wmissing-parameter-name], ac_cv_missing_parameter_name, [dnl
+old_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Wmissing-parameter-name -Werror"
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([])],
+		  ac_cv_missing_parameter_name=yes,
+		  ac_cv_missing_parameter_name=no)
+CFLAGS="$old_CFLAGS"])
+AM_CONDITIONAL(HAVE_MISSING_PARAMETER_NAME_WARNING,
+	       [test "x$ac_cv_missing_parameter_name" != "xno"])
+
 AC_CACHE_CHECK([whether the compiler accepts -fno-addrsig], ac_cv_fno_addrsig, [dnl
 old_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS -fno-addrsig -Werror"

@@ -111,11 +111,17 @@ else
 USE_AFTER_FREE3_WARNING=
 endif
 
+if HAVE_MISSING_PARAMETER_NAME_WARNING
+MISSING_PARAMETER_NAME_WARNING=-Wmissing-parameter-name
+else
+MISSING_PARAMETER_NAME_WARNING=
+endif
+
 AM_CFLAGS = -Wall -Wshadow -Wformat=2 \
 	    -Wold-style-definition -Wstrict-prototypes $(TRAMPOLINES_WARNING) \
 	    $(LOGICAL_OP_WARNING) $(DUPLICATED_COND_WARNING) \
 	    $(NULL_DEREFERENCE_WARNING) $(IMPLICIT_FALLTHROUGH_WARNING) \
-	    $(USE_AFTER_FREE3_WARNING) \
+	    $(USE_AFTER_FREE3_WARNING) $(MISSING_PARAMETER_NAME_WARNING) \
 	    $(if $($(*F)_no_Werror),,-Werror) \
 	    $(if $($(*F)_no_Wunused),,-Wunused -Wextra) \
 	    $(if $($(*F)_no_Wstack_usage),,$(STACK_USAGE_WARNING)) \
