@@ -102,6 +102,22 @@ ebl_section_type_name (Ebl *ebl, int section, char *buf, size_t len)
 	    res = "GNU_ATTRIBUTES";
 	    break;
 
+	/* A few LLVM additions.  */
+
+#ifndef SHT_LLVM_ADDRSIG
+#define SHT_LLVM_ADDRSIG 0x6fff4c03
+#endif
+	  case SHT_LLVM_ADDRSIG:
+	    res = "LLVM_ADDRSIG";
+	    break;
+
+#ifndef SHT_LLVM_LTO
+#define SHT_LLVM_LTO 0x6fff4c0c
+#endif
+	  case SHT_LLVM_LTO:
+	    res = "LLVM_LTO";
+	    break;
+
 	  default:
 	    /* Handle OS-specific section names.  */
 	    if (section >= SHT_LOOS && section <= SHT_HIOS)
