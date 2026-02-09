@@ -1437,15 +1437,17 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 #endif
     }
 
-  // e.g. gmon callgraphs only requires maxframes=1 (caller ID only)
-  if (this->last_us.addrs.size() > this->maxframes)
-    {
-      /* XXX very rarely, the unwinder can loop infinitely; worth investigating? */
-      return DWARF_CB_ABORT;
-    }
-
   this->last_us.sp = sp;
   this->last_us.addrs.push_back(pc);
+
+  /* e.g. gmon callgraphs only requires maxframes=1
+     (initial pc + one frame for caller ID only) */
+  if (this->last_us.addrs.size() > this->maxframes)
+    {
+      /* XXX without maxframes, very rarely, the unwinder can loop
+	 infinitely; worth investigating? */
+      return DWARF_CB_ABORT;
+    }
   return DWARF_CB_OK;
 }
 
