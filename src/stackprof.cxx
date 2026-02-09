@@ -1846,11 +1846,11 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
 
 void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
 {
-  if (sample->addrs.size() < 2)
-    return; /* no callgraph arc */ // XXX: accumulate at least histogram hit even without callgraph
+  if (sample->addrs.size() < 1)
+    return; /* edge case -- no pc or callgraph arc */
 
   Dwarf_Addr pc = sample->addrs[0];
-  Dwarf_Addr pc2 = sample->addrs[1];
+  Dwarf_Addr pc2 = sample->addrs.size() < 2 ? 0 : sample->addrs[1];
 
   Dwfl_Module *mod = dwfl_addrmodule(sample->dwfl, pc);
   if (mod == NULL)
@@ -1862,17 +1862,14 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
 #endif
 
   Dwfl_Module *mod2 = dwfl_addrmodule(sample->dwfl, pc2);
-  if (mod2 == NULL)
-    return;
-  // If caller & callee are in different modules, this is a cross-shared-library
-  // call, so we can't track it as a call-graph arc.  XXX: at least count them 
+  // XXX: allowing mod2 == NULL -- callgraph arc will be skipped
 
   // extract buildid for pc (hit callee)
   const unsigned char *desc = nullptr;
   GElf_Addr vaddr;
   int build_id_len = dwfl_module_build_id(mod, &desc, &vaddr);
   if (build_id_len <= 0)
-    return; // XXX: report/tabulate hit outside known modules
+    return; // TODO: report/tabulate hit outside known modules
 
   /* TODO(REVIEW.5): Is it better to use the unconverted build_id_desc as hash key? */
   string buildid;
@@ -1888,21 +1885,18 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
     buildid_to_mainfile[buildid] = mainfile;
   if (debugfile && !buildid_to_debugfile.count(buildid))
     buildid_to_debugfile[buildid] = debugfile;
-  /* TODO(REVIEW.6): Also monitor for collisions. */
+  /* TODO(REVIEW.6): Also monitor for collisions here. */
 
   UnwindModuleStats *buildid_ent = this->stats->buildid_find_or_create(buildid, mod);
 
   int i = dwfl_module_relocate_address (mod, &pc);
   (void) i;
-  #if 0
-  // XXX: for now, ignore relocation-basis section name or whatever
-  const char *name;
-  if (i >= 0)
-    name = dwfl_module_relocation_info (mod, i, NULL);
-  #endif
+  // XXX: could get dwfl_module_relocation_info (mod, i, NULL), but no need?
   buildid_ent->record_pc(pc);
 
-  if (mod == mod2) // intra-module call
+  // If caller & callee are in different modules, this is a cross-shared-library
+  // call, so we can't track it as a call-graph arc.  TODO: at least count them
+  if (sample->addrs.size() >= 2 && mod == mod2) // intra-module call
     {
       int j = dwfl_module_relocate_address (mod, &pc2); // map pc2 also
       (void) j;
