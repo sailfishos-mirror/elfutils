@@ -390,6 +390,7 @@ class GprofUnwindSampleConsumer: public UnwindSampleConsumer
   UnwindStatsTable *stats;
   unordered_map<string, string> buildid_to_mainfile;
   unordered_map<string, string> buildid_to_debugfile;
+  void record_gmon_hist(std::ostream &of, map<uint64_t, uint32_t> &histogram, uint64_t low_pc, uint64_t high_pc, uint64_t alignment);
 
 public:
   GprofUnwindSampleConsumer(UnwindStatsTable *usc) : stats(usc) {}
@@ -418,12 +419,15 @@ ARGP_PROGRAM_VERSION_HOOK_DEF = print_version;
 /* Bug report address.  */
 ARGP_PROGRAM_BUG_ADDRESS_DEF = PACKAGE_BUGREPORT;
 
+#define HIST_SPLIT_OPTS "none/even/flex"
+
 /* Definitions of arguments for argp functions.  */
 static const struct argp_option options[] =
 {
   { NULL, 0, NULL, OPTION_DOC, N_("Output options:"), 1 },
   { "verbose", 'v', NULL, 0, N_ ("Increase verbosity of logging messages."), 0 },
   { "gmon", 'g', NULL, 0, N_("Generate gmon.BUILDID.out files for each binary."), 0 },
+  { "hist-split", 'h', HIST_SPLIT_OPTS, 0, N_("Histogram splitting method for gmon, default 'flex'."), 0 },
   { "output", 'o', "DIR", 0, N_("Output directory for gmon files."), 0 },
   { "force", 'f', NULL, 0, N_("Unlink output files to force writing as new."), 0 },
   { "pid", 'p', "PID", 0, N_("Profile given PID, and its future children."), 0 },
@@ -443,9 +447,17 @@ static const struct argp argp =
   };
 
 
+// How to divide the program counter histograms in gmon output:
+enum hist_split_method {
+  HIST_SPLIT_NONE = 0, /* one histogram for the entire executable */
+  HIST_SPLIT_EVEN = 1, /* all histograms the same size */
+  HIST_SPLIT_FLEX = 2, /* variable-size histograms */
+};
+
 // Globals set based on command line options:
 static unsigned verbose;
 static bool gmon;
+static hist_split_method gmon_hist_split = HIST_SPLIT_FLEX;
 static string output_dir = ".";
 static bool output_force = false; // overwrite preexisting output files?
 static int pid;
@@ -477,6 +489,16 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
     case 'g':
       gmon = true;
+      break;
+
+    case 'h':
+      /* TODO: Error if -g is not set? */
+      if (strcmp (arg, "none") == 0)
+	gmon_hist_split = HIST_SPLIT_NONE;
+      else if (strcmp (arg, "even") == 0)
+	gmon_hist_split = HIST_SPLIT_EVEN;
+      else if (strcmp (arg, "flex") == 0)
+	gmon_hist_split = HIST_SPLIT_FLEX;
       break;
 
     case 'o':
@@ -1638,7 +1660,67 @@ enum gmon_entry_tag {
   GMON_TAG_BB_COUNT = 2,
 };
 
+struct gmon_hist_hdr {
+  uint8_t tag; /* GMON_TAG_TIME_HIST */
+  uint8_t unused[3];
+  uint64_t low_pc;
+  uint64_t high_pc;
+  uint32_t num_buckets;
+  uint32_t prof_rate;
+  char _dimension_string[16];
 };
+
+};
+
+void GprofUnwindSampleConsumer::record_gmon_hist(std::ostream &of, map<uint64_t, uint32_t> &histogram, uint64_t low_pc, uint64_t high_pc, uint64_t alignment)
+{
+  // write one histogram from low_pc ... high_pc
+  uint32_t num_buckets = (high_pc-low_pc)/alignment + 1;
+  double result_scale = (double)((high_pc-low_pc)/sizeof(uint16_t))/num_buckets;
+  clog << format("DEBUG +hist {:x}..{:x} (alignment {}) of {} buckets @scale {}\n",
+		 low_pc, high_pc, alignment, num_buckets, result_scale);
+  /* TODO(PROBLEM): It's the @scale value that must be kept within
+     0.000001 of 0.5 to keep gprof from complaining. */
+
+  // write histogram record header
+  unsigned char tag = GMON_TAG_TIME_HIST;
+  of.write(reinterpret_cast<const char *>(&tag), sizeof(tag));
+  int wordsize = (sizeof (void *) == 8) ? 8 : 4;
+  if (wordsize == 4) {
+    uint32_t addr = low_pc;
+    of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
+    addr = high_pc;
+    of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
+  } else {
+    of.write(reinterpret_cast<const char *>(&low_pc), sizeof(low_pc));
+    of.write(reinterpret_cast<const char *>(&high_pc), sizeof(high_pc));
+  }
+  of.write(reinterpret_cast<const char *>(&num_buckets), sizeof(num_buckets));
+  uint32_t prof_rate = attr.sample_freq;
+  of.write(reinterpret_cast<const char *>(&prof_rate), sizeof(prof_rate));
+  // dimension string is 15 chars long (not null terminated)
+  char dimension_string[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  if (libpfm_event != "")
+    strncpy(dimension_string, libpfm_event.c_str(), 15);
+  else
+    strcpy(dimension_string, "ticks");
+  of.write(reinterpret_cast<const char *>(dimension_string), 15);
+  // dimension character abbreviation: just take the first char of above
+  of.write(reinterpret_cast<const char *>(dimension_string), 1);
+
+  // write histogram buckets
+  uint64_t bucket_addr = low_pc;
+  for (uint32_t bucket = 0; bucket < num_buckets; bucket++)
+    {
+      uint16_t count = 0;
+      for (auto it = histogram.lower_bound(bucket_addr);
+               it != histogram.upper_bound(bucket_addr+alignment-1);
+               it ++)
+	count += it->second; // TODO: check for overflow here!
+      bucket_addr += alignment;
+      of.write(reinterpret_cast<const char *>(&count), sizeof(count));
+    }
+}
 
 void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindModuleStats& m)
 {
@@ -1729,57 +1811,108 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 
   if (m.histogram.size() > 0)
     {
-      // write one histogram from low_pc ... high_pc
-      
-      // XXX: the histogram bucket counts are 16-bits wide, so if we have
-      // collected more than 2**16 hits, we need additional histogram(s)
-      // to accumulate those excess counts
+      uint64_t low_pc = m.histogram.begin()->first;
+      uint64_t high_pc = m.histogram.rbegin()->first;
+      uint64_t alignment = (high_pc - low_pc + 1) / UINT_MAX + 1;
 
-      uint64_t first_pc = m.histogram.begin()->first;
-      uint64_t last_pc = m.histogram.rbegin()->first;
-      uint64_t alignment = (last_pc - first_pc + 1) / UINT_MAX + 1; // compute an alignment that fits 2**32 buckets
-      uint32_t num_buckets = (last_pc-first_pc)/alignment + 1;
-      clog << format("DEBUG +hist {:x}..{:x} (alignment {}) of {} entries\n",
-                     first_pc, last_pc, alignment, num_buckets);
+      if (gmon_hist_split == HIST_SPLIT_NONE)
+	{
+	  /* Put everything into one histogram. */
+	  this->record_gmon_hist(of, m.histogram, low_pc, high_pc, alignment);
+	}
+      else if (gmon_hist_split == HIST_SPLIT_EVEN)
+	{
+	  /* TODO(EXPERIMENTAL/WIP): Attempt to satisfy gprof's
+	     histogram scale consistency check, which requires all
+	     values '(double)(high_pc-low_pc)/num_buckets' to fall
+	     within EPSILON.  In practice, we can only be sure of this
+	     if we cover the address space with histograms all one
+	     size.  */
 
-      // write histogram record header
-      unsigned char tag = GMON_TAG_TIME_HIST;
-      of.write(reinterpret_cast<const char *>(&tag), sizeof(tag));
-      if (wordsize == 4) {
-        uint32_t addr = first_pc;
-        of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
-        addr = last_pc;
-        of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
-      } else {
-        of.write(reinterpret_cast<const char *>(&first_pc), sizeof(first_pc));
-        of.write(reinterpret_cast<const char *>(&last_pc), sizeof(last_pc));
-      }
-      of.write(reinterpret_cast<const char *>(&num_buckets), sizeof(num_buckets));
-      uint32_t prof_rate = attr.sample_freq;
-      of.write(reinterpret_cast<const char *>(&prof_rate), sizeof(prof_rate));
-      // dimension string is 15 chars long (not null terminated)
-      char dimension_string[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-      if (libpfm_event != "")
-        strncpy(dimension_string, libpfm_event.c_str(), 15);
-      else
-        strcpy(dimension_string, "ticks");
-      of.write(reinterpret_cast<const char *>(dimension_string), 15);
-      // dimension character abbreviation: just take the first char of above
-      of.write(reinterpret_cast<const char *>(dimension_string), 1);
+	  /* Keep the search for 'optimal' size simple -- we just need
+	     a plausible order of magnitude.  XXX Some rechecking of
+	     correctness needed.  */
+	  //uint64_t min_size = 1; // this is 'optimal' much of the time
+	  uint64_t min_size = 1024;
+	  uint64_t max_size = high_pc - low_pc;
+	  uint64_t opt_size = min_size;
+	  uint64_t opt_est = 0;
+	  uint64_t next_size = opt_size;
+	  while (next_size < max_size)
+	    {
+	      if (next_size > max_size)
+		next_size = max_size;
+	      uint64_t size_inc = sizeof(struct gmon_hdr) + next_size;
+	      uint64_t size_est = size_inc;
+	      uint64_t pc = low_pc;
+	      while (pc + size_est < high_pc)
+		{
+		  auto it = m.histogram.upper_bound(pc + size_est/alignment);
+		  if (it == m.histogram.end())
+		    break;
+		  pc = it->first;
+		  size_est += sizeof(struct gmon_hdr) + next_size;
+		}
+	      if (opt_est == 0 || size_est < opt_est)
+		{
+		  opt_size = next_size;
+		  opt_est = size_est;
+		}
+	      // if (opt_est > prev_est) break; /* XXX: We've hit the lowest point. */
+	      //cerr << format("DEBUG total size {} -> {} histograms of size {}",
+	      //               size_est, size_est / size_inc, next_size) << endl;
+	      next_size = 2 * next_size;
+	    }
 
-      // write histogram buckets
-      uint64_t bucket_addr = first_pc;
-      for (uint32_t bucket = 0; bucket < num_buckets; bucket++)
-        {
-          uint16_t count = 0;
-          for (auto it = m.histogram.lower_bound(bucket_addr);
-               it != m.histogram.upper_bound(bucket_addr+alignment-1);
-               it ++)
-            count += it->second; // XXX: check for overflow here!
-          bucket_addr += alignment;
-          of.write(reinterpret_cast<const char *>(&count), sizeof(count));
-        }
-    } // had a histogram
+	  /* Partition into histograms of opt_size.
+	     TODO: Need to check if low_pc must be aligned.  */
+	  uint64_t prev_pc = low_pc;
+	  uint64_t pc = prev_pc;
+	  /* XXX Iterate histogram ascending by key, faster than by addr. */
+	  for (const auto& p : m.histogram)
+	    {
+	      pc = p.first;
+	      if (pc - low_pc > opt_size)
+		{
+		  /* Record a histogram from low_pc to low_pc+opt_size. */
+		  this->record_gmon_hist(of, m.histogram, low_pc, low_pc+opt_size /* >= prev_pc */, alignment);
+		  low_pc = pc;
+		}
+	      prev_pc = pc;
+	    }
+	  /* Record a final histogram from low_pc to low_pc+opt_size.
+	     TODO: Edge case -- adjust for overflow of low_pc+opt_size at end of address space. */
+	  this->record_gmon_hist(of, m.histogram, low_pc, low_pc+opt_size /* >= prev_pc */, alignment);
+	}
+      else if (gmon_hist_split == HIST_SPLIT_FLEX)
+	{
+	  /* Allow variable-size histograms to save on storage space.
+	     Will fail gprof's input consistency checks, XXX but ok
+	     for profiledb purposes?*/
+	  uint64_t prev_pc = low_pc;
+	  uint64_t pc = prev_pc;
+	  /* XXX Iterate histogram ascending by key, faster than by addr
+	     when we just need to scan for gaps. */
+	  for (const auto& p : m.histogram)
+	    {
+	      pc = p.first;
+	      uint64_t bin_dist = (pc - prev_pc) / alignment;
+	      if (bin_dist > sizeof(struct gmon_hist_hdr))
+		/* XXX If we add '&& low_pc != prev_pc && pc != high_pc',
+		   this avoids producing a histogram with only 1 entry,
+		   but this is still not enough to satisfy gprof's
+		   histogram scale calculation.  */
+		{
+		  /* Record a histogram from low_pc to prev_pc. */
+		  this->record_gmon_hist(of, m.histogram, low_pc, prev_pc, alignment);
+		  low_pc = pc;
+		}
+	      prev_pc = pc;
+	    }
+	  /* Record a final histogram from low_pc to pc. */
+	  this->record_gmon_hist(of, m.histogram, low_pc, pc, alignment);
+	}
+    }
 
   /* Write call graph arcs. */
   for (auto& p : m.callgraph)
