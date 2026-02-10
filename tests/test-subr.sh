@@ -1,5 +1,6 @@
 #! /bin/sh
 # Copyright (C) 2005-2015, 2017 Red Hat, Inc.
+# Copyright (C) 2026 Mark J. Wielaard <mark@klomp.org>
 # This file is part of elfutils.
 #
 # This file is free software; you can redistribute it and/or modify
@@ -118,6 +119,13 @@ program_transform()
   echo "$*" | sed "${program_transform_name}"
 }
 
+is_obj_bitcode()
+{
+  bcfile="$1"
+  BC=$(od -An -tx2 -N2 "$bcfile" | sed -e 's/^[[:space:]]*//')
+  if [ "'$BC'" = "'4342'" ]; then return 0; else return 1; fi
+}
+
 self_test_files_exe=`echo ${abs_top_builddir}/src/addr2line \
 ${abs_top_builddir}/src/elfclassify \
 ${abs_top_builddir}/src/stack \
@@ -137,8 +145,12 @@ testrun_on_self()
   exit_status=0
 
   for file in $self_test_files; do
+    if is_obj_bitcode "$file"; then
+      echo "*** skipping bitcode file in $* $file"
+    else
       testrun $* $file \
 	  || { echo "*** failure in $* $file"; exit_status=1; }
+    fi
   done
 
   # Only exit if something failed
@@ -176,8 +188,12 @@ testrun_on_self_obj()
   exit_status=0
 
   for file in $self_test_files_obj; do
+    if is_obj_bitcode "$file"; then
+      echo "*** skipping bitcode file in $* $file"
+    else
       testrun $* $file \
 	  || { echo "*** failure in $* $file"; exit_status=1; }
+    fi
   done
 
   # Only exit if something failed
@@ -190,12 +206,16 @@ testrun_on_self_compressed()
   exit_status=0
 
   for file in $self_test_files; do
+    if is_obj_bitcode "$file"; then
+      echo "*** skipping bitcode file in $* $file"
+    else
       tempfiles ${file}z
       testrun ${abs_top_builddir}/src/elfcompress -f -q -o ${file}z ${file}
       testrun ${abs_top_builddir}/src/elfcompress -f -q --name='.s??tab' ${file}z
 
       testrun $* ${file}z \
 	  || { echo "*** failure in $* ${file}z"; exit_status=1; }
+    fi
   done
 
   # Only exit if something failed
@@ -208,8 +228,12 @@ testrun_on_self_quiet()
   exit_status=0
 
   for file in $self_test_files; do
+    if is_obj_bitcode "$file"; then
+      echo "*** skipping bitcode file in $* $file"
+    else
       testrun $* $file > /dev/null \
 	  || { echo "*** failure in $* $file"; exit_status=1; }
+    fi
   done
 
   # Only exit if something failed

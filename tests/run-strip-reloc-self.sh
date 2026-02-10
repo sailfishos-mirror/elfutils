@@ -8,6 +8,10 @@ runtest ${abs_top_builddir}/src/strip.o 1
 
 # Copy ET_REL file for self-test and make sure to run with/without
 # elf section compression.
+if is_obj_bitcode ${abs_top_builddir}/src/strip.o; then
+      echo "*** skipping bitcode file"
+      exit $runtest_status
+fi
 tempfiles strip-uncompressed.o strip-compressed.o
 testrun ${abs_top_builddir}/src/elfcompress -o strip-uncompressed.o -t none \
   ${abs_top_builddir}/src/strip.o

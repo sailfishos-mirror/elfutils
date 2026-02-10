@@ -36,6 +36,11 @@ runtest() {
 
   echo "runtest $infile"
 
+  if is_obj_bitcode "$infile"; then
+    echo "*** skipping bitcode file $infile"
+    return
+  fi
+
   rm -f $outfile1 $debugfile1 $outfile2 $debugfile2
 
   testrun ${abs_top_builddir}/src/strip -o $outfile1 -f $debugfile1 $infile ||
