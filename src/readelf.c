@@ -5722,13 +5722,10 @@ compare_listptr (const void *a, const void *b)
 		 _("%s %#" PRIx64 " used with different offset sizes"),
 		 name, (uint64_t) p1->offset);
 	}
-      if (listptr_base (p1) != listptr_base (p2))
-	{
-	  p1->warned = p2->warned = true;
-	  error (0, 0,
-		 _("%s %#" PRIx64 " used with different base addresses"),
-		 name, (uint64_t) p1->offset);
-	}
+
+      /* Note: CUs can share the same listptr_base.  So we don't check
+	 (listptr_base (p1) != listptr_base (p2)) */
+
       if (p1->attr != p2 ->attr)
 	{
 	  p1->warned = p2->warned = true;
