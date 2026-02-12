@@ -22,14 +22,23 @@ set -x
 
 # prerequisites
 type timeout 2>/dev/null || (echo "no timeout installed"; exit 77)
-type gprof 2>/dev/null || (echo "no gprof installed"; exit 77)
+expr `whoami` = "root" || (echo "run as root"; exit 77) 
 
+# run systemwide scan
+tempfiles test.out
 # produce gprof data
-testrun ${abs_top_builddir}/src/stackprof -v -v -g -- timeout 2 /bin/sh -c "while true; do true; done" 2>&1 | tee test.out
+testrun timeout -p -sINT 10 ${abs_top_builddir}/src/stackprof -v -v 2>&1 | tee test.out
+
+grep "^perf_event_attr configuration" test.out
+grep "Starting stack profile collection systemwide" test.out
+grep -E "^[0-9]+ " test.out
+
+# run it again, producing gprof data
+testrun timeout -p -sINT 10 ${abs_top_builddir}/src/stackprof -v -v -g 2>&1 | tee test.out
 tempfiles test.out
 tempfiles gmon.*
-grep "^perf_event_attr configuration" test.out
-grep "Starting stack profile collection pid" test.out
+grep "^perf_event_attr configuration type=1 config=0 sample_freq=" test.out
+grep "Starting stack profile collection systemwide" test.out
 grep -E "^buildid [0-9a-f]+" test.out
 
 export DEBUGINFOD_URLS=https://debuginfod.elfutils.org/
@@ -67,5 +76,5 @@ do
         fi
     fi
 done
-    
+
 exit 0

@@ -1677,8 +1677,9 @@ void GprofUnwindSampleConsumer::record_gmon_hist(std::ostream &of, map<uint64_t,
   // write one histogram from low_pc ... high_pc
   uint32_t num_buckets = (high_pc-low_pc)/alignment + 1;
   double result_scale = (double)((high_pc-low_pc)/sizeof(uint16_t))/num_buckets;
-  clog << format("DEBUG +hist {:x}..{:x} (alignment {}) of {} buckets @scale {}\n",
-		 low_pc, high_pc, alignment, num_buckets, result_scale);
+  if (verbose > 2)
+    clog << format("DEBUG +hist {:x}..{:x} (alignment {}) of {} buckets @scale {}\n",
+                   low_pc, high_pc, alignment, num_buckets, result_scale);
   /* TODO(PROBLEM): It's the @scale value that must be kept within
      0.000001 of 0.5 to keep gprof from complaining. */
 
@@ -1735,11 +1736,12 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
   }
 
   string target_path = buildid_to_mainfile[buildid];
-  if (symlink(target_path.c_str(), exe_symlink_path.c_str()) == -1) {
-    // Handle error, e.g., print errno or throw exception
-    cerr << "symlink failed: " << strerror(errno) << endl;
-    //return; /* TODO: We may want to re-create the symlink on repeated runs. */
-  }
+  if (target_path != unknown_comm) // skip .exe symlink if there's no path
+    if (symlink(target_path.c_str(), exe_symlink_path.c_str()) == -1) {
+      // Handle error, e.g., print errno or throw exception
+      cerr << "symlink failed: " << strerror(errno) << endl;
+      //return; /* TODO: We may want to re-create the symlink on repeated runs. */
+    }
 
   // TODO(REVIEW.4): plop buildid_to_{mainfile,debugfile} bits into per-gmon-out json files
   json_object *metadata = json_object_new_object();
@@ -1964,7 +1966,7 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
       if (buildid_to_debugfile.count(buildid) != 0)
 	debugfile = buildid_to_debugfile[buildid].c_str();
       if (show_summary)
-	clog << format(N_("buildid {} ({} {}{}) -- received {} distinct pcs, {} callgraph arcs\n"), /* TODO also count samples / estimated histogram size? */
+	clog << format(N_("buildid {} ({}{}{}) -- received {} distinct pcs, {} callgraph arcs\n"), /* TODO also count samples / estimated histogram size? */
 		 buildid.c_str(),
 		 mainfile == NULL ? "<unknown>" : mainfile,
 		 debugfile == NULL ? "" : " +debugfile ",

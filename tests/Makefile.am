@@ -322,7 +322,8 @@ funcretval_test_struct_SOURCES = funcretval_test_struct.c
 TESTS += run-funcretval-struct-native.sh
 
 if ENABLE_STACKPROF
-TESTS += run-stackprof-user.sh run-stackprof-user-gprof.sh
+TESTS += run-stackprof-user.sh run-stackprof-user-gprof.sh 
+TESTS += run-stackprof-system.sh run-stackprof-system-gprof.sh
 endif
 if HAVE_LIBPFM
 export HAVE_LIBPFM = 1
@@ -722,6 +723,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     run-test-manyfuncs.sh manyfuncs.c \
 	     run-debuginfod-seekable.sh thread-safety-subr.sh \
 	     run-stackprof-user.sh run-stackprof-user-gprof.sh \
+	     run-stackprof-system.sh run-stackprof-system-gprof.sh \
 	     run-eu-search-cfi.sh run-eu-search-macros.sh \
 	     run-eu-search-lines.sh run-eu-search-die.sh
 
