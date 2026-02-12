@@ -33,9 +33,27 @@ grep "^perf_event_attr configuration" test.out
 grep "Starting stack profile collection pid" test.out
 grep -E "^buildid [0-9a-f]+" test.out
 
+export DEBUGINFOD_URLS=https://debuginfod.elfutils.org/
+
 for f in gmon.*.out
 do
-    gprof `basename "$f" .out`.exe "$f"
+    exe="`basename "$f" .out`.exe"
+    echo "NOTE: analyzing $exe `readlink $exe`"
+    tempfiles gprof_output.txt
+    # Try a plain gprof attempt on the executable
+    if gprof "$exe" > gprof_output.txt 2>&1; then
+        # Success, use the output
+        cat gprof_output.txt
+    else
+        # Fall back to debuginfod if necessary (e.g., if debug info is missing)
+        echo "NOTE: stripped binary found, attempting to find debuginfo"
+        if testrun ${abs_top_builddir}/debuginfod/debuginfod-find debuginfo $exe; then
+            debuginfo="`debuginfod-find debuginfo $exe`"
+            gprof "$debuginfo" "$f"
+        else
+            echo "SKIPPING: debuginfo not found"
+        fi
+    fi
 done
     
 exit 0

@@ -427,7 +427,7 @@ static const struct argp_option options[] =
   { NULL, 0, NULL, OPTION_DOC, N_("Output options:"), 1 },
   { "verbose", 'v', NULL, 0, N_ ("Increase verbosity of logging messages."), 0 },
   { "gmon", 'g', NULL, 0, N_("Generate gmon.BUILDID.out files for each binary."), 0 },
-  { "hist-split", 'h', HIST_SPLIT_OPTS, 0, N_("Histogram splitting method for gmon, default 'flex'."), 0 },
+  { "hist-split",'G', HIST_SPLIT_OPTS, 0, N_("Histogram splitting method for gmon, default 'even'."), 0 },
   { "output", 'o', "DIR", 0, N_("Output directory for gmon files."), 0 },
   { "force", 'f', NULL, 0, N_("Unlink output files to force writing as new."), 0 },
   { "pid", 'p', "PID", 0, N_("Profile given PID, and its future children."), 0 },
@@ -457,7 +457,7 @@ enum hist_split_method {
 // Globals set based on command line options:
 static unsigned verbose;
 static bool gmon;
-static hist_split_method gmon_hist_split = HIST_SPLIT_FLEX;
+static hist_split_method gmon_hist_split = HIST_SPLIT_EVEN;
 static string output_dir = ".";
 static bool output_force = false; // overwrite preexisting output files?
 static int pid;
@@ -491,7 +491,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       gmon = true;
       break;
 
-    case 'h':
+    case 'G':
       /* TODO: Error if -g is not set? */
       if (strcmp (arg, "none") == 0)
 	gmon_hist_split = HIST_SPLIT_NONE;
@@ -1875,14 +1875,18 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 	      if (pc - low_pc > opt_size)
 		{
 		  /* Record a histogram from low_pc to low_pc+opt_size. */
-		  this->record_gmon_hist(of, m.histogram, low_pc, low_pc+opt_size /* >= prev_pc */, alignment);
+		  this->record_gmon_hist(of, m.histogram,
+                                         low_pc, low_pc+opt_size-1 /* >= prev_pc */,
+                                         alignment);
 		  low_pc = pc;
 		}
 	      prev_pc = pc;
 	    }
 	  /* Record a final histogram from low_pc to low_pc+opt_size.
 	     TODO: Edge case -- adjust for overflow of low_pc+opt_size at end of address space. */
-	  this->record_gmon_hist(of, m.histogram, low_pc, low_pc+opt_size /* >= prev_pc */, alignment);
+	  this->record_gmon_hist(of, m.histogram,
+                                 low_pc, low_pc+opt_size-1 /* >= prev_pc */,
+                                 alignment);
 	}
       else if (gmon_hist_split == HIST_SPLIT_FLEX)
 	{
