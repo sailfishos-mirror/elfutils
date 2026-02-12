@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: elfutils\n"
 "Report-Msgid-Bugs-To: https://sourceware.org/bugzilla/\n"
-"POT-Creation-Date: 2025-04-25 15:19-0400\n"
+"POT-Creation-Date: 2025-12-02 15:33-0500\n"
 "PO-Revision-Date: 2009-09-20 15:32+0900\n"
 "Last-Translator: Hyu_gabaru Ryu_ichi <hyu_gabaru@yahoo.co.jp>\n"
 "Language-Team: Japanese <jp@li.org>\n"
@@ -296,7 +296,7 @@ msgstr ".debug_addr セクションが見つかりません"
 msgid "unknown section"
 msgstr "不明なバージョンです"
 
-#: libdwfl/argp-std.c:45 src/stack.c:664 src/unstrip.c:2598
+#: libdwfl/argp-std.c:45 src/stack.c:664 src/unstrip.c:2604
 msgid "Input selection options:"
 msgstr "入力選択オプション："
 
@@ -1053,11 +1053,11 @@ msgstr "アーカイブ '%s' を stat できません"
 msgid "no entry %s in archive\n"
 msgstr "アーカイブに項目 %s がありません\n"
 
-#: src/ar.c:475 src/ar.c:929 src/ar.c:1135
+#: src/ar.c:475 src/ar.c:931 src/ar.c:1139
 msgid "cannot create hash table"
 msgstr "ハッシュテーブルを作成できません"
 
-#: src/ar.c:481 src/ar.c:935 src/ar.c:1143
+#: src/ar.c:481 src/ar.c:937 src/ar.c:1147
 msgid "cannot insert into hash table"
 msgstr "ハッシュテーブルに挿入できません"
 
@@ -1066,97 +1066,97 @@ msgstr "ハッシュテーブルに挿入できません"
 msgid "cannot stat '%s'"
 msgstr "'%s' を stat できません"
 
-#: src/ar.c:591
+#: src/ar.c:593
 #, c-format
 msgid "cannot read content of %s: %s"
 msgstr "%s の内容を読み込めません: %s"
 
-#: src/ar.c:634
+#: src/ar.c:636
 #, c-format
 msgid "cannot open %.*s"
 msgstr "%.*s を開けません"
 
-#: src/ar.c:656
+#: src/ar.c:658
 #, c-format
 msgid "failed to write %s"
 msgstr "%s への書き込みに失敗しました"
 
-#: src/ar.c:668
+#: src/ar.c:670
 #, c-format
 msgid "cannot change mode of %s"
 msgstr "%s のモードを変更できません"
 
-#: src/ar.c:684
+#: src/ar.c:686
 #, c-format
 msgid "cannot change modification time of %s"
 msgstr "%s の更新時間を変更できません"
 
-#: src/ar.c:730
+#: src/ar.c:732
 #, c-format
 msgid "cannot rename temporary file to %.*s"
 msgstr "一時ファイルを %.*s に名前変更できません"
 
-#: src/ar.c:766 src/ar.c:1020 src/ar.c:1423 src/ranlib.c:221
+#: src/ar.c:768 src/ar.c:1024 src/ar.c:1429 src/ranlib.c:221
 #, c-format
 msgid "cannot create new file"
 msgstr "新しいファイルを作成できません"
 
-#: src/ar.c:1225
+#: src/ar.c:1231
 #, c-format
 msgid "position member %s not found"
 msgstr "位置メンバー %s が見つかりません"
 
-#: src/ar.c:1235
+#: src/ar.c:1241
 #, c-format
 msgid "%s: no entry %s in archive!\n"
 msgstr "%s: 項目 %s がアーカイブにありません!\n"
 
-#: src/ar.c:1264 src/objdump.c:240
+#: src/ar.c:1270 src/objdump.c:240
 #, c-format
 msgid "cannot open %s"
 msgstr "%s を開けません"
 
-#: src/ar.c:1269
+#: src/ar.c:1275
 #, c-format
 msgid "cannot stat %s"
 msgstr "%s を stat できません"
 
-#: src/ar.c:1275
+#: src/ar.c:1281
 #, c-format
 msgid "%s is no regular file"
 msgstr "%s は一般ファイルではありません"
 
-#: src/ar.c:1288
+#: src/ar.c:1294
 #, c-format
 msgid "cannot get ELF descriptor for %s: %s\n"
 msgstr "%s の ELF 記述子を取得できません: %s\n"
 
-#: src/ar.c:1308
+#: src/ar.c:1314
 #, c-format
 msgid "cannot read %s: %s"
 msgstr "%s を読み込めません: %s"
 
-#: src/ar.c:1483
+#: src/ar.c:1489
 #, c-format
 msgid "cannot represent ar_date"
 msgstr "ar_date を表現できません"
 
-#: src/ar.c:1489
+#: src/ar.c:1495
 #, c-format
 msgid "cannot represent ar_uid"
 msgstr "ar_uid を表現できません"
 
-#: src/ar.c:1495
+#: src/ar.c:1501
 #, c-format
 msgid "cannot represent ar_gid"
 msgstr "ar_gid を表現できません"
 
-#: src/ar.c:1501
+#: src/ar.c:1507
 #, c-format
 msgid "cannot represent ar_mode"
 msgstr "ar_mode を表現できません"
 
-#: src/ar.c:1507
+#: src/ar.c:1513
 #, c-format
 msgid "cannot represent ar_size"
 msgstr "ar_size を表現できません"
@@ -1601,7 +1601,7 @@ msgstr "--gaps パラメータ に対する不当な値 '%s' です"
 
 #: src/elfcmp.c:733 src/findtextrel.c:194 src/nm.c:363 src/ranlib.c:140
 #: src/size.c:271 src/strings.c:184 src/strip.c:1048 src/strip.c:1085
-#: src/unstrip.c:2245 src/unstrip.c:2274
+#: src/unstrip.c:2251 src/unstrip.c:2280
 #, c-format
 msgid "cannot open '%s'"
 msgstr "'%s' を開けません"
@@ -4144,7 +4144,7 @@ msgstr "セクションを取得できません: %s"
 #: src/unstrip.c:396 src/unstrip.c:427 src/unstrip.c:490 src/unstrip.c:622
 #: src/unstrip.c:640 src/unstrip.c:680 src/unstrip.c:897 src/unstrip.c:1263
 #: src/unstrip.c:1390 src/unstrip.c:1414 src/unstrip.c:1470 src/unstrip.c:1511
-#: src/unstrip.c:1703 src/unstrip.c:1854 src/unstrip.c:1998 src/unstrip.c:2106
+#: src/unstrip.c:1703 src/unstrip.c:1854 src/unstrip.c:2004 src/unstrip.c:2112
 #, c-format
 msgid "cannot get section header: %s"
 msgstr "セクションヘッダーを取得できません: %s"
@@ -4503,7 +4503,7 @@ msgstr ""
 " セクションからセグメントへのマッビング:\n"
 "  セグメント セクション..."
 
-#: src/readelf.c:1530 src/unstrip.c:2165 src/unstrip.c:2207 src/unstrip.c:2214
+#: src/readelf.c:1530 src/unstrip.c:2171 src/unstrip.c:2213 src/unstrip.c:2220
 #, c-format
 msgid "cannot get program header: %s"
 msgstr "プログラムヘッダーを得られません: %s"
@@ -6811,7 +6811,7 @@ msgstr "ELF ヘッダーを作成できません: %s"
 msgid "cannot get shdrstrndx:%s"
 msgstr "shdrstrndx を取得できません: %s"
 
-#: src/unstrip.c:243 src/unstrip.c:2136
+#: src/unstrip.c:243 src/unstrip.c:2142
 #, c-format
 msgid "cannot get ELF header: %s"
 msgstr "ELF ヘッダーを取得できません: %s"
@@ -6831,12 +6831,12 @@ msgstr "新しい zero セクションを更新できません: %s"
 msgid "cannot copy ELF header: %s"
 msgstr "ELF ヘッダーを複製できません: %s"
 
-#: src/unstrip.c:264 src/unstrip.c:2154 src/unstrip.c:2197
+#: src/unstrip.c:264 src/unstrip.c:2160 src/unstrip.c:2203
 #, c-format
 msgid "cannot get number of program headers: %s"
 msgstr "プログラムヘッダ数を取得できません: %s"
 
-#: src/unstrip.c:269 src/unstrip.c:2158
+#: src/unstrip.c:269 src/unstrip.c:2164
 #, c-format
 msgid "cannot create program headers: %s"
 msgstr "プログラムヘッダーを作成できません: %s"
@@ -6873,7 +6873,7 @@ msgid "cannot get symbol table entry: %s"
 msgstr "シンボルテーブル項目を取得できません: %s"
 
 #: src/unstrip.c:408 src/unstrip.c:669 src/unstrip.c:690 src/unstrip.c:703
-#: src/unstrip.c:1811 src/unstrip.c:2007 src/unstrip.c:2031
+#: src/unstrip.c:1811 src/unstrip.c:2013 src/unstrip.c:2037
 #, c-format
 msgid "cannot update symbol table: %s"
 msgstr "シンボルテーブルを更新できません: %s"
@@ -6987,7 +6987,7 @@ msgstr ""
 msgid "invalid contents in '%s' section"
 msgstr ""
 
-#: src/unstrip.c:1378 src/unstrip.c:1394 src/unstrip.c:1674 src/unstrip.c:1966
+#: src/unstrip.c:1378 src/unstrip.c:1394 src/unstrip.c:1674 src/unstrip.c:1972
 #, c-format
 msgid "cannot add section name to string table: %s"
 msgstr ""
@@ -7035,111 +7035,111 @@ msgstr "シンボル [%zu] が不当なセクション索引を持っていま�
 msgid "group has invalid section index [%zd]"
 msgstr "グループが不当なセクション索引 [%zd] を持っています"
 
-#: src/unstrip.c:2115
+#: src/unstrip.c:2121
 #, c-format
 msgid "cannot read section data: %s"
 msgstr "セクションデータを読み込めません: %s"
 
-#: src/unstrip.c:2144
+#: src/unstrip.c:2150
 #, c-format
 msgid "cannot update ELF header: %s"
 msgstr "ELF ヘッダーを更新できません: %s"
 
-#: src/unstrip.c:2168
+#: src/unstrip.c:2174
 #, c-format
 msgid "cannot update program header: %s"
 msgstr ""
 
-#: src/unstrip.c:2173 src/unstrip.c:2256
+#: src/unstrip.c:2179 src/unstrip.c:2262
 #, c-format
 msgid "cannot write output file: %s"
 msgstr ""
 
-#: src/unstrip.c:2224
+#: src/unstrip.c:2230
 #, c-format
 msgid "DWARF data not adjusted for prelinking bias; consider prelink -u"
 msgstr ""
 
-#: src/unstrip.c:2227
+#: src/unstrip.c:2233
 #, c-format
 msgid ""
 "DWARF data in '%s' not adjusted for prelinking bias; consider prelink -u"
 msgstr ""
 
-#: src/unstrip.c:2247 src/unstrip.c:2299 src/unstrip.c:2311 src/unstrip.c:2401
+#: src/unstrip.c:2253 src/unstrip.c:2305 src/unstrip.c:2317 src/unstrip.c:2407
 #, c-format
 msgid "cannot create ELF descriptor: %s"
 msgstr ""
 
-#: src/unstrip.c:2285
+#: src/unstrip.c:2291
 msgid "WARNING: "
 msgstr ""
 
-#: src/unstrip.c:2287
+#: src/unstrip.c:2293
 msgid ", use --force"
 msgstr ""
 
-#: src/unstrip.c:2315
+#: src/unstrip.c:2321
 msgid "ELF header identification (e_ident) different"
 msgstr ""
 
-#: src/unstrip.c:2319
+#: src/unstrip.c:2325
 msgid "ELF header type (e_type) different"
 msgstr ""
 
-#: src/unstrip.c:2323
+#: src/unstrip.c:2329
 msgid "ELF header machine type (e_machine) different"
 msgstr ""
 
-#: src/unstrip.c:2327
+#: src/unstrip.c:2333
 msgid "stripped program header (e_phnum) smaller than unstripped"
 msgstr ""
 
-#: src/unstrip.c:2358
+#: src/unstrip.c:2364
 #, c-format
 msgid "cannot find stripped file for module '%s': %s"
 msgstr ""
 
-#: src/unstrip.c:2362
+#: src/unstrip.c:2368
 #, c-format
 msgid "cannot open stripped file '%s' for module '%s': %s"
 msgstr ""
 
-#: src/unstrip.c:2377
+#: src/unstrip.c:2383
 #, c-format
 msgid "cannot find debug file for module '%s': %s"
 msgstr ""
 
-#: src/unstrip.c:2381
+#: src/unstrip.c:2387
 #, c-format
 msgid "cannot open debug file '%s' for module '%s': %s"
 msgstr ""
 
-#: src/unstrip.c:2394
+#: src/unstrip.c:2400
 #, c-format
 msgid "module '%s' file '%s' is not stripped"
 msgstr ""
 
-#: src/unstrip.c:2425
+#: src/unstrip.c:2431
 #, c-format
 msgid "cannot cache section addresses for module '%s': %s"
 msgstr ""
 
-#: src/unstrip.c:2553
+#: src/unstrip.c:2559
 msgid "no matching modules found"
 msgstr ""
 
-#: src/unstrip.c:2563
+#: src/unstrip.c:2569
 msgid "matched more than one module"
 msgstr ""
 
-#: src/unstrip.c:2608
+#: src/unstrip.c:2614
 msgid ""
 "STRIPPED-FILE DEBUG-FILE\n"
 "[MODULE...]"
 msgstr ""
 
-#: src/unstrip.c:2609
+#: src/unstrip.c:2615
 msgid ""
 "Combine stripped files with separate symbols and debug information.\n"
 "\n"

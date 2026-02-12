@@ -841,6 +841,7 @@ AM_CONDITIONAL([HAVE_CXX20],[test "x$HAVE_CXX20" = "xyes"])
 # For eu-stackprof
 # optional:
 AC_CHECK_HEADERS([perfmon/pfmlib_perf_event.h])
+AM_CONDITIONAL([HAVE_LIBPFM], [test "x${ac_cv_header_perfmon_pfmlib_perf_event_h}" = "xyes" ])
 AC_CHECK_LIB(pfm, pfm_get_os_event_encoding, [AC_SUBST(libpfm_LIBS, '-lpfm')])
 # required:
 AC_CHECK_HEADERS([linux/perf_event.h])
