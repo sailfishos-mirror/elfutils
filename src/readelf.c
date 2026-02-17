@@ -2874,8 +2874,9 @@ process_symtab (Ebl *ebl, unsigned int nsyms, Elf64_Word idx,
         xndx = sym->st_shndx;
       if (use_dynamic_segment == true)
 	{
-	  if (validate_str (symstr_data->d_buf, sym->st_name,
-			    symstr_data->d_size))
+	  if (symstr_data != NULL
+	      && validate_str (symstr_data->d_buf, sym->st_name,
+			       symstr_data->d_size))
 	    sym_name = (char *)symstr_data->d_buf + sym->st_name;
 	  else
 	    sym_name = NULL;
