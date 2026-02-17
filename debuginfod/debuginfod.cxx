@@ -844,6 +844,11 @@ struct archive_exception: public reportable_exception
     reportable_exception(string("libarchive error: ") + msg + ": " + string(archive_error_string(a) ?: "?")) {
     inc_metric("error_count","libarchive",msg + ": " + string(archive_error_string(a) ?: "?"));
   }
+  archive_exception(struct archive* a, const string& fname, const string& msg):
+    reportable_exception(string("libarchive error: ") + fname + string(" ") + msg + ": " +
+                         string(archive_error_string(a) ?: "?")) {
+    inc_metric("error_count","libarchive",msg + ": " + string(archive_error_string(a) ?: "?"));
+  }
 };
 
 
@@ -3027,7 +3032,7 @@ handle_buildid_r_match (bool internal_req_p,
         {
           close (fd);
           unlink (tmppath);
-          throw archive_exception(a, "cannot extract file");
+          throw archive_exception(a, b_source0, "cannot extract file");
         }
 
       // Set the mtime so the fdcache file mtimes, even prefetched ones,
@@ -4702,7 +4707,7 @@ archive_classify (const string& rps, string& archive_extension, int64_t archivei
           rc = archive_read_data_into_fd (a, fd);
           if (rc != ARCHIVE_OK) {
             close (fd);
-            throw archive_exception(a, "cannot extract file");
+            throw archive_exception(a, rps, "cannot extract file");
           }
 
           // finally ... time to run elf_classify on this bad boy and update the database
