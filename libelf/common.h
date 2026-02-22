@@ -47,6 +47,7 @@ determine_kind (void *buf, size_t len)
   if (len >= EI_NIDENT && memcmp (buf, ELFMAG, SELFMAG) == 0)
     {
       /* Could be an ELF file.  */
+/*
       int eclass = (int) ((unsigned char *) buf)[EI_CLASS];
       int data = (int) ((unsigned char *) buf)[EI_DATA];
       int version = (int) ((unsigned char *) buf)[EI_VERSION];
@@ -54,6 +55,7 @@ determine_kind (void *buf, size_t len)
       if (eclass > ELFCLASSNONE && eclass < ELFCLASSNUM
 	  && data > ELFDATANONE && data < ELFDATANUM
 	  && version == EV_CURRENT)
+*/
 	return ELF_K_ELF;
     }
 

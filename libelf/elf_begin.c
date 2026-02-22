@@ -289,8 +289,8 @@ file_read_elf (int fildes, void *map_address, unsigned char *e_ident,
 		    && e_ident[EI_DATA] != ELFDATA2MSB)))
     {
       /* Cannot handle this.  */
-      __libelf_seterrno (ELF_E_INVALID_ELF);
-      return NULL;
+      ; //__libelf_seterrno (ELF_E_INVALID_ELF);
+      // return NULL;
     }
 
   /* Determine the number of sections.  Returns -1 and sets libelf errno
