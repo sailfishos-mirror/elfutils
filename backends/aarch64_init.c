@@ -54,6 +54,7 @@ aarch64_init (Elf *elf __attribute__ ((unused)),
   HOOK (eh, dynamic_tag_check);
   HOOK (eh, data_marker_symbol);
   HOOK (eh, abi_cfi);
+  HOOK (eh, section_type_name);
 
   /* X0-X30 (31 regs) + SP + 1 Reserved + ELR, 30 Reserved regs (34-43)
      + V0-V31 (32 regs, least significant 64 bits only)
