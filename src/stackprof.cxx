@@ -2056,7 +2056,7 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
 	  if (verbose)
 	    clog << format(N_("{}: Skipping pc={:x} raw_pc={:x} outside module range start={:x}..end={:x}"),
 			   mainfile == NULL ? "<unknown>" : mainfile,
-			   pc, last_pc, low_addr, high_addr) << endl;
+			   pc2, last_pc, low_addr, high_addr) << endl;
 	  return;
 	}
       (void) j;
