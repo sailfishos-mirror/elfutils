@@ -2018,7 +2018,9 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
 
   const char *mainfile;
   const char *debugfile;
-  dwfl_module_info (mod, NULL, NULL, NULL, NULL,
+  Dwarf_Addr low_addr;
+  Dwarf_Addr high_addr;
+  dwfl_module_info (mod, NULL, &low_addr, &high_addr, NULL,
 		    NULL, &mainfile, &debugfile);
   if (mainfile && !buildid_to_mainfile.count(buildid))
     buildid_to_mainfile[buildid] = mainfile;
@@ -2028,7 +2030,17 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
 
   UnwindModuleStats *buildid_ent = this->stats->buildid_find_or_create(buildid, mod);
 
+  uint64_t last_pc = pc;
   int i = dwfl_module_relocate_address (mod, &pc);
+  /* XXX: Out-of-range address seen with ld-linux.so, not useful for profiledb purposes: */
+  if ((last_pc < low_addr || last_pc > high_addr))
+    {
+      if (verbose)
+	clog << format(N_("{}: Skipping pc={:x} raw_pc={:x} outside module range start={:x}..end={:x}"),
+		       mainfile == NULL ? "<unknown>" : mainfile,
+		       pc, last_pc, low_addr, high_addr) << endl;
+      return;
+    }
   (void) i;
   // XXX: could get dwfl_module_relocation_info (mod, i, NULL), but no need?
   buildid_ent->record_pc(pc);
@@ -2037,7 +2049,16 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   // call, so we can't track it as a call-graph arc.  TODO: at least count them
   if (sample->addrs.size() >= 2 && mod == mod2) // intra-module call
     {
+      last_pc = pc2;
       int j = dwfl_module_relocate_address (mod, &pc2); // map pc2 also
+      if (last_pc < low_addr || last_pc > high_addr)
+	{
+	  if (verbose)
+	    clog << format(N_("{}: Skipping pc={:x} raw_pc={:x} outside module range start={:x}..end={:x}"),
+			   mainfile == NULL ? "<unknown>" : mainfile,
+			   pc, last_pc, low_addr, high_addr) << endl;
+	  return;
+	}
       (void) j;
       buildid_ent->record_callgraph_arc(pc2, pc);
     }
