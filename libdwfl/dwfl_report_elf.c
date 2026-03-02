@@ -268,6 +268,9 @@ __libdwfl_report_elf (Dwfl *dwfl, const char *name, const char *file_name,
       /* Preinstall the open ELF handle for the module.  */
       if (m->main.elf == NULL)
 	{
+	  /* We assume all calls to __libdwfl_report_elf got their Elf
+	     through __libdw_open_file which already called
+	     __libdwfl_reset_sh_addr.  */
 	  m->main.elf = elf;
 	  m->main.vaddr = vaddr;
 	  m->main.address_sync = address_sync;

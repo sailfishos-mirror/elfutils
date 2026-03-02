@@ -37,6 +37,35 @@
 
 typedef uint8_t GElf_Byte;
 
+
+void
+internal_function
+__libdwfl_reset_sh_addr (Elf *elf)
+{
+  if (elf == NULL || elf->kind != ELF_K_ELF)
+    return;
+
+  GElf_Ehdr ehdr_mem;
+  GElf_Ehdr *ehdr = gelf_getehdr (elf, &ehdr_mem);
+  if (ehdr == NULL || ehdr->e_type != ET_REL)
+    return;
+
+  Elf_Scn *scn = NULL;
+  while ((scn = elf_nextscn (elf, scn)) != NULL)
+    {
+      GElf_Shdr shdr_mem;
+      GElf_Shdr *shdr = gelf_getshdr (scn, &shdr_mem);
+      if (shdr != NULL)
+	{
+	  if ((shdr->sh_flags & SHF_ALLOC) != 0 && shdr->sh_addr != 0)
+	    {
+	      shdr_mem.sh_addr = 0;
+	      gelf_update_shdr (scn, &shdr_mem);
+	    }
+	}
+    }
+}
+
 /* Adjust *VALUE to add the load address of the SHNDX section.
    We update the section header in place to cache the result.  */
 
