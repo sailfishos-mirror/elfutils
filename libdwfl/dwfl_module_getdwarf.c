@@ -57,6 +57,7 @@ open_elf_file (Elf **elf, int *fd, char **name)
       if (*fd < 0)
 	return CBFAIL;
 
+      /* This will call __libdwfl_reset_sh_addr.  */
       return __libdw_open_file (fd, elf, true, false);
     }
   else if (unlikely (elf_kind (*elf) != ELF_K_ELF))
@@ -1004,6 +1005,7 @@ find_aux_sym (Dwfl_Module *mod __attribute__ ((unused)),
 	free (buffer);
       else
 	{
+	  /* We don't call __libdwfl_reset_sh_addr here, should we?  */
 	  mod->aux_sym.elf = elf_memory (buffer, size);
 	  if (mod->aux_sym.elf == NULL)
 	    free (buffer);
@@ -1423,6 +1425,7 @@ find_dw (Dwfl_Module *mod)
   switch (mod->dwerr)
     {
     case DWFL_E_NOERROR:
+      /* main.elf already should have had __libdwfl_reset_sh_addr called.  */
       mod->debug.elf = mod->main.elf;
       mod->debug.address_sync = mod->main.address_sync;
 

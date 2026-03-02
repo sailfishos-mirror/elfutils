@@ -1072,6 +1072,8 @@ dwfl_segment_report_module (Dwfl *dwfl, int ndx, const char *name,
 	elf->flags |= ELF_F_MALLOCED;
     }
 
+  /* Elf comes through a core file, so cannot be an ET_REL. Don't call
+     __libdwfl_reset_sh_addr.  */
   if (elf != NULL && mod->main.elf == NULL)
     {
       /* Install the file in the module.  */

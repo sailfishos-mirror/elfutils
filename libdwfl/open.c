@@ -190,6 +190,8 @@ libdw_open_elf (int *fdp, Elf **elfp, bool close_on_fail, bool archive_ok,
       *fdp = -1;
     }
 
+  __libdwfl_reset_sh_addr (elf);
+
   *elfp = elf;
   return error;
 }
