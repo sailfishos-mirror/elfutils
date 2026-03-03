@@ -61,10 +61,10 @@ Then the hexadecimal BUILDID is simply:
 .ESAMPLE
 
 In place of the hexadecimal \fIBUILDID\fP, debuginfod-find also
-accepts a path name to to an ELF binary, from which it extracts the
-buildid.  In this case, ensure the file name has some character other
-than \fB[0-9a-f]\fP.  Files ambiguously named files like
-"\fBdeadbeef\fP" can be passed with a \fB./deadbeef\fP extra path
+accepts a \fIPATH\fP name to to an ELF binary, from which it extracts
+the buildid.  This alternative is triggered if the file name has some
+character other than \fB[0-9a-f]\fP.  Files ambiguously named files
+like "\fBdeadbeef\fP" can be passed with a \fB./deadbeef\fP extra path
 component.
 
 
@@ -121,6 +121,13 @@ l l.
 \../bar/foo.c AT_comp_dir=/zoo/	source BUILDID /zoo//../bar/foo.c
 .TE
 
+.SS section \fIBUILDID\fP \fISECTION-NAME\fP
+
+If the given buildid is known to the server, this request will result
+in a binary file that contains the raw section contents, whether it is
+found in an executable or a separated debuginfo file.
+
+
 .SS metadata \fIKEY\fP \fIVALUE\fP
 
 All designated debuginfod servers are queried for metadata about all
@@ -174,7 +181,7 @@ NAME	TYPE	DESCRIPTION
 
 It's worth noting that \fBtype\fP cannot be \fBsource\fP since in order
 to perform such a search fast enough additional indexing would need to be added to
-the database which would nearly double it's size.
+the database which would nearly double its size.
 
 The search also always combines both files and archives in the results
 and at this time further granularity is not availible.
@@ -182,10 +189,13 @@ and at this time further granularity is not availible.
 .SH "OPTIONS"
 
 .TP
-.B "\-v"
+.B "\-v" "\-\-verbose"
 Increase verbosity, including printing frequent download-progress messages
 and printing the http response headers from the server.
 
+.TP
+.B "\-\-help" "\-\-usage"
+Print some help and exit.
 
 .SH "SECURITY"
 
