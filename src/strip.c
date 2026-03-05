@@ -2600,10 +2600,12 @@ while computing checksum for debug information"));
 
       if (newehdr->e_ident[EI_CLASS] == ELFCLASS32)
 	{
-	  assert (offsetof (Elf32_Ehdr, e_shentsize) + sizeof (Elf32_Half)
-		  == offsetof (Elf32_Ehdr, e_shnum));
-	  assert (offsetof (Elf32_Ehdr, e_shnum) + sizeof (Elf32_Half)
-		  == offsetof (Elf32_Ehdr, e_shstrndx));
+	  eu_static_assert (offsetof (Elf32_Ehdr, e_shentsize)
+			    + sizeof (Elf32_Half)
+			    == offsetof (Elf32_Ehdr, e_shnum));
+	  eu_static_assert (offsetof (Elf32_Ehdr, e_shnum)
+			    + sizeof (Elf32_Half)
+			    == offsetof (Elf32_Ehdr, e_shstrndx));
 	  const Elf32_Off zero_off = 0;
 	  const Elf32_Half zero[3] = { 0, 0, SHN_UNDEF };
 	  if (pwrite_retry (fd, &zero_off, sizeof zero_off,
@@ -2620,10 +2622,12 @@ while computing checksum for debug information"));
 	}
       else
 	{
-	  assert (offsetof (Elf64_Ehdr, e_shentsize) + sizeof (Elf64_Half)
-		  == offsetof (Elf64_Ehdr, e_shnum));
-	  assert (offsetof (Elf64_Ehdr, e_shnum) + sizeof (Elf64_Half)
-		  == offsetof (Elf64_Ehdr, e_shstrndx));
+	  eu_static_assert (offsetof (Elf64_Ehdr, e_shentsize)
+			    + sizeof (Elf64_Half)
+			    == offsetof (Elf64_Ehdr, e_shnum));
+	  eu_static_assert (offsetof (Elf64_Ehdr, e_shnum)
+			    +sizeof (Elf64_Half)
+			    == offsetof (Elf64_Ehdr, e_shstrndx));
 	  const Elf64_Off zero_off = 0;
 	  const Elf64_Half zero[3] = { 0, 0, SHN_UNDEF };
 	  if (pwrite_retry (fd, &zero_off, sizeof zero_off,

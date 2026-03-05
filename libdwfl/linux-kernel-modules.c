@@ -577,8 +577,8 @@ check_notes (Dwfl_Module *mod, const char *notesfile,
   if (fd < 0)
     return 1;
 
-  assert (sizeof (Elf32_Nhdr) == sizeof (GElf_Nhdr));
-  assert (sizeof (Elf64_Nhdr) == sizeof (GElf_Nhdr));
+  eu_static_assert (sizeof (Elf32_Nhdr) == sizeof (GElf_Nhdr));
+  eu_static_assert (sizeof (Elf64_Nhdr) == sizeof (GElf_Nhdr));
   union
   {
     GElf_Nhdr nhdr;

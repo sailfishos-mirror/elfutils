@@ -64,7 +64,7 @@ arlib_init (void)
                     (arlib_deterministic_output ? 0
                      : (long long int) time (NULL)));
   memcpy (ar_hdr.ar_date, tmpbuf, s);
-  assert ((sizeof (struct ar_hdr)  % sizeof (uint32_t)) == 0);
+  eu_static_assert ((sizeof (struct ar_hdr) % sizeof (uint32_t)) == 0);
 
   /* Note the string for the ar_uid and ar_gid cases is longer than
      necessary.  This does not matter since we copy only as much as
@@ -81,7 +81,7 @@ arlib_init (void)
   /* The first word in the offset table specifies the size.  Create
      such an entry now.  The real value will be filled-in later.  For
      all supported platforms the following is true.  */
-  assert (sizeof (uint32_t) == sizeof (int));
+  eu_static_assert (sizeof (uint32_t) == sizeof (int));
   obstack_int_grow (&symtab.symsoffob, 0);
 
   /* The long name obstack also gets its archive header.  As above,
@@ -194,7 +194,7 @@ void
 arlib_add_symref (const char *symname, off_t symoff)
 {
   /* For all supported platforms the following is true.  */
-  assert (sizeof (uint32_t) == sizeof (int));
+  eu_static_assert (sizeof (uint32_t) == sizeof (int));
   obstack_int_grow (&symtab.symsoffob, (int) le_bswap_32 (symoff));
 
   size_t symname_len = strlen (symname) + 1;

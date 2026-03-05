@@ -311,12 +311,12 @@ openbackend (Elf *elf, const char *emulation, GElf_Half machine)
 
 	/* We access some data structures directly.  Make sure the 32 and
 	   64 bit variants are laid out the same.  */
-	assert (offsetof (Elf32_Ehdr, e_machine)
-		== offsetof (Elf64_Ehdr, e_machine));
-	assert (sizeof (((Elf32_Ehdr *) 0)->e_machine)
-		== sizeof (((Elf64_Ehdr *) 0)->e_machine));
-	assert (offsetof (Elf, state.elf32.ehdr)
-		== offsetof (Elf, state.elf64.ehdr));
+	eu_static_assert (offsetof (Elf32_Ehdr, e_machine)
+			  == offsetof (Elf64_Ehdr, e_machine));
+	eu_static_assert (sizeof (((Elf32_Ehdr *) 0)->e_machine)
+			  == sizeof (((Elf64_Ehdr *) 0)->e_machine));
+	eu_static_assert (offsetof (Elf, state.elf32.ehdr)
+			  == offsetof (Elf, state.elf64.ehdr));
 
 	/* Prefer taking the information from the ELF file.  */
 	if (elf == NULL)

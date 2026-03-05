@@ -275,7 +275,7 @@ core_set_initial_registers (Dwfl_Thread *thread, void *thread_arg_voidp)
 	      reg_desc += sizeof val64;
 	      val64 = (elf_getident (core, NULL)[EI_DATA] == ELFDATA2MSB
 		       ? be64toh (val64) : le64toh (val64));
-	      assert (sizeof (*thread->unwound->regs) == sizeof val64);
+	      eu_static_assert (sizeof (*thread->unwound->regs) == sizeof val64);
 	      val = val64;
 	      break;
 	    default:
