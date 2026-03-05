@@ -570,8 +570,8 @@ adjust_relocs (Elf_Scn *outscn, Elf_Scn *inscn, const GElf_Shdr *shdr,
 
 	/* We don't bother using gelf_update_versym because there is
 	   really no conversion to be done.  */
-	assert (sizeof (Elf32_Versym) == sizeof (GElf_Versym));
-	assert (sizeof (Elf64_Versym) == sizeof (GElf_Versym));
+	eu_static_assert (sizeof (Elf32_Versym) == sizeof (GElf_Versym));
+	eu_static_assert (sizeof (Elf64_Versym) == sizeof (GElf_Versym));
 	GElf_Versym *versym = xcalloc (nent, sizeof versym[0]);
 
 	for (size_t i = 1; i < onent; ++i)

@@ -537,7 +537,7 @@ dwfl_segment_report_module (Dwfl *dwfl, int ndx, const char *name,
 	      if (filesz > SIZE_MAX / sizeof (Elf32_Nhdr))
 		continue;
 
-              assert (sizeof (Elf32_Nhdr) == sizeof (Elf64_Nhdr));
+              eu_static_assert (sizeof (Elf32_Nhdr) == sizeof (Elf64_Nhdr));
 
               void *notes;
               if (ei_data == MY_ELFDATA
