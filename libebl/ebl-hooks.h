@@ -172,7 +172,7 @@ bool EBLHOOK(set_initial_registers_sample) (const Dwarf_Word *regs,
 /* Extract the stack address and instruction pointer from a register sample.  */
 bool EBLHOOK(sample_sp_pc) (const Dwarf_Word *regs, uint32_t n_regs,
 			    const int *regs_mapping,
-			    uint32_t n_regs_mapping,
+			    size_t n_regs_mapping,
 			    Dwarf_Word *sp, Dwarf_Word *pc);
 
 /* Translate from linux perf_events PERF_REGS_MASK and ABI to a generic

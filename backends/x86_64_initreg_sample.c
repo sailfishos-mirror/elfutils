@@ -47,7 +47,7 @@
 
 bool
 x86_64_sample_sp_pc (const Dwarf_Word *regs, uint32_t n_regs,
-		     const int *regs_mapping, uint32_t n_regs_mapping,
+		     const int *regs_mapping, size_t n_regs_mapping,
 		     Dwarf_Word *sp, Dwarf_Word *pc)
 {
   /* XXX for dwarf_regs indices, compare x86_64_initreg.c */
