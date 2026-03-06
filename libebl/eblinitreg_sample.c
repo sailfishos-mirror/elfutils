@@ -71,7 +71,7 @@ ebl_set_initial_registers_sample (Ebl *ebl,
     dwarf_regs[i] = 0x0;
   for (i = 0; i < n_regs; i++)
     {
-      if (i > n_regs_mapping)
+      if (i >= n_regs_mapping)
 	break;
       if (regs_mapping[i] < 0 || regs_mapping[i] >= (int)ebl->frame_nregs)
 	continue;
