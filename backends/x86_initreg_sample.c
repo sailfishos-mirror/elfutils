@@ -1,5 +1,5 @@
-/* x86 stack sample register handling, pieces common to x86-64 and i386.
-   Copyright (C) 2025 Red Hat, Inc.
+/* x86 stack sample register handling helper common to x86-64 and i386.
+   Copyright (C) 2025-2026 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -26,45 +26,7 @@
    the GNU Lesser General Public License along with this program.  If
    not, see <http://www.gnu.org/licenses/>.  */
 
-static bool
-x86_sample_sp_pc (const Dwarf_Word *regs, uint32_t n_regs,
-		  const int *regs_mapping, uint32_t n_regs_mapping,
-		  Dwarf_Word *sp, uint sp_index /* into dwarf_regs */,
-		  Dwarf_Word *pc, uint pc_index /* into dwarf_regs */)
-{
-  if (sp != NULL) *sp = 0;
-  if (pc != NULL) *pc = 0;
-#if !defined(__x86_64__)
-  (void)regs;
-  (void)n_regs;
-  (void)regs_mapping;
-  (void)n_regs_mapping;
-  (void)sp;
-  (void)sp_index;
-  (void)pc;
-  (void)pc_index;
-  return false;
-#else /* __x86_64__ */
-  /* TODO: Register locations could be cached and rechecked on a
-     fastpath without needing to loop? */
-  int j, need_sp = (sp != NULL), need_pc = (pc != NULL);
-  for (j = 0; (need_sp || need_pc) && n_regs_mapping > (uint32_t)j; j++)
-    {
-      if (n_regs < (uint32_t)j) break;
-      if (need_sp && regs_mapping[j] == (int)sp_index)
-	{
-	  *sp = regs[j]; need_sp = false;
-	}
-      if (need_pc && regs_mapping[j] == (int)pc_index)
-	{
-	  *pc = regs[j]; need_pc = false;
-	}
-    }
-  return (!need_sp && !need_pc);
-#endif
-}
-
-static bool
+static inline bool
 x86_sample_perf_regs_mapping (Ebl *ebl,
 			      uint64_t perf_regs_mask, uint32_t abi,
 			      const int **regs_mapping,
