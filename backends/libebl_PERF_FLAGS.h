@@ -33,7 +33,7 @@
 
 #if defined(__linux__)
 /* XXX Need to exclude __linux__ arches without perf_regs.h. */
-#if defined(__x86_64__) || defined(__i386__) || defined(__aarch64__)
+#if defined(__x86_64__) || defined(__i386__) || defined(__aarch64__) || defined(__arm__)
 /* || defined(other_architecture)... */
 # include <asm/perf_regs.h>
 #endif
@@ -59,6 +59,20 @@
 #define PERF_FRAME_REGISTERS_X86_64 0
 #endif /* _ASM_X86_PERF_REGS_H */
 
+#if defined(_ASM_ARM_PERF_REGS_H)
+#define REG(R) (1ULL << PERF_REG_ARM_ ## R)
+/* TODO (REVIEW): Proper unwind set seems to be: callee-saved R4..R10,
+   then R11 for FP, and SP, LR, PC. Collecting all 16 regs is feasible.  */
+#define PERF_FRAME_REGISTERS_ARM (REG(R0) | REG(R1) | REG(R2) | REG(R3)  \
+  | REG(R4) | REG(R5) | REG(R6) | REG(R7) | REG(R8) | REG(R9) | REG(R10) \
+  | REG(FP) | REG(IP) | REG(SP) | REG(LR) | REG(PC))
+/* Register ordering defined in linux arch/arm/include/uapi/asm/perf_regs.h.  */
+#elif !defined(_ASM_ARM64_PERF_REGS_H)
+/* Since asm/perf_regs.h is absent, or gives the register layout for a
+   different arch, we can't unwind 32-bit ARM perf sample frames.  */
+#define PERF_FRAME_REGISTERS_ARM 0
+#endif /* _ASM_ARM_PERF_REGS_H */
+
 #if defined(_ASM_ARM64_PERF_REGS_H)
 #define REG(R) (1ULL << PERF_REG_ARM64_ ## R)
 /* TODO(REVIEW): Proper unwind set seems to be: callee-saved X19..X28,
@@ -67,6 +81,18 @@
   | REG(X22) | REG(X23) | REG(X24) | REG(X25) | REG(X26) | REG(X27)  \
   | REG(X28) | REG(X29) /*FP*/ | REG(LR) | REG(SP) | REG(PC))
 /* Register ordering defined in linux arch/arm64/include/uapi/asm/perf_regs.h.  */
+
+/* TODO(REVIEW): Likewise, for 32bit-on-64bit compat mode:  */
+#define PERF_FRAME_REGISTERS_ARM (REG(X0) | REG(X1) | REG(X2) | REG(X3)   \
+  | REG(X4) | REG(X5) | REG(X6) | REG(X7) | REG(X8) | REG(X9) | REG(X10)  \
+  | REG(X11) /* FP */ | REG(X12) /* IP */ /* | skip X13..X29 */ | REG(LR) \
+  | REG(SP) | REG(PC))
+/* TODO(REVIEW): Then the profiler likely needs to be instructed to
+   request the intersection of these register sets rather than just
+   PERF_FRAME_REGISTERS_AARCH64? i.e. in aarch64_init.c:
+
+   eh->perf_frame_regs_mask = PERF_FRAME_REGISTERS_AARCH64 | PERF_FRAME_REGISTERS_ARM;
+*/
 #else
 /* Since asm/perf_regs.h is absent, or gives the register layout for a
    different arch, we can't unwind aarch64 perf sample frames.  */

@@ -57,7 +57,7 @@ alpha_SRCS = alpha_init.c alpha_symbol.c alpha_retval.c alpha_regs.c \
 
 arm_SRCS = arm_init.c arm_symbol.c arm_regs.c arm_corenote.c \
 	   arm_auxv.c arm_attrs.c arm_retval.c arm_cfi.c arm_initreg.c \
-	   arm_machineflagname.c
+	   arm_initreg_sample.c arm_machineflagname.c
 
 aarch64_SRCS = aarch64_init.c aarch64_regs.c aarch64_symbol.c	\
 	       aarch64_corenote.c aarch64_retval.c aarch64_cfi.c \
