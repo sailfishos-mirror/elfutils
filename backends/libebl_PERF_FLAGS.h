@@ -76,7 +76,7 @@
 /* TODO(REVIEW) Replaces x86_sample_sp_pc -- is this header the right location for it? */
 static inline bool
 generic_sample_sp_pc (const Dwarf_Word *regs, uint32_t n_regs,
-		      const int *regs_mapping, uint32_t n_regs_mapping,
+		      const int *regs_mapping, size_t n_regs_mapping,
 		      Dwarf_Word *sp, uint sp_index /* into dwarf_regs */,
 		      Dwarf_Word *pc, uint pc_index /* into dwarf_regs */)
 {
@@ -84,8 +84,8 @@ generic_sample_sp_pc (const Dwarf_Word *regs, uint32_t n_regs,
   if (pc != NULL) *pc = 0;
   /* TODO(REVIEW): Register locations could be cached and rechecked on
      a fastpath without needing to loop? */
-  int j, need_sp = (sp != NULL), need_pc = (pc != NULL);
-  for (j = 0; (need_sp || need_pc) && n_regs_mapping > (uint32_t)j; j++)
+  int need_sp = (sp != NULL), need_pc = (pc != NULL);
+  for (size_t j = 0; (need_sp || need_pc) && n_regs_mapping > j; j++)
     {
       if (n_regs < (uint32_t)j) break;
       if (need_sp && regs_mapping[j] == (int)sp_index)
