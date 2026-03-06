@@ -65,7 +65,8 @@ aarch64_init (Elf *elf __attribute__ ((unused)),
   HOOK (eh, set_initial_registers_sample);
   HOOK (eh, sample_sp_pc);
   /* sample_perf_regs_mapping is default ver  */
-  eh->perf_frame_regs_mask = PERF_FRAME_REGISTERS_AARCH64;
+  eh->perf_frame_regs_mask = PERF_FRAME_REGISTERS_AARCH64
+      | PERF_FRAME_REGISTERS_ARM; /* XXX try to include 32-bit compat mode regs  */
   __libebl_init_cached_regs_mapping (eh);
   HOOK (eh, unwind);
 
