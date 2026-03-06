@@ -1,5 +1,5 @@
 /* Initialization of x86-64 specific backend library.
-   Copyright (C) 2002-2009, 2013, 2018, 2025 Red Hat, Inc.
+   Copyright (C) 2002-2009, 2013, 2018, 2025-2026 Red Hat, Inc.
    Copyright (C) H.J. Lu <hjl.tools@gmail.com>, 2015.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2002.
@@ -63,13 +63,11 @@ x86_64_init (Elf *elf __attribute__ ((unused)),
   /* gcc/config/ #define DWARF_FRAME_REGISTERS.  */
   eh->frame_nregs = 17;
   HOOK (eh, set_initial_registers_tid);
-  /* set_initial_registers_sample is default ver */
+  /* set_initial_registers_sample is default ver  */
   HOOK (eh, sample_sp_pc);
   HOOK (eh, sample_perf_regs_mapping);
   eh->perf_frame_regs_mask = PERF_FRAME_REGISTERS_X86_64;
-  eh->cached_perf_regs_mask = 0;
-  eh->cached_regs_mapping = NULL;
-  eh->cached_n_regs_mapping = -1;
+  __libebl_init_cached_regs_mapping (eh);
   HOOK (eh, unwind);
   HOOK (eh, check_reloc_target_type);
 

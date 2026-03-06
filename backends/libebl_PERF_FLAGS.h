@@ -54,7 +54,7 @@
    and note how regs are added in the same order as the perf_regs.h enum.  */
 #else
 /* Since asm/perf_regs.h is absent, or gives the register layout for a
-   different arch, we can't unwind i386 and x86_64 frames. */
+   different arch, we can't unwind i386 and x86_64 perf sample frames.  */
 #define PERF_FRAME_REGISTERS_I386 0
 #define PERF_FRAME_REGISTERS_X86_64 0
 #endif /* _ASM_X86_PERF_REGS_H */
