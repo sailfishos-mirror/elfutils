@@ -1,7 +1,7 @@
 /* Linux perf_events sample_regs_user flags required for unwinding.
    Internal only; elfutils library users should use ebl_perf_frame_regs_mask().
 
-   Copyright (C) 2025 Red Hat, Inc.
+   Copyright (C) 2025-2026 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -57,6 +57,47 @@
    different arch, we can't unwind i386 and x86_64 frames. */
 #define PERF_FRAME_REGISTERS_I386 0
 #define PERF_FRAME_REGISTERS_X86_64 0
-#endif
+#endif /* _ASM_X86_PERF_REGS_H */
+
+#if defined(_ASM_ARM64_PERF_REGS_H)
+#define REG(R) (1ULL << PERF_REG_ARM64_ ## R)
+/* TODO(REVIEW): Proper unwind set seems to be: callee-saved X19..X28,
+   then X29 for FP, LR for return addr, and SP, PC.  */
+#define PERF_FRAME_REGISTERS_AARCH64 (REG(X19) | REG(X20) | REG(X21) \
+  | REG(X22) | REG(X23) | REG(X24) | REG(X25) | REG(X26) | REG(X27)  \
+  | REG(X28) | REG(X29) /*FP*/ | REG(LR) | REG(SP) | REG(PC))
+/* Register ordering defined in linux arch/arm64/include/uapi/asm/perf_regs.h.  */
+#else
+/* Since asm/perf_regs.h is absent, or gives the register layout for a
+   different arch, we can't unwind aarch64 perf sample frames.  */
+#define PERF_FRAME_REGISTERS_AARCH64 0
+#endif /* _ASM_ARM64_PERF_REGS_H */
+
+/* TODO(REVIEW) Replaces x86_sample_sp_pc -- is this header the right location for it? */
+static inline bool
+generic_sample_sp_pc (const Dwarf_Word *regs, uint32_t n_regs,
+		      const int *regs_mapping, uint32_t n_regs_mapping,
+		      Dwarf_Word *sp, uint sp_index /* into dwarf_regs */,
+		      Dwarf_Word *pc, uint pc_index /* into dwarf_regs */)
+{
+  if (sp != NULL) *sp = 0;
+  if (pc != NULL) *pc = 0;
+  /* TODO(REVIEW): Register locations could be cached and rechecked on
+     a fastpath without needing to loop? */
+  int j, need_sp = (sp != NULL), need_pc = (pc != NULL);
+  for (j = 0; (need_sp || need_pc) && n_regs_mapping > (uint32_t)j; j++)
+    {
+      if (n_regs < (uint32_t)j) break;
+      if (need_sp && regs_mapping[j] == (int)sp_index)
+	{
+	  *sp = regs[j]; need_sp = false;
+	}
+      if (need_pc && regs_mapping[j] == (int)pc_index)
+	{
+	  *pc = regs[j]; need_pc = false;
+	}
+    }
+  return (!need_sp && !need_pc);
+}
 
 #endif	/* libebl_PERF_FLAGS.h */

@@ -1,6 +1,6 @@
 /* Populate process Dwfl_Frame from perf_events sample.
 
-   Copyright (C) 2025 Red Hat, Inc.
+   Copyright (C) 2025-2026 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -31,8 +31,10 @@
 # include <config.h>
 #endif
 
-#include <libeblP.h>
+#include <stdlib.h>
 #include <assert.h>
+
+#include <libeblP.h>
 
 bool
 ebl_sample_sp_pc (Ebl *ebl,
@@ -83,10 +85,38 @@ ebl_sample_perf_regs_mapping (Ebl *ebl,
 			      uint64_t perf_regs_mask, uint32_t abi,
 			      const int **regs_mapping, size_t *n_regs_mapping)
 {
-  /* If sample_perf_regs_mapping is unsupported then PERF_FRAME_REGS_MASK is zero.  */
-  assert (ebl->sample_perf_regs_mapping != NULL);
-  return ebl->sample_perf_regs_mapping (ebl, perf_regs_mask, abi,
-					regs_mapping, n_regs_mapping);
+  /* If sample_perf_regs_mapping is unsupported then perf_frame_regs_mask is zero.  */
+  assert (ebl->perf_frame_regs_mask != 0);
+
+  /* If sample_perf_regs_mapping is defined for this arch, use it.  */
+  if (ebl->sample_perf_regs_mapping != NULL)
+    return ebl->sample_perf_regs_mapping (ebl, perf_regs_mask, abi,
+					  regs_mapping, n_regs_mapping);
+
+  /* If sample_perf_regs_mapping is unspecified, then it is safe
+     to return a linear 1:1 mapping between perf_regs and dwarf_regs.  */
+
+  if (perf_regs_mask != 0 && ebl->cached_perf_regs_mask == perf_regs_mask)
+    {
+      *regs_mapping = ebl->cached_regs_mapping;
+      *n_regs_mapping = ebl->cached_n_regs_mapping;
+      return true;
+    }
+
+  /* XXX Unwind-relevant register file should be no bigger than this:  */
+  int count = 64;
+
+  ebl->cached_regs_mapping = (int *)calloc (count, sizeof(int));
+  ebl->cached_n_regs_mapping = count;
+
+  /* TODO(REVIEW) Check correctness. */
+  for (int j = 0; j < count; j++)
+    ebl->cached_regs_mapping[j] = j;
+
+  *regs_mapping = ebl->cached_regs_mapping;
+  *n_regs_mapping = ebl->cached_n_regs_mapping;
+  return true;
+
 }
 
 uint64_t

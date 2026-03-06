@@ -1,5 +1,5 @@
 /* Generate ELF backend handle.
-   Copyright (C) 2000-2017 Red Hat, Inc.
+   Copyright (C) 2000-2017, 2026 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -269,6 +269,17 @@ fill_defaults (Ebl *result)
   result->abi_cfi = default_abi_cfi;
   result->destr = default_destr;
   result->sysvhash_entrysize = sizeof (Elf32_Word);
+}
+
+/* Called by the initialization functions for backends which support
+   hook sample_perf_regs_mapping().  */
+void
+internal_function
+__libebl_init_cached_regs_mapping (Ebl *eh)
+{
+  eh->cached_perf_regs_mask = 0;
+  eh->cached_regs_mapping = NULL;
+  eh->cached_n_regs_mapping = -1;
 }
 
 /* Find an appropriate backend for the file associated with ELF.  */
