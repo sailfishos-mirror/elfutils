@@ -1,5 +1,5 @@
 /* Populate process registers from a linux perf_events sample.
-   Copyright (C) 2025 Red Hat, Inc.
+   Copyright (C) 2025-2026 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -47,23 +47,13 @@
 
 bool
 i386_sample_sp_pc (const Dwarf_Word *regs, uint32_t n_regs,
-                   const int *regs_mapping, uint32_t n_regs_mapping,
-                   Dwarf_Word *sp, Dwarf_Word *pc)
+		   const int *regs_mapping, uint32_t n_regs_mapping,
+		   Dwarf_Word *sp, Dwarf_Word *pc)
 {
-#ifdef HAVE_X86_INITREG_SAMPLE
   /* XXX for dwarf_regs indices, compare i386_initreg.c */
-  return x86_sample_sp_pc (regs, n_regs, regs_mapping, n_regs_mapping,
+  return generic_sample_sp_pc (regs, n_regs, regs_mapping, n_regs_mapping,
 			   sp, 4 /* index of sp in dwarf_regs */,
 			   pc, 8 /* index of pc in dwarf_regs */);
-#else
-  (void) regs;
-  (void) n_regs;
-  (void) regs_mapping;
-  (void) n_regs_mapping;
-  (void) sp;
-  (void) pc;
-  return false;
-#endif
 }
 
 bool
