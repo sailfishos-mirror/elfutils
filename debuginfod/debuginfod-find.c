@@ -68,6 +68,7 @@ static const struct argp_option options[] =
 static debuginfod_client *client;
 static int verbose;
 static volatile sig_atomic_t interrupted;
+static bool saw_progress_envvar;
 
 static void
 handle_sigint(int signo __attribute__((__unused__)))
@@ -75,13 +76,19 @@ handle_sigint(int signo __attribute__((__unused__)))
   interrupted = 1;
 }
 
-int progressfn(debuginfod_client *c __attribute__((__unused__)),
-	       long a, long b)
+static int
+progressfn(debuginfod_client *c, long a, long b)
 {
   if (interrupted)
     return 1;
   if (verbose < 1)
-    return 0;
+    {
+      /* Fallback to the default progressfn if verbose isn't set and
+	 DEBUGINFOD_PROGRESS is set.  */
+      if (saw_progress_envvar)
+	return debuginfod_default_progressfn (c, a, b);
+      return 0;
+    }
 
   static bool first = true;
   static struct timespec last;
@@ -152,6 +159,9 @@ main(int argc, char** argv)
   sa.sa_flags = 0;
   sa.sa_handler = handle_sigint;
   sigaction (SIGINT, &sa, NULL);
+
+  if (getenv(DEBUGINFOD_PROGRESS_ENV_VAR) != NULL)
+    saw_progress_envvar = true;
 
   debuginfod_set_progressfn (client, & progressfn);
 
