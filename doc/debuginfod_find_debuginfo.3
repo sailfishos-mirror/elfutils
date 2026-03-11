@@ -57,9 +57,11 @@ LOOKUP FUNCTIONS
 OPTIONAL FUNCTIONS
 
 .BI "typedef int (*debuginfod_progressfn_t)(debuginfod_client *" client ","
-.BI "                                       long a, long b);"
+.BI "                                       long " a ", long " b ");"
 .BI "void debuginfod_set_progressfn(debuginfod_client *" client ","
 .BI "                               debuginfod_progressfn_t " progressfn ");"
+.BI "int debuginfod_default_progressfn(debuginfod_client *" client ","
+.BI "                                  long " a ", long " b ");"
 .BI "void debuginfod_set_verbose_fd(debuginfod_client *" client ","
 .BI "                               int " fd ");"
 .BI "void debuginfod_set_user_data(debuginfod_client *" client ","
@@ -176,6 +178,17 @@ modify or trigger signals.)  The progress callback must return 0 to
 continue the work, or any other value to stop work as soon as
 possible.  Consequently, the \fBdebuginfod_find_*\fP() function will
 likely return with an error, but might still succeed.
+
+.BR debuginfod_default_progressfn ()
+is the progress callback function set by the debuginfod client library
+when the
+.B DEBUGINFOD_PROGRESS
+environment variable is set and no progressfn is explicitly set. For more
+information see
+.B DEBUGINFOD_PROGRESS
+below. Custom progress callback functions may call
+.BR debuginfod_default_progressfn ()
+directly to report download status.
 
 .SS "VERBOSE OUTPUT"
 

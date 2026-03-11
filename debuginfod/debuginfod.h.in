@@ -105,6 +105,8 @@ int debuginfod_find_metadata (debuginfod_client *client,
                               const char* value,
                               char **path);
 
+int debuginfod_default_progressfn(debuginfod_client *c, long a, long b);
+
 typedef int (*debuginfod_progressfn_t)(debuginfod_client *c, long a, long b);
 void debuginfod_set_progressfn(debuginfod_client *c,
 			       debuginfod_progressfn_t fn);

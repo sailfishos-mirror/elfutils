@@ -752,8 +752,8 @@ add_headers_from_file(debuginfod_client *client, const char* filename)
 
 
 /* Offer a basic form of progress tracing */
-static int
-default_progressfn (debuginfod_client *c, long a, long b)
+int
+debuginfod_default_progressfn (debuginfod_client *c, long a, long b)
 {
   const char* url = debuginfod_get_url (c);
   int len = 0;
@@ -2567,7 +2567,7 @@ debuginfod_begin (void)
   if (client != NULL)
     {
       if (getenv(DEBUGINFOD_PROGRESS_ENV_VAR))
-	client->progressfn = default_progressfn;
+	client->progressfn = debuginfod_default_progressfn;
       if (getenv(DEBUGINFOD_VERBOSE_ENV_VAR))
 	client->verbose_fd = STDERR_FILENO;
       else

@@ -25,3 +25,6 @@ ELFUTILS_0.188 {
 ELFUTILS_0.192 {
   debuginfod_find_metadata;
 } ELFUTILS_0.188;
+ELFUTILS_0.195 {
+  debuginfod_default_progressfn;
+} ELFUTILS_0.192;
