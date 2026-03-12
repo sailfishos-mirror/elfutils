@@ -69,7 +69,7 @@ sparc_SRCS = sparc_init.c sparc_symbol.c sparc_regs.c sparc_retval.c \
 
 ppc_SRCS = ppc_init.c ppc_symbol.c ppc_retval.c ppc_regs.c \
 	   ppc_corenote.c ppc_auxv.c ppc_attrs.c \
-	   ppc_cfi.c ppc_initreg.c
+	   ppc_cfi.c ppc_initreg.c ppc_initreg_sample.c
 
 ppc64_SRCS = ppc64_init.c ppc64_symbol.c ppc64_retval.c ppc64_corenote.c \
 	     ppc64_unwind.c ppc64_resolve_sym.c

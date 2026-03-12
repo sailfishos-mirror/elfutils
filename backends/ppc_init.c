@@ -1,5 +1,5 @@
 /* Initialization of PPC specific backend library.
-   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2013 Red Hat, Inc.
+   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2013, 2026 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2004.
 
@@ -34,6 +34,7 @@
 #define BACKEND		ppc_
 #define RELOC_PREFIX	R_PPC_
 #include "libebl_CPU.h"
+#include "libebl_PERF_FLAGS.h"
 
 /* This defines the common reloc hooks based on ppc_reloc.def.  */
 #include "common-reloc.c"
@@ -61,6 +62,11 @@ ppc_init (Elf *elf __attribute__ ((unused)),
   /* gcc/config/ #define DWARF_FRAME_REGISTERS.  */
   eh->frame_nregs = (114 - 1) + 32;
   HOOK (eh, set_initial_registers_tid);
+  HOOK (eh, set_initial_registers_sample);
+  HOOK (eh, sample_sp_pc);
+  HOOK (eh, sample_perf_regs_mapping);
+  eh->perf_frame_regs_mask = PERF_FRAME_REGISTERS_POWERPC;
+  __libebl_init_cached_regs_mapping(eh);
   HOOK (eh, dwarf_to_regno);
 
   return eh;

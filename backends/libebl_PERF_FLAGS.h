@@ -33,7 +33,7 @@
 
 #if defined(__linux__)
 /* XXX Need to exclude __linux__ arches without perf_regs.h. */
-#if defined(__x86_64__) || defined(__i386__) || defined(__aarch64__) || defined(__arm__)
+#if defined(__x86_64__) || defined(__i386__) || defined(__aarch64__) || defined(__arm__) || defined(__powerpc__)
 /* || defined(other_architecture)... */
 # include <asm/perf_regs.h>
 #endif
@@ -98,6 +98,25 @@
    different arch, we can't unwind aarch64 perf sample frames.  */
 #define PERF_FRAME_REGISTERS_AARCH64 0
 #endif /* _ASM_ARM64_PERF_REGS_H */
+
+#if defined(_UAPI_ASM_POWERPC_PERF_REGS_H)
+#define REG(R) (1ULL << PERF_REG_POWERPC_ ## R)
+/* TODO(REVIEW) The same register file is provided for 32-bit and
+   64-bit powerpc architectures. Are the same registers needed for
+   unwinding?  */
+#define PERF_FRAME_REGISTERS_POWERPC (REG(R1) | REG(R2) | REG(R3) | REG(R4) \
+  | REG(R5) | REG(R6) | REG(R7) | REG(R8) | REG(R9) | REG(R10) | REG(R11)   \
+  | REG(R12) | REG(R13) | REG(R14) | REG(R15) | REG(R16) | REG(R17)         \
+  | REG(R18) | REG(R19) | REG(R20) | REG(R21) | REG(R22) | REG(R23)         \
+  | REG(R24) | REG(R25) | REG(R26) | REG(R27) | REG(R28) | REG(R29)         \
+  | REG(R22) | REG(R23) | REG(R24) | REG(R25) | REG(R26) | REG(R27)         \
+  | REG(R28) | REG(R29) | REG(R30) | REG(R31) | REG(NIP) | REG(LINK))
+/* Register ordering defined in linux arch/powerpc/include/uapi/asm/perf_regs.h.  */
+#else
+/* Since asm/perf_regs.h is absent, or gives the register layout for a
+   different arch, we can't unwind powerpc perf sample frames.  */
+#define PERF_FRAME_REGISTERS_POWERPC 0
+#endif /* _UAPI_ASM_POWERPC_PERF_REGS_H */
 
 /* TODO(REVIEW) Replaces x86_sample_sp_pc -- is this header the right location for it? */
 static inline bool
