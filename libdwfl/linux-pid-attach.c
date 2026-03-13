@@ -302,6 +302,8 @@ pid_getthread (Dwfl *dwfl __attribute__ ((unused)), pid_t tid,
   return true;
 }
 
+#endif /* __linux__ */
+
 /* Implement the ebl_set_initial_registers_tid setfunc callback.  */
 
 bool
@@ -326,6 +328,8 @@ __libdwfl_set_initial_registers_thread (int firstreg, unsigned nregs,
   assert (nregs > 0);
   return INTUSE(dwfl_thread_state_registers) (thread, firstreg, nregs, regs);
 }
+
+#ifdef __linux__
 
 static bool
 pid_set_initial_registers (Dwfl_Thread *thread, void *thread_arg)
@@ -507,7 +511,9 @@ __libdwfl_get_pid_arg (Dwfl *dwfl)
   return NULL;
 }
 
-#else	/* __linux__ */
+#endif	/* __linux__ */
+
+#ifndef __linux__
 
 bool
 internal_function
