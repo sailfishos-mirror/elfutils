@@ -77,3 +77,30 @@ dwfl_frame_reg (Dwfl_Frame *state, unsigned regno, Dwarf_Word *val)
   return res;
 }
 INTDEF(dwfl_frame_reg)
+
+/* Implement the ebl_set_initial_registers_tid setfunc callback.  */
+
+bool
+/* Not internal_function, since that allows calling-convention changes
+   e.g. on i386, and stable ABI is needed to use this as an
+   ebl_tid_registers_t * callback in linux-pid-attach.c and
+   libdwfl_stacktrace.  */
+__libdwfl_set_initial_registers_thread (int firstreg, unsigned nregs,
+				   const Dwarf_Word *regs, void *arg)
+{
+  Dwfl_Thread *thread = (Dwfl_Thread *) arg;
+  if (firstreg == -1)
+    {
+      assert (nregs == 1);
+      INTUSE(dwfl_thread_state_register_pc) (thread, *regs);
+      return true;
+    }
+  else if (firstreg == -2)
+    {
+      assert (nregs == 1);
+      INTUSE(dwfl_thread_state_registers) (thread, firstreg, nregs, regs);
+      return true;
+     }
+  assert (nregs > 0);
+  return INTUSE(dwfl_thread_state_registers) (thread, firstreg, nregs, regs);
+}

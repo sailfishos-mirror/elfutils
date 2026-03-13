@@ -302,31 +302,6 @@ pid_getthread (Dwfl *dwfl __attribute__ ((unused)), pid_t tid,
   return true;
 }
 
-/* Implement the ebl_set_initial_registers_tid setfunc callback.  */
-
-bool
-/* XXX No internal_function annotation,
-   as this function gets passed as ebl_tid_registers_t *.  */
-__libdwfl_set_initial_registers_thread (int firstreg, unsigned nregs,
-				   const Dwarf_Word *regs, void *arg)
-{
-  Dwfl_Thread *thread = (Dwfl_Thread *) arg;
-  if (firstreg == -1)
-    {
-      assert (nregs == 1);
-      INTUSE(dwfl_thread_state_register_pc) (thread, *regs);
-      return true;
-    }
-  else if (firstreg == -2)
-    {
-      assert (nregs == 1);
-      INTUSE(dwfl_thread_state_registers) (thread, firstreg, nregs, regs);
-      return true;
-     }
-  assert (nregs > 0);
-  return INTUSE(dwfl_thread_state_registers) (thread, firstreg, nregs, regs);
-}
-
 static bool
 pid_set_initial_registers (Dwfl_Thread *thread, void *thread_arg)
 {
