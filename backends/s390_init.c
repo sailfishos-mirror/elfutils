@@ -1,5 +1,5 @@
 /* Initialization of S/390 specific backend library.
-   Copyright (C) 2005, 2006, 2013 Red Hat, Inc.
+   Copyright (C) 2005, 2006, 2013, 2026 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -33,6 +33,7 @@
 #define BACKEND		s390_
 #define RELOC_PREFIX	R_390_
 #include "libebl_CPU.h"
+#include "libebl_PERF_FLAGS.h"
 
 /* This defines the common reloc hooks based on arm_reloc.def.  */
 #include "common-reloc.c"
@@ -62,6 +63,10 @@ s390_init (Elf *elf __attribute__ ((unused)),
      unwinding.  */
   eh->frame_nregs = 32;
   HOOK (eh, set_initial_registers_tid);
+  HOOK (eh, set_initial_registers_sample);
+  HOOK (eh, sample_sp_pc);
+  /* TODO(REVIEW) sample_perf_regs_mapping is default ver  */
+  eh->perf_frame_regs_mask = PERF_FRAME_REGISTERS_S390;
   if (eh->class == ELFCLASS32)
     HOOK (eh, normalize_pc);
   HOOK (eh, unwind);

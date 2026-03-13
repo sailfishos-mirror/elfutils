@@ -76,7 +76,7 @@ ppc64_SRCS = ppc64_init.c ppc64_symbol.c ppc64_retval.c ppc64_corenote.c \
 
 s390_SRCS = s390_init.c s390_symbol.c s390_regs.c s390_retval.c \
 	    s390_corenote.c s390x_corenote.c s390_cfi.c s390_initreg.c \
-	    s390_unwind.c
+	    s390_initreg_sample.c s390_unwind.c
 
 m68k_SRCS = m68k_init.c m68k_symbol.c m68k_regs.c \
 	    m68k_retval.c m68k_corenote.c m68k_cfi.c m68k_initreg.c
