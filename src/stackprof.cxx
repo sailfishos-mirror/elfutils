@@ -1331,13 +1331,23 @@ Dwfl *pcu_init_dwfl_cb (Dwflst_Process_Tracker *cb_tracker __attribute__ ((unuse
   return pcu->init_dwfl (pid);
 }
 
+uint32_t expected_frame_nregs (Ebl *ebl)
+{
+  int m = ebl_get_elfmachine(ebl);
+  /* For aarch64, we actually use fewer than ebl->frame_nregs to unwind. */
+  if (m == EM_ARM)
+    return 14; /* XXX 16 for 32-bit ARM */
+  /* On x86, expect everything except FLAGS: */
+  if (m == EM_X86_64 || m == EM_386)
+    return ebl_frame_nregs(ebl);
+  /* In general, it's better to be on the permissive side. */
+  return 1;
+}
+
 Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t nregs,
 				      Elf **out_elf, bool *cached)
 {
-  /* XXX: Note that requesting the x86_64 register file from
-     perf_events will result in an array of 17 regs even for 32-bit
-     applications. */
-  if (nregs < ebl_frame_nregs(this->reader->ebl())) /* XXX expecting everything except FLAGS */
+  if (nregs < expected_frame_nregs(this->reader->ebl()))
     {
       if (verbose)
 	cerr << N_("find_dwfl: nregs=") << nregs << ", expected " << ebl_frame_nregs(this->reader->ebl()) << endl;
@@ -1362,7 +1372,6 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
     }
 
  reuse:
-  /* TODO: Generalize to other architectures than x86. */
   this->last_us.sp = regs[this->get_sp_reg(this->last_us.elfclass == ELFCLASS32)];
   this->last_us.base = this->last_us.sp;
 
@@ -1372,10 +1381,12 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
   return dwfl;
 }
 
+/* Index of stack pointer within dwarf_regs order: */
 int PerfConsumerUnwinder::get_sp_reg(bool is_abi32)
 {
   int machine = ebl_get_elfmachine(this->reader->ebl());
   if (machine == EM_X86_64 || machine == EM_386) return is_abi32 ? 4 : 7;
+  else if (machine == EM_ARM) return is_abi32 ? 13 : 31;
   else { assert(0); return 7; }
 }
 
