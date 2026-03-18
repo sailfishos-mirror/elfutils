@@ -3578,25 +3578,9 @@ handle_metrics (off_t* size)
   return r;
 }
 
-
-static struct MHD_Response*
-handle_metadata (MHD_Connection* conn,
-                 string key, string value, off_t* size)
+static sqlite_ps*
+handle_metadata_glob(sqlite3* thisdb, const string& key, const string& value)
 {
-  MHD_Response* r;
-  // Because this query can take on the order of many seconds, we need
-  // to prevent DoS against the other normal quick queries, so we use
-  // a dedicated database connection.
-  sqlite3 *thisdb = 0;
-  int rc = sqlite3_open_v2 (db_path.c_str(), &thisdb, (SQLITE_OPEN_READONLY
-                                                       |SQLITE_OPEN_URI
-                                                       |SQLITE_OPEN_PRIVATECACHE
-                                                       |SQLITE_OPEN_NOMUTEX), /* private to us */
-                            NULL);
-  if (rc)
-    throw sqlite_exception(rc, "cannot open database for metadata query");
-  defer_dtor<sqlite3*,int> sqlite_db_closer (thisdb, sqlite3_close_v2);
-                                           
   // Query locally for matching e, d files
   string op;
   if (key == "glob")
@@ -3670,6 +3654,63 @@ handle_metadata (MHD_Connection* conn,
   pp->bind(2, bname);
   pp->bind(3, dirname);
   pp->bind(4, bname);
+  return pp;
+}
+
+static sqlite_ps*
+handle_metadata_buildid(sqlite3* thisdb, const string& value)
+{
+  string sql = string(
+                      "select d1.executable_p, d1.debuginfo_p, 0 as source_p, "
+                      "       b1.hex, f1d.name || '/' || f1b.name as file, a1.name as archive "
+                      "from " BUILDIDS "_r_de d1, " BUILDIDS "_files f1, " BUILDIDS "_fileparts f1b, " BUILDIDS "_fileparts f1d, "
+                      BUILDIDS "_buildids b1, " BUILDIDS "_files_v a1 "
+                      "where f1.id = d1.content and a1.id = d1.file and d1.buildid = b1.id "
+                      "      and b1.hex = ? and f1.dirname = f1d.id and f1.basename = f1b.id "
+                      "union all \n"
+                      "select d2.executable_p, d2.debuginfo_p, 0, "
+                      "       b2.hex, f2d.name || '/' || f2b.name, NULL "
+                      "from " BUILDIDS "_f_de d2, " BUILDIDS "_files f2, " BUILDIDS "_fileparts f2b, " BUILDIDS "_fileparts f2d, "
+                      BUILDIDS "_buildids b2 "
+                      "where f2.id = d2.file and d2.buildid = b2.id "
+                      "      and b2.hex = ? "
+                      "      and f2.dirname = f2d.id and f2.basename = f2b.id");
+
+  sqlite_ps *pp = new sqlite_ps (thisdb, "mhd-query-meta-buildid", sql);
+  pp->reset();
+  pp->bind(1, value); // Bind buildid for the first select (_r_de)
+  pp->bind(2, value); // Bind buildid for the second select (_f_de)
+  return pp;
+}
+
+static struct MHD_Response*
+handle_metadata (MHD_Connection* conn,
+                 string key, string value, off_t* size)
+{
+  MHD_Response* r;
+  // Because this query can take on the order of many seconds, we need
+  // to prevent DoS against the other normal quick queries, so we use
+  // a dedicated database connection.
+  sqlite3 *thisdb = 0;
+  int rc = sqlite3_open_v2 (db_path.c_str(), &thisdb, (SQLITE_OPEN_READONLY
+                                                       |SQLITE_OPEN_URI
+                                                       |SQLITE_OPEN_PRIVATECACHE
+                                                       |SQLITE_OPEN_NOMUTEX), /* private to us */
+                            NULL);
+  if (rc)
+    throw sqlite_exception(rc, "cannot open database for metadata query");
+  defer_dtor<sqlite3*,int> sqlite_db_closer (thisdb, sqlite3_close_v2);
+
+  sqlite_ps *pp = nullptr;
+
+  if (key == "glob" || key == "file") {
+    pp = handle_metadata_glob(thisdb, key, value);
+  } else if (key == "buildid") {
+    pp = handle_metadata_buildid(thisdb, value);
+  } else {
+    throw reportable_exception("/metadata webapi error, unsupported key");
+  }
+
   unique_ptr<sqlite_ps> ps_closer(pp); // release pp if exception or return
   pp->reset_timeout(metadata_maxtime_s);
       

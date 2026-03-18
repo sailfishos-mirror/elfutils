@@ -54,7 +54,7 @@ static const char args_doc[] = N_("debuginfo BUILDID\n"
                                   "source PATH /FILENAME\n"
                                   "section BUILDID SECTION-NAME\n"
                                   "section PATH SECTION-NAME\n"
-                                  "metadata (glob|file|KEY) (GLOB|FILENAME|VALUE)\n"
+                                  "metadata (glob|file|buildid|KEY) (GLOB|FILENAME|BUILDID|VALUE)\n"
                                   );
 
 /* Definitions of arguments for argp functions.  */

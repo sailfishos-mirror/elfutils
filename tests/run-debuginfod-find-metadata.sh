@@ -75,6 +75,10 @@ RESULTJ=`env LD_LIBRARY_PATH=$ldpath ${VALGRIND_CMD} ${abs_builddir}/../debuginf
 echo $RESULTJ
 N_FOUND=`echo $RESULTJ | jq '.results | length'`
 test $N_FOUND -eq 2
+RESULTJ=`env LD_LIBRARY_PATH=$ldpath ${VALGRIND_CMD} ${abs_builddir}/../debuginfod/debuginfod-find metadata buildid "f17a29b5a25bd4960531d82aa6b07c8abe84fa66"`
+echo $RESULTJ
+N_FOUND=`echo $RESULTJ | jq '.results | length'`
+test $N_FOUND -eq 2
 
 
 # Query via the webapi as well
@@ -85,6 +89,8 @@ curl -s -i http://127.0.0.1:$PORT2'/metadata?key=glob&value=/usr/bin/*hi*' | gre
 test `curl -s http://127.0.0.1:$PORT2'/metadata?key=glob&value=/usr/bin/*hi*' | jq '.results[0].buildid == "f17a29b5a25bd4960531d82aa6b07c8abe84fa66"'` = 'true'
 test `curl -s http://127.0.0.1:$PORT2'/metadata?key=glob&value=/usr/bin/*hi*' | jq '.results[0].file == "/usr/bin/hithere"'` = 'true'
 test `curl -s http://127.0.0.1:$PORT2'/metadata?key=glob&value=/usr/bin/*hi*' | jq '.results[0].archive | test(".*hithere.*deb")'` = 'true'
+test `curl -s http://127.0.0.1:$PORT1'/metadata?key=buildid&value=bc1febfd03ca05e030f0d205f7659db29f8a4b30' | jq '.results[0].archive | test(".*hello2.*rpm")'` = 'true'
+test `curl -s http://127.0.0.1:$PORT2'/metadata?key=buildid&value=bc1febfd03ca05e030f0d205f7659db29f8a4b30' | jq '.results[0].archive | test(".*hello2.*rpm")'` = 'true'
 # Note we query the upstream server too, since the downstream will have an incomplete result due to the badurl
 test `curl -s http://127.0.0.1:$PORT1'/metadata?key=glob&value=/usr/bin/*hi*' | jq '.complete == true'` = 'true'
 test `curl -s http://127.0.0.1:$PORT2'/metadata?key=glob&value=/usr/bin/*hi*' | jq '.complete == false'` = 'true'
