@@ -82,6 +82,8 @@ const char* debuginfod_get_url (debuginfod_client *c) { return NULL; }
 int debuginfod_add_http_header (debuginfod_client *c,
 				const char *h) { return -ENOSYS; }
 const char* debuginfod_get_headers (debuginfod_client *c) { return NULL; }
+int debuginfod_default_progressfn (debuginfod_client *c, long a, long b)
+				    { return 0; }
 
 void debuginfod_end (debuginfod_client *c) { }
 
