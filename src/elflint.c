@@ -4568,6 +4568,9 @@ only executables, shared objects, and core files can have program headers\n"));
   int num_pt_interp = 0;
   int num_pt_tls = 0;
   int num_pt_relro = 0;
+  int num_pt_phdr = 0;
+  size_t prev_pt_load_vaddr = 0;
+  bool pt_load_sorted = true;
 
   for (unsigned int cnt = 0; cnt < phnum; ++cnt)
     {
@@ -4592,7 +4595,17 @@ program header entry %d: unknown program header entry type %#" PRIx64 "\n"),
 	       cnt, (uint64_t) phdr->p_type);
 
       if (phdr->p_type == PT_LOAD)
-	has_loadable_segment = true;
+	{
+	  if (has_loadable_segment && pt_load_sorted
+	      && prev_pt_load_vaddr >= phdr->p_vaddr)
+	    {
+	      ERROR (_("LOAD segments not sorted by vaddr\n"));
+	      pt_load_sorted = false;
+	    }
+	  else
+	    prev_pt_load_vaddr = phdr->p_vaddr;
+	  has_loadable_segment = true;
+        }
       else if (phdr->p_type == PT_INTERP)
 	{
 	  if (++num_pt_interp != 1)
@@ -4601,6 +4614,9 @@ program header entry %d: unknown program header entry type %#" PRIx64 "\n"),
 		ERROR (_("\
 more than one INTERP entry in program header\n"));
 	    }
+	  else if (has_loadable_segment)
+	    ERROR (_("\
+INTERP entry is preceded by a loadable segment in program header\n"));
 	  has_interp_segment = true;
 	}
       else if (phdr->p_type == PT_TLS)
@@ -4694,7 +4710,13 @@ GNU_RELRO [%u] flags are not a subset of the loadable segment [%u] flags\n"),
 	}
       else if (phdr->p_type == PT_PHDR)
 	{
-	  /* Check that the region is in a writable segment.  */
+	  if (++num_pt_phdr != 1)
+	    {
+	      if (num_pt_phdr == 2)
+		ERROR (_("\
+more than one PHDR entry in program header\n"));
+	    }
+	  /* Check that the region is in a loaded segment.  */
 	  unsigned int inner;
 	  for (inner = 0; inner < phnum; ++inner)
 	    {
