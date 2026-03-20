@@ -783,6 +783,7 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   int em = EM_NONE;
   if (strcmp(u.machine, "x86_64") == 0) em = EM_X86_64;
   else if (strcmp(u.machine, "i686") == 0 || strcmp(u.machine, "i386") == 0) em = EM_386;
+  else if (strcmp(u.machine, "aarch64") == 0 || strcmp(u.machine, "armv7l")) em = EM_ARM;
   else {
     cerr << "Unsupported architecture: " << u.machine << endl;
     exit(1);
