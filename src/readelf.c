@@ -8853,9 +8853,19 @@ print_debug_units (Dwfl_Module *dwflmod,
       else
 	{
 	  Dwarf_CU *split_cu = subdie.cu;
-	  dwarf_cu_die (split_cu, &result, NULL, &abbroffset,
+	  Dwarf_Half split_version; /* Should be the same version as skel.  */
+	  dwarf_cu_die (split_cu, &result, &split_version, &abbroffset,
 			&addrsize, &offsize, &unit_id, &subdie_off);
 	  Dwarf_Off offset = cu->start;
+	  uint8_t split_unit_type; /* Should be DW_UT_split_compile. */
+	  uint64_t split_unit_id; /* Should be the same as id.  */
+	  if (dwarf_cu_info (split_cu, NULL, &split_unit_type, NULL, NULL,
+			     &split_unit_id, NULL, NULL) != 0)
+	    {
+	      /* Really shouldn't happen unless split_cu is NULL.  */
+	      split_unit_type = DW_UT_split_compile;
+	      split_unit_id = unit_id;
+	    }
 
 	  if (!silent)
 	    {
@@ -8865,15 +8875,15 @@ print_debug_units (Dwfl_Module *dwflmod,
 			        ", Abbreviation section offset: %" PRIu64
 			        ", Address size: %" PRIu8
 			        ", Offset size: %" PRIu8 "\n"),
-		       (uint64_t) offset, version, abbroffset,
+		       (uint64_t) offset, split_version, abbroffset,
 		       addrsize, offsize);
 	      fprintf (out, _(" Unit type: %s (%" PRIu8 ")"),
-		       dwarf_unit_name (unit_type), unit_type);
-	      fprintf (out, ", Unit id: 0x%.16" PRIx64 "", unit_id);
+		       dwarf_unit_name (split_unit_type), split_unit_type);
+	      fprintf (out, ", Unit id: 0x%.16" PRIx64 "", split_unit_id);
 	      fprintf (out, "\n");
 	    }
 
-	  unit_type = DW_UT_split_compile;
+	  unit_type = split_unit_type;
 	  is_split = true;
 	  level = 0;
 	  dies[0] = subdie;
