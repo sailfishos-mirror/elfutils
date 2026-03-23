@@ -1,6 +1,6 @@
 /* Print information from ELF file in human-readable form.
    Copyright (C) 1999-2018 Red Hat, Inc.
-   Copyright (C) 2023, 2025 Mark J. Wielaard <mark@klomp.org>
+   Copyright (C) 2023, 2025, 2026 Mark J. Wielaard <mark@klomp.org>
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -141,8 +141,9 @@ static const struct argp_option options[] =
   { NULL, 0, NULL, 0, N_("Additional output selection:"), 0 },
   { "debug-dump", 'w', "SECTION", OPTION_ARG_OPTIONAL,
     N_("Display DWARF section content.  SECTION can be one of abbrev, addr, "
-       "aranges, decodedaranges, frame, gdb_index, info, info+, loc, line, "
-       "decodedline, ranges, pubnames, str, macinfo, macro or exception"), 0 },
+       "aranges, cu_index, decodedaranges, frame, gdb_index, info, info+, "
+       "loc, line, decodedline, ranges, pubnames, str, macinfo, macro or "
+       "exception"), 0 },
   { "hex-dump", 'x', "SECTION", 0,
     N_("Dump the uninterpreted contents of SECTION, by number or name"), 0 },
   { "strings", 'p', "SECTION", OPTION_ARG_OPTIONAL,
@@ -288,11 +289,13 @@ static enum section_e
   section_macro = 4096,		/* .debug_macro  */
   section_addr = 8192,		/* .debug_addr  */
   section_types = 16384,	/* .debug_types (implied by .debug_info)  */
+  section_cu_index = 32768,	/* .debug_cu_index (include .debug_tu_index) */
   section_all = (section_abbrev | section_aranges | section_frame
 		 | section_info | section_line | section_loc
 		 | section_pubnames | section_str | section_macinfo
 		 | section_ranges | section_exception | section_gdb_index
-		 | section_macro | section_addr | section_types)
+		 | section_macro | section_addr | section_types
+		 | section_cu_index)
 } print_debug_sections, implicit_debug_sections;
 
 /* Select hex dumping of sections.  */
@@ -789,6 +792,8 @@ parse_opt (int key, char *arg,
 	print_debug_sections |= section_exception;
       else if (strcmp (arg, "gdb_index") == 0)
 	print_debug_sections |= section_gdb_index;
+      else if (strcmp (arg, "cu_index") == 0)
+	print_debug_sections |= section_cu_index;
       else
 	{
 	  fprintf (stderr, _("Unknown DWARF debug section `%s'.\n"),
@@ -4873,6 +4878,48 @@ dwarf_line_content_description_string (unsigned int kind)
     }
 }
 
+
+/* Doesn't use dwarf_section_name because we want short (max 6 chars)
+   lowercase strings and result depends on version.  */
+static const char *
+dwarf_section_short_string (unsigned int vers, unsigned kind)
+{
+  const char *sec_str = NULL;
+  if (vers == 2 && (kind == 7 || kind == 8)) /* macinfo or macro  */
+    sec_str = "macro";
+  else
+    {
+      switch (kind)
+	{
+	case DW_SECT_INFO:
+	  sec_str = "info";
+	  break;
+	case DW_SECT_TYPES:
+	  sec_str = "types"; /* Only really valid for version 2.  */
+	  break;
+	case DW_SECT_ABBREV:
+	  sec_str = "abbrv";
+	  break;
+	case DW_SECT_LINE:
+	  sec_str = "line";
+	  break;
+	case DW_SECT_LOCLISTS:
+	  sec_str = "locs";
+	  break;
+	case DW_SECT_STR_OFFSETS:
+	  sec_str = "stroff";
+	  break;
+	case DW_SECT_MACRO:
+	  sec_str = "macro";
+	  break;
+	case DW_SECT_RNGLISTS:
+	  sec_str = "rngs";
+	  break;
+	}
+    }
+
+  return sec_str;
+}
 
 /* Used by all dwarf_foo_name functions.  */
 static const char *
@@ -12176,6 +12223,222 @@ print_gdb_index_section (Dwfl_Module *dwflmod, Ebl *ebl,
     fprintf (out, "<unknown>\n");
 }
 
+/* Print the content of the '.debug_cu_index' or '.debug_tu_index'
+   sections.  */
+static void
+print_cu_index_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
+			Ebl *ebl, GElf_Ehdr *ehdr __attribute__ ((unused)),
+			Elf_Scn *scn, GElf_Shdr *shdr, Dwarf *dbg,
+			FILE *out)
+{
+  const char *sname = section_name (ebl, shdr);
+  fprintf (out, _("\nDWARF section [%2zu] '%s' at offset %#" PRIx64
+		    " contains %" PRId64 " bytes :\n"),
+	   elf_ndxscn (scn), sname,
+	   (uint64_t) shdr->sh_offset, (uint64_t) shdr->sh_size);
+
+  Elf_Data *data = elf_rawdata (scn, NULL);
+
+  if (unlikely (data == NULL))
+    {
+      error (0, 0, _("cannot get %s content: %s"), sname, elf_errmsg (-1));
+      return;
+    }
+
+  bool is_tu = sname != NULL && strcmp (sname, ".debug_tu_index") == 0;
+
+  const unsigned char *readp = data->d_buf;
+  const unsigned char *const dataend = readp + data->d_size;
+
+  if (unlikely (readp > dataend - 4))
+    {
+    invalid_data:
+      error (0, 0, _("invalid data"));
+      return;
+    }
+
+  /* If read as 4 bytes the version is 2, it is GNU DebugFission for
+     DWARF 5, otherwise the version is in the first 2 bytes, with 2
+     bytes padding.  */
+  int32_t vers = read_4ubyte_unaligned (dbg, readp);
+  if (vers != 2)
+    vers = read_2ubyte_unaligned (dbg, readp);
+  fprintf (out, _(" Version: %8" PRId32 "\n"), vers);
+
+  /* There used to be a version 1, which we don't support, but is
+     described at https://gcc.gnu.org/wiki/DebugFissionDWP
+     Version 2 is GNU DebugFission for DWARF4.
+     Version 5 is the standardized DWARF5 index.
+     Version 6 supports DWARF64 as described in
+     https://dwarfstd.org/issues/220708.2.html */
+  if (vers != 2 && vers != 5 && vers != 6)
+    {
+      error (0, 0, _("unknown version, cannot parse section"));
+      return;
+    }
+
+  /* The offset size field is only available in version 6.  */
+  uint8_t offset_size_flag = 0;
+  if (vers < 6)
+    readp += 4;
+  else
+    {
+      readp += 3;
+      offset_size_flag = *readp;
+      fprintf (out, _(" Offset Size: %4" PRIu8 "\n"),
+	       offset_size_flag == 0 ? 32 : 64);
+      readp++;
+    }
+
+  const unsigned char off_bytes = offset_size_flag == 0 ? 4 : 8;
+
+  if (unlikely (readp > dataend - 4))
+    goto invalid_data;
+  uint32_t section_count = read_4ubyte_unaligned (dbg, readp);
+  fprintf (out, _(" Columns: %8" PRId32 "\n"), section_count);
+
+  readp += 4;
+  if (unlikely (readp > dataend - 4))
+    goto invalid_data;
+  uint32_t unit_count = read_4ubyte_unaligned (dbg, readp);
+  fprintf (out, _(" Entries: %8" PRId32 "\n"), unit_count);
+
+  readp += 4;
+  if (unlikely (readp > dataend - 4))
+    goto invalid_data;
+  uint32_t slot_count = read_4ubyte_unaligned (dbg, readp);
+  fprintf (out, _(" Slots:   %8" PRId32 "\n"), slot_count);
+
+  /* Really should be slot_count > 3 * unit_count / 2, but accept as
+     long as slot_count is at least unit_count.  */
+  if (slot_count < unit_count)
+    {
+      error (0, 0, _("Must have at least as many slots as entries"));
+      return;
+    }
+
+  readp += 4;
+
+  /* Hash table starts directly after header (16 bytes).  */
+  const unsigned char *hash_table = readp;
+  /* Indices (which slot is used for each hash id entry) start after
+     the hash table (ids of 8 bytes).  */
+  const unsigned char *indices = hash_table + slot_count * 8;
+  /* Sections used starts after the indices, indices and hash table
+     have the same number of slots, indeces are 4 bytes each, */
+  const unsigned char *sections = indices + slot_count * 4;
+  /* Offset slots for each section follow the one row of sections.  */
+  const unsigned char *offsets = sections + section_count * 4;
+  /* Size slots for each section follow the offsets (used rows).  */
+  const unsigned char *lengths = (offsets +
+				  unit_count * section_count * off_bytes);
+  const unsigned char *lengths_end = lengths + section_count * 4;
+
+  /* Sanity check the above against dataend.  */
+  if ((slot_count > UINT32_MAX / 8)
+      || (section_count > SIZE_MAX / off_bytes)
+      || (unit_count > SIZE_MAX / off_bytes)
+      || ((unit_count != 0) && (section_count > SIZE_MAX / unit_count))
+      || ((section_count != 0) && (unit_count > SIZE_MAX / section_count))
+      || (indices > dataend)
+      || (sections > dataend)
+      || (offsets > dataend)
+      || (lengths > dataend)
+      || (lengths_end > dataend))
+    goto invalid_data;
+
+  fprintf (out, _("\n Offset table\n"));
+  fprintf (out, " slot  %s", is_tu ? "tu sig" : "dwo id");
+  fprintf (out, "           ");
+  for (size_t i = 0; i < section_count; i++)
+    {
+      uint32_t section = read_4ubyte_unaligned (dbg, sections + i * 4);
+      const char *sec_str = dwarf_section_short_string (vers, section);
+      if (sec_str == NULL)
+	fprintf (out, " ??? %2x", section);
+      else
+	fprintf (out, " %6s", sec_str);
+    }
+  fprintf (out, "\n");
+
+  for (size_t i = 0; i < slot_count; i++)
+    {
+      uint64_t id;
+      uint32_t row;
+      id = read_8ubyte_unaligned (dbg, hash_table + i * 8);
+      row = read_4ubyte_unaligned (dbg, indices + i * 4);
+      /* Only print used rows.  */
+      if (id != 0 && row != 0)
+	{
+	  fprintf (out, " [%3zd] %016" PRIx64 " ", i, id);
+	  if (row > unit_count)
+	    {
+	      error (0, 0, _("Row (%" PRIu32 ") larger than "
+			     "unit count (%" PRIu32 ")"), row, unit_count);
+	      continue;
+	    }
+	  /* Note row is one based, not zero based.  */
+	  const unsigned char *prow = (offsets
+				       + ((row - 1) * section_count
+					  * off_bytes));
+	  if (off_bytes == 4)
+	    for (size_t j = 0; j < section_count; j++)
+	      {
+		uint32_t off = read_4ubyte_unaligned (dbg, prow + j * 4);
+		fprintf (out, " %6" PRIu32, off);
+	      }
+	  else
+	    for (size_t j = 0; j < section_count; j++)
+	      {
+		uint64_t off = read_4ubyte_unaligned (dbg, prow + j * 8);
+		fprintf (out, " %6" PRIu64, off);
+	      }
+	  fprintf (out, "\n");
+	}
+    }
+
+  fprintf (out, _("\n Size table\n"));
+  fprintf (out, " slot  %s", is_tu ? "tu sig" : "dwo id");
+  fprintf (out, "           ");
+  for (size_t i = 0; i < section_count; i++)
+    {
+      uint32_t section = read_4ubyte_unaligned (dbg, sections + i * 4);
+      const char *sec_str = dwarf_section_short_string (vers, section);
+      if (sec_str == NULL)
+	fprintf (out, " ??? %2x", section);
+      else
+	fprintf (out, " %6s", sec_str);
+    }
+  fprintf (out, "\n");
+
+  for (size_t i = 0; i < slot_count; i++)
+    {
+      uint64_t id;
+      uint32_t row;
+      id = read_8ubyte_unaligned (dbg, hash_table + i * 8);
+      row = read_4ubyte_unaligned (dbg, indices + i * 4);
+      /* Only print used rows.  */
+      if (id != 0 && row != 0)
+	{
+	  fprintf (out, " [%3zd] %016" PRIx64 " ", i, id);
+	  if (row > unit_count)
+	    {
+	      error (0, 0, _("Row (%" PRIu32 ") larger than "
+			     "unit count (%" PRIu32 ")"), row, unit_count);
+	      continue;
+	    }
+	  /* Note row is one based, not zero based.  */
+	  const unsigned char *prow = lengths + (row - 1) * section_count * 4;
+	  for (size_t j = 0; j < section_count; j++)
+	    {
+	      uint32_t off = read_4ubyte_unaligned (dbg, prow + j * 4);
+	      fprintf (out, " %6" PRIu32, off);
+	    }
+	  fprintf (out, "\n");
+	}
+    }
+}
+
 /* Returns true and sets split DWARF CU id if there is a split compile
    unit in the given Dwarf, and no non-split units are found (before it).  */
 static bool
@@ -12293,6 +12556,11 @@ print_debug (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr)
   Dwarf *split_dbg = NULL;
   Dwarf_CU *split_cu = NULL;
 
+  /* If we need to implicitly or explicitly scan the debug_info section
+     we might need a bit more info, like a skeleton for split dwarf file).  */
+  bool implicit_info = (implicit_debug_sections & section_info) != 0;
+  bool explicit_info = (print_debug_sections & section_info) != 0;
+
   /* Before we start the real work get a debug context descriptor.  */
   Dwarf_Addr dwbias;
   Dwarf *dbg = dwfl_module_getdwarf (dwflmod, &dwbias);
@@ -12308,7 +12576,7 @@ print_debug (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr)
 	       dwfl_errmsg (-1));
       dbg = &dummy_dbg;
     }
-  else
+  else if (implicit_info || explicit_info)
     {
       /* If we are asked about a split dwarf (.dwo) file, use the user
 	 provided, or find the corresponding skeleton file. If we got
@@ -12461,8 +12729,6 @@ print_debug (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr)
      we must make sure to handle it before handling any other debug
      section.  Various other sections depend on the CU DIEs being
      scanned (silently) first.  */
-  bool implicit_info = (implicit_debug_sections & section_info) != 0;
-  bool explicit_info = (print_debug_sections & section_info) != 0;
   if (implicit_info)
     {
       Elf_Scn *scn = NULL;
@@ -12545,7 +12811,9 @@ print_debug (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr)
 		print_debug_frame_hdr_section },
 	      { ".gcc_except_table", section_frame | section_exception,
 		print_debug_exception_table },
-	      { ".gdb_index", section_gdb_index, print_gdb_index_section }
+	      { ".gdb_index", section_gdb_index, print_gdb_index_section },
+	      { ".debug_cu_index", section_cu_index, print_cu_index_section },
+	      { ".debug_tu_index", section_cu_index, print_cu_index_section },
 	    };
 	  const int ndebug_sections = (sizeof (debug_sections)
 				       / sizeof (debug_sections[0]));
