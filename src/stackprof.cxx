@@ -162,7 +162,7 @@ struct UnwindStatsTable
   unordered_map<pid_t, UnwindDwflStats> dwfl_tab;
   unordered_map<string, UnwindModuleStats> buildid_tab;
   typedef map<string, UnwindModuleStats> buildid_map_t;
-  
+
   UnwindStatsTable () {}
   ~UnwindStatsTable () {}
 
@@ -516,7 +516,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 'f':
       output_force = true;
       break;
-      
+
 #ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H
     case 'e':
       libpfm_event = arg;
@@ -540,7 +540,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 	pinfo.size = sizeof(pinfo);
 	info.size = sizeof(info);
 
-        for(int j= PFM_PMU_NONE ; j< PFM_PMU_MAX; j++)
+	for(int j= PFM_PMU_NONE ; j< PFM_PMU_MAX; j++)
 	  {
 	    pfm_err_t ret = pfm_get_pmu_info((pfm_pmu_t) j, &pinfo);
 	    if (ret != PFM_SUCCESS)
@@ -604,46 +604,45 @@ main (int argc, char *argv[])
       attr.size = sizeof(attr);
 
       if (libpfm_event != "")
-        {
+	{
 #if HAVE_PERFMON_PFMLIB_PERF_EVENT_H
-          pfm_err_t rc = pfm_initialize();
-          if (rc != PFM_SUCCESS)
-            {
-              cerr << "ERROR: pfm_initialized failed"
-                   << ": " << pfm_strerror(rc) << endl;
-              exit(1);
-            }
+	  pfm_err_t rc = pfm_initialize();
+	  if (rc != PFM_SUCCESS)
+	    {
+	      cerr << "ERROR: pfm_initialized failed"
+		   << ": " << pfm_strerror(rc) << endl;
+	      exit(1);
+	    }
 	  char* fstr = nullptr;
-          pfm_perf_encode_arg_t arg = { .attr = &attr, .fstr=&fstr, .size = sizeof(arg) };
-          rc = pfm_get_os_event_encoding(libpfm_event.c_str(),
-                                         PFM_PLM3, /* userspace, whether systemwide or not */
-                                         PFM_OS_PERF_EVENT_EXT, &arg);
-          if (rc != PFM_SUCCESS)
-            {
-              cerr << "ERROR: pfm_get_os_event_encoding failed"
-                   << ": " << pfm_strerror(rc) << endl;
-              exit(1);
-            }
+	  pfm_perf_encode_arg_t arg = { .attr = &attr, .fstr=&fstr, .size = sizeof(arg) };
+	  rc = pfm_get_os_event_encoding(libpfm_event.c_str(),
+					 PFM_PLM3, /* userspace, whether systemwide or not */
+					 PFM_OS_PERF_EVENT_EXT, &arg);
+	  if (rc != PFM_SUCCESS)
+	    {
+	      cerr << "ERROR: pfm_get_os_event_encoding failed"
+		   << ": " << pfm_strerror(rc) << endl;
+	      exit(1);
+	    }
 	  if (verbose)
 	    {
 	      clog << "libpfm expanded " << libpfm_event << " to " << fstr << endl;
 	    }
-          libpfm_event_decoded = fstr; // overwrite 
+	  libpfm_event_decoded = fstr; // overwrite
 	  free(fstr);
 #endif
-        }
+	}
       else
-        {
+	{
 	  // same as: -e perf::CPU-CLOCK:freq=1000
-          attr.type = PERF_TYPE_SOFTWARE;
-          attr.config = PERF_COUNT_SW_CPU_CLOCK;
-          attr.sample_freq = 1000;
+	  attr.type = PERF_TYPE_SOFTWARE;
+	  attr.config = PERF_COUNT_SW_CPU_CLOCK;
+	  attr.sample_freq = 1000;
 	  attr.freq = 1;
 	  attr.exclude_kernel = 1;
 	  attr.exclude_hv = 1;
 	  attr.exclude_guest = 1;
-        }
-
+	}
 
       if (show_summary)
 	{
@@ -654,47 +653,47 @@ main (int argc, char *argv[])
 	}
 
       if (remaining < argc) // got a CMD... suffix?  ok start it
-        {
-          has_cmd = true;
-          int rc = pipe (pipefd); // will use pipefd[] >= 0 as flag for synchronization just below
-          if (rc < 0)
-            {
-              cerr << "ERROR: pipe failed"
-                   << ": " << strerror(errno) << endl;
-              exit(1);
-            }
+	{
+	  has_cmd = true;
+	  int rc = pipe (pipefd); // will use pipefd[] >= 0 as flag for synchronization just below
+	  if (rc < 0)
+	    {
+	      cerr << "ERROR: pipe failed"
+		   << ": " << strerror(errno) << endl;
+	      exit(1);
+	    }
 
-          pid = fork();
-          if (pid == 0) // in child
-            {
-              close (pipefd[1]); // close write end
-              char dummy;
-              int rc = read (pipefd[0], &dummy, 1); // block until parent is ready
+	  pid = fork();
+	  if (pid == 0) // in child
+	    {
+	      close (pipefd[1]); // close write end
+	      char dummy;
+	      int rc = read (pipefd[0], &dummy, 1); // block until parent is ready
 	      if (rc != 1)
 		{
 		  cerr << "ERROR: child sync read failed"
 		       << ": " << strerror(errno) << endl;
 		  exit(1);
 		}
-              close (pipefd[0]);
-              execvp (argv[remaining], & argv[remaining] /* not +1: child argv[0] included! */ );
-              // notreached unless error
-              cerr << "ERROR: execvp failed"
-                   << ": " << strerror(errno) << endl;
-              exit(1);
-            }
-          else if (pid > 0) // in parent
-            {
-              close (pipefd[0]); // close read end
-              // will write to pipefd[1] after perfreader sicced at child
-            }
-          else // error
-            {
-              cerr << "ERROR: fork failed"
-                   << ": " << strerror(errno) << endl;
-              exit(1);
-            }
-        }
+	      close (pipefd[0]);
+	      execvp (argv[remaining], & argv[remaining] /* not +1: child argv[0] included! */ );
+	      // notreached unless error
+	      cerr << "ERROR: execvp failed"
+		   << ": " << strerror(errno) << endl;
+	      exit(1);
+	    }
+	  else if (pid > 0) // in parent
+	    {
+	      close (pipefd[0]); // close read end
+	      // will write to pipefd[1] after perfreader sicced at child
+	    }
+	  else // error
+	    {
+	      cerr << "ERROR: fork failed"
+		   << ": " << strerror(errno) << endl;
+	      exit(1);
+	    }
+	}
 
       // Create the perf processing pipeline as per command line options
       PerfReader *pr = nullptr;
@@ -726,27 +725,27 @@ main (int argc, char *argv[])
       signal(SIGTERM, sigint_handler);
 
       if (pid > 0 && has_cmd) // need to release child CMD process?
-        {
-          int rc = write(pipefd[1], "x", 1); // unblock child
-          assert (rc == 1);
-          close(pipefd[1]);
-        }
+	{
+	  int rc = write(pipefd[1], "x", 1); // unblock child
+	  assert (rc == 1);
+	  close(pipefd[1]);
+	}
 
       if (verbose)
-        {
-          clog << "Starting stack profile collection ";
-          if (pid) clog << "pid " << pid;
-          else clog << "systemwide";
-          clog << endl;
-        }
+	{
+	  clog << "Starting stack profile collection ";
+	  if (pid) clog << "pid " << pid;
+	  else clog << "systemwide";
+	  clog << endl;
+	}
 
       while (true) // main loop
-        {
-          if (interrupted) break;
-          if (pid > 0) waitpid(pid, NULL, WNOHANG); // reap dead child to allow kill(pid, 0) to signal death
-          if (pid > 0 && kill(pid, 0) != 0) break; // exit if child or targeted non-child process died
-          pr->process_some();
-        }
+	{
+	  if (interrupted) break;
+	  if (pid > 0) waitpid(pid, NULL, WNOHANG); // reap dead child to allow kill(pid, 0) to signal death
+	  if (pid > 0 && kill(pid, 0) != 0) break; // exit if child or targeted non-child process died
+	  pr->process_some();
+	}
 
       delete pr;
       delete usc;
@@ -874,8 +873,6 @@ uint64_t millis_monotonic()
   return chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
 }
 
-
-
 static inline uint64_t
 ring_buffer_read_head(volatile struct perf_event_mmap_page *base)
 {
@@ -909,47 +906,47 @@ void PerfReader::process_some()
     {
       uint64_t now = millis_monotonic();
       if (endtime < now)
-        break;
+	break;
       int ready = poll(this->pollfds.data(), this->pollfds.size(), (int)(endtime-now)); // wait a little while
       if (ready < 0)
-        break;
+	break;
 
       for (size_t i = 0; i < pollfds.size(); i++)
-        if (this->pollfds[i].revents & POLLIN) // found an fd with fresh yummy events
-          {
-            perf_event_mmap_page *header = perf_headers[i];
-            uint64_t data_head = ring_buffer_read_head(header);
-            uint64_t data_tail = header->data_tail;
-            uint8_t *base = ((uint8_t *) header) + this->page_size;
-            struct perf_event_header *ehdr;
-            size_t ehdr_size;
+	if (this->pollfds[i].revents & POLLIN) // found an fd with fresh yummy events
+	  {
+	    perf_event_mmap_page *header = perf_headers[i];
+	    uint64_t data_head = ring_buffer_read_head(header);
+	    uint64_t data_tail = header->data_tail;
+	    uint8_t *base = ((uint8_t *) header) + this->page_size;
+	    struct perf_event_header *ehdr;
+	    size_t ehdr_size;
 
-            while (data_head != data_tail) // consume all packets in ring buffer XXX why?
-              {
-                ehdr = (perf_event_header*) (base + (data_tail & (ring_buffer_size - 1)));
-                ehdr_size = ehdr->size;
-                if (show_tmi)
-                  clog << format("perf head={:p} tail={:p} ehdr={:p} size={:d}{:x}\n",
+	    while (data_head != data_tail) // consume all packets in ring buffer XXX why?
+	      {
+		ehdr = (perf_event_header*) (base + (data_tail & (ring_buffer_size - 1)));
+		ehdr_size = ehdr->size;
+		if (show_tmi)
+		  clog << format("perf head={:p} tail={:p} ehdr={:p} size={:d}{:x}\n",
 				      (void*) data_head, (void*) data_tail, (void*) ehdr, ehdr_size, 0);
 
-                if (((uint8_t *)ehdr) + ehdr_size > base + ring_buffer_size) // mmap region wraparound?
-                  {
-                    // need to copy it to a contiguous temporary
-                    uint8_t *copy_start = (uint8_t*) ehdr;
-                    size_t len_first = base + ring_buffer_size - copy_start;
-                    size_t len_secnd = ehdr_size - len_first;
-                    uint8_t *event_temp = this->event_wraparound_temp.data();
-                    memcpy(event_temp, copy_start, len_first);       // part at end of mmap'd region
-                    memcpy(event_temp + len_first, base, len_secnd); // part at beginning of mmap'd region
-                    ehdr = (perf_event_header*) event_temp;
-                  }
+		if (((uint8_t *)ehdr) + ehdr_size > base + ring_buffer_size) // mmap region wraparound?
+		  {
+		    // need to copy it to a contiguous temporary
+		    uint8_t *copy_start = (uint8_t*) ehdr;
+		    size_t len_first = base + ring_buffer_size - copy_start;
+		    size_t len_secnd = ehdr_size - len_first;
+		    uint8_t *event_temp = this->event_wraparound_temp.data();
+		    memcpy(event_temp, copy_start, len_first);	     // part at end of mmap'd region
+		    memcpy(event_temp + len_first, base, len_secnd); // part at beginning of mmap'd region
+		    ehdr = (perf_event_header*) event_temp;
+		  }
 
-                this->decode_event(ehdr);
-                data_tail += ehdr_size;
-              }
+		this->decode_event(ehdr);
+		data_tail += ehdr_size;
+	      }
 
 	    ring_buffer_write_tail(header, data_tail);
-          }
+	  }
     }
 }
 
@@ -963,74 +960,74 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
     {
     case PERF_RECORD_SAMPLE:
       {
-        const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
-        uint64_t ip = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
-        uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-        uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-        uint64_t time = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
-        // PERF_SAMPLE_CALLCHAIN would be here if requested
-        uint64_t abi = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
-        uint32_t nregs = this->sample_regs_count;
-        const uint64_t* regs = reinterpret_cast<const uint64_t*>(data); data += nregs * sizeof(uint64_t);
-        uint64_t data_size = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
-        const uint8_t* stack_data = data;
-        consumer->process_sample(ehdr, ip, pid, tid, time, abi, nregs, regs, data_size, stack_data);
-        break;
+	const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
+	uint64_t ip = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+	uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+	uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+	uint64_t time = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+	// PERF_SAMPLE_CALLCHAIN would be here if requested
+	uint64_t abi = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+	uint32_t nregs = this->sample_regs_count;
+	const uint64_t* regs = reinterpret_cast<const uint64_t*>(data); data += nregs * sizeof(uint64_t);
+	uint64_t data_size = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+	const uint8_t* stack_data = data;
+	consumer->process_sample(ehdr, ip, pid, tid, time, abi, nregs, regs, data_size, stack_data);
+	break;
       }
     case PERF_RECORD_COMM:
       {
-        const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
-        uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-        uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-        const char* comm = reinterpret_cast<const char*>(data);
-        consumer->process_comm(ehdr, pid, tid, (ehdr->misc & PERF_RECORD_MISC_COMM_EXEC), comm);
-        break;
+	const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
+	uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+	uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+	const char* comm = reinterpret_cast<const char*>(data);
+	consumer->process_comm(ehdr, pid, tid, (ehdr->misc & PERF_RECORD_MISC_COMM_EXEC), comm);
+	break;
       }
     case PERF_RECORD_EXIT:
       {
-        const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
-        uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-        uint32_t ppid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-        uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-        uint32_t ptid = *reinterpret_cast<const uint32_t*>(data);
-        consumer->process_exit(ehdr, pid, ppid, tid, ptid);
-        break;
+	const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
+	uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+	uint32_t ppid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+	uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+	uint32_t ptid = *reinterpret_cast<const uint32_t*>(data);
+	consumer->process_exit(ehdr, pid, ppid, tid, ptid);
+	break;
       }
     case PERF_RECORD_FORK:
       {
-        const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
-        uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-        uint32_t ppid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-        uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-        uint32_t ptid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-        consumer->process_fork(ehdr, pid, ppid, tid, ptid);
-        break;
+	const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
+	uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+	uint32_t ppid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+	uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+	uint32_t ptid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+	consumer->process_fork(ehdr, pid, ppid, tid, ptid);
+	break;
       }
     case PERF_RECORD_MMAP2:
       {
-        const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
-        uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-        uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-        uint64_t addr = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
-        uint64_t len = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
-        uint64_t pgoff = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
-        uint8_t build_id_size = 0;
-        const uint8_t* build_id = nullptr;
-        if (ehdr->misc & PERF_RECORD_MISC_MMAP_BUILD_ID)
-          {
-            build_id_size = *reinterpret_cast<const uint8_t*>(data); data += sizeof(uint8_t);
-            data += sizeof(uint8_t) + sizeof(uint16_t); // skip padding
-            build_id = reinterpret_cast<const uint8_t*>(data);
-            data += build_id_size;
-          }
-        else
-          {
-            data += 4 + 4 + 8 + 8; // maj, min, ino, ino_generation
-          }
-        data += sizeof(uint32_t) + sizeof(uint32_t); // prot, flags
-        const char* filename = reinterpret_cast<const char*>(data);
-        consumer->process_mmap2(ehdr, pid, tid, addr, len, pgoff, build_id_size, build_id, filename);
-        break;
+	const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
+	uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+	uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+	uint64_t addr = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+	uint64_t len = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+	uint64_t pgoff = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+	uint8_t build_id_size = 0;
+	const uint8_t* build_id = nullptr;
+	if (ehdr->misc & PERF_RECORD_MISC_MMAP_BUILD_ID)
+	  {
+	    build_id_size = *reinterpret_cast<const uint8_t*>(data); data += sizeof(uint8_t);
+	    data += sizeof(uint8_t) + sizeof(uint16_t); // skip padding
+	    build_id = reinterpret_cast<const uint8_t*>(data);
+	    data += build_id_size;
+	  }
+	else
+	  {
+	    data += 4 + 4 + 8 + 8; // maj, min, ino, ino_generation
+	  }
+	data += sizeof(uint32_t) + sizeof(uint32_t); // prot, flags
+	const char* filename = reinterpret_cast<const char*>(data);
+	consumer->process_mmap2(ehdr, pid, tid, addr, len, pgoff, build_id_size, build_id, filename);
+	break;
       }
     default:
       break;
@@ -1211,7 +1208,7 @@ PerfConsumerUnwinder::PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStat
 
 PerfConsumerUnwinder::PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust, PerfReader *reader)
   : consumer(usc), stats(ust) {
-  maxframes = usc->maxframes();    
+  maxframes = usc->maxframes();
   this->reader = reader;
   this->tracker = dwflst_tracker_begin (&dwfl_cfi_callbacks);
 }
@@ -1453,7 +1450,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
       int build_id_len = dwfl_module_build_id (m, &desc, &vaddr);
       cerr << format("* pid {:d} build_id=", this->last_us.pid);
       for (int i = 0; i < build_id_len; ++i)
-        cerr << format("{:02x}", static_cast<int>(desc[i]));
+	cerr << format("{:02x}", static_cast<int>(desc[i]));
 
       /* TODO also extract mainfile= debugfile= */
       const char *mainfile;
@@ -1691,7 +1688,7 @@ void GprofUnwindSampleConsumer::record_gmon_hist(std::ostream &of, map<uint64_t,
   double result_scale = (double)((high_pc-low_pc)/sizeof(uint16_t))/num_buckets;
   if (verbose > 2)
     clog << format("DEBUG +hist {:x}..{:x} (alignment {}) of {} buckets @scale {}\n",
-                   low_pc, high_pc, alignment, num_buckets, result_scale);
+		   low_pc, high_pc, alignment, num_buckets, result_scale);
   /* TODO(PROBLEM): It's the @scale value that must be kept within
      0.000001 of 0.5 to keep gprof from complaining. */
 
@@ -1727,8 +1724,8 @@ void GprofUnwindSampleConsumer::record_gmon_hist(std::ostream &of, map<uint64_t,
     {
       uint16_t count = 0;
       for (auto it = histogram.lower_bound(bucket_addr);
-               it != histogram.upper_bound(bucket_addr+alignment-1);
-               it ++)
+	       it != histogram.upper_bound(bucket_addr+alignment-1);
+	       it ++)
 	count += it->second; // TODO: check for overflow here!
       bucket_addr += alignment;
       of.write(reinterpret_cast<const char *>(&count), sizeof(count));
@@ -1792,14 +1789,14 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
     if (NULL == br_js) goto json_fail;
     json_object_object_add(metadata, "branch-record", br_js);
   }
-  
+
   const char *metadata_str = json_object_to_json_string(metadata);
   if (!metadata_str) goto json_fail;
   ofstream of_js (json_path);
   of_js << metadata_str;
   of_js.close();
   json_object_put (metadata);
-    
+
   ofstream of (filename, ios::binary);
   if (!of)
     {
@@ -1890,8 +1887,8 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 		{
 		  /* Record a histogram from low_pc to low_pc+opt_size. */
 		  this->record_gmon_hist(of, m.histogram,
-                                         low_pc, low_pc+opt_size-1 /* >= prev_pc */,
-                                         alignment);
+					 low_pc, low_pc+opt_size-1 /* >= prev_pc */,
+					 alignment);
 		  low_pc = pc;
 		}
 	      prev_pc = pc;
@@ -1899,18 +1896,18 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 	  /* Record a final histogram from low_pc to low_pc+opt_size.
 	     TODO: Edge case -- adjust for overflow of low_pc+opt_size at end of address space. */
 	  this->record_gmon_hist(of, m.histogram,
-                                 low_pc, low_pc+opt_size-1 /* >= prev_pc */,
-                                 alignment);
+				 low_pc, low_pc+opt_size-1 /* >= prev_pc */,
+				 alignment);
 	}
       else if (gmon_hist_split == HIST_SPLIT_FLEX)
 	{
 	  /* Allow variable-size histograms to save on storage space.
 	     Will fail gprof's input consistency checks, XXX but ok
-	     for profiledb purposes?*/
+	     for profiledb purposes?  */
 	  uint64_t prev_pc = low_pc;
 	  uint64_t pc = prev_pc;
 	  /* XXX Iterate histogram ascending by key, faster than by addr
-	     when we just need to scan for gaps. */
+	     when we just need to scan for gaps.  */
 	  for (const auto& p : m.histogram)
 	    {
 	      pc = p.first;
@@ -1938,15 +1935,15 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
       unsigned char tag = GMON_TAG_CG_ARC;
       of.write(reinterpret_cast<const char *>(&tag), sizeof(tag));
       if (wordsize == 4) {
-        uint32_t addr = p.first.first;
-        of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
-        addr = p.first.second;
-        of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
+	uint32_t addr = p.first.first;
+	of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
+	addr = p.first.second;
+	of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
       } else {
-        uint64_t addr = p.first.first;
-        of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
-        addr = p.first.second;
-        of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
+	uint64_t addr = p.first.first;
+	of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
+	addr = p.first.second;
+	of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
       }
       /* p is (from,to) -> count */
       uint32_t count = p.second;
@@ -1960,17 +1957,17 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
 {
   if (show_summary)
     cout << endl << "=== buildid / sample counts ===" << endl;
-  
+
   UnwindStatsTable::buildid_map_t m (this->stats->buildid_tab.begin(), this->stats->buildid_tab.end());
   for (auto& p : m) // traverse in sorted order
     {
       const string& buildid = p.first;
       UnwindModuleStats& m = p.second;
       /* TODO(REVIEW.4): Write the buildid-->path mapping to a secondary
-         (json?) metadata file.  That makes for a reasonable hint;
-         debuginfod-find can be used as a mostly-functional fallback
-         (for packaged rather than locally built executables) if the
-         results are moved to another system. */
+	 (json?) metadata file.  That makes for a reasonable hint;
+	 debuginfod-find can be used as a mostly-functional fallback
+	 (for packaged rather than locally built executables) if the
+	 results are moved to another system.  */
       const char *mainfile = NULL;
       if (buildid_to_mainfile.count(buildid) != 0)
 	mainfile = buildid_to_mainfile[buildid].c_str();
