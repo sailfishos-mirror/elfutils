@@ -1003,22 +1003,22 @@ AC_CONFIG_FILES([config/profile.sh config/profile.csh config/profile.fish])
 
 # XXX Currently, eu-stacktrace can only work with sysprof/x86, hence:
 AC_ARG_ENABLE([stacktrace],AS_HELP_STRING([--enable-stacktrace], [Enable eu-stacktrace]))
-# check for x86, or more precisely _ASM_X86_PERF_REGS_H
+# check for x86/arm, or more precisely _ASM_{X86,ARM,ARM64}_PERF_REGS_H
 AS_IF([test "x$enable_stacktrace" = "xyes"], [
    enable_stacktrace=no
    AC_LANG([C])
-   AC_CACHE_CHECK([for _ASM_X86_PERF_REGS_H], ac_cv_has_asm_x86_perf_regs_h,
+   AC_CACHE_CHECK([for _ASM_{X86,ARM,ARM64}_PERF_REGS_H], ac_cv_has_compat_asm_perf_regs_h,
       [AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 #include <asm/perf_regs.h>
-#ifndef _ASM_X86_PERF_REGS_H
-#error "_ASM_X86_PERF_REGS_H not found"
+#if !defined(_ASM_X86_PERF_REGS_H) && !defined (_ASM_ARM_PERF_REGS_H) && !defined(_ASM_ARM64_PERF_REGS_H)
+#error "_ASM_{X86,ARM,ARM64}_PERF_REGS_H not found"
 #endif
-])], ac_cv_has_asm_x86_perf_regs_h=yes, ac_cv_has_asm_x86_perf_regs_h=no)])
-   AS_IF([test "x$ac_cv_has_asm_x86_perf_regs_h" = xyes], [
+])], ac_cv_has_compat_asm_perf_regs_h=yes, ac_cv_has_compat_asm_perf_regs_h=no)])
+   AS_IF([test "x$ac_cv_has_compat_asm_perf_regs_h" = xyes], [
       enable_stacktrace=yes
    ])
    if test "x$enable_stacktrace" = "xno"; then
-      AC_MSG_ERROR([${program_prefix}stacktrace currently only supports x86, use --disable-stacktrace to disable.])
+      AC_MSG_ERROR([${program_prefix}stacktrace currently only supports x86/arm, use --disable-stacktrace to disable.])
    fi
 ])
 # check for sysprof headers:

@@ -80,13 +80,14 @@
 #include <locale.h>
 
 #include <system.h>
+#include <sys/utsname.h>
 
 #include <linux/perf_event.h>
 
-/* TODO: Need to generalize the code beyond x86 architectures. */
+/* TODO: Need to generalize the code beyond x86/ARM architectures. */
 #include <asm/perf_regs.h>
-#ifndef _ASM_X86_PERF_REGS_H
-#error "eu-stacktrace is currently limited to x86 architectures"
+#if !defined(_ASM_X86_PERF_REGS_H) && !defined(_ASM_ARM_PERF_REGS_H) && !defined(_ASM_ARM64_PERF_REGS_H)
+#error "eu-stacktrace is currently limited to x86/ARM architectures"
 #endif
 
 /*************************************
@@ -853,6 +854,26 @@ sysprof_init_dwfl_cb (Dwflst_Process_Tracker *cb_tracker,
   return dwfl;
 }
 
+uint32_t expected_frame_nregs (Ebl *ebl)
+{
+  int m = ebl_get_elfmachine(ebl);
+  /* For aarch64, we use fewer and ebl->frame_nregs to unwind.  */
+  if (m == EM_ARM || m == EM_AARCH64)
+    return 14;
+  if (m == EM_X86_64 || m == EM_386)
+    return ebl_frame_nregs(ebl);
+  /* In general, it's better to be on the permissive side.  */
+  return 1;
+}
+
+int sp_reg_index (Ebl *ebl, bool is_abi32)
+{
+  int m = ebl_get_elfmachine(ebl);
+  if (m == EM_X86_64 || m == EM_386) return is_abi32 ? 4 : 7;
+  else if (m == EM_ARM || m == EM_AARCH64) return is_abi32 ? 13 : 31;
+  else return 0; /* XXX unwinding will likely not continue */
+}
+
 Dwfl *
 sysprof_find_dwfl (struct sysprof_unwind_info *sui,
 		   SysprofCaptureStackUser *ev,
@@ -860,10 +881,7 @@ sysprof_find_dwfl (struct sysprof_unwind_info *sui,
 		   Elf **out_elf)
 {
   pid_t pid = ev->frame.pid;
-  /* XXX: Note that sysprof requesting the x86_64 register file from
-     perf_events will result in an array of 17 regs even for 32-bit
-     applications. */
-  if (regs->n_regs < ebl_frame_nregs(default_ebl)) /* XXX expecting everything except FLAGS */
+  if (regs->n_regs < expected_frame_nregs(default_ebl))
     {
       if (show_failures)
 	fprintf(stderr, N_("sysprof_find_dwfl: n_regs=%d, expected %ld\n"),
@@ -891,12 +909,11 @@ sysprof_find_dwfl (struct sysprof_unwind_info *sui,
     }
 
  reuse:
-  /* TODO: Generalize to other architectures than x86_64. */
-  sui->last_sp = regs->regs[7];
+  bool is_abi32 = (regs->abi == PERF_SAMPLE_REGS_ABI_32);
+  sui->last_sp = regs->regs[sp_reg_index(default_ebl, is_abi32)];
   sui->last_base = sui->last_sp;
 
   if (show_frames) {
-    bool is_abi32 = (regs->abi == PERF_SAMPLE_REGS_ABI_32);
     fprintf(stderr, "sysprof_find_dwfl pid %lld%s: size=%ld%s pc=%lx sp=%lx+(%lx)\n",
 	    (long long) pid, cached ? " (cached)" : "",
 	    ev->size, is_abi32 ? " (32-bit)" : "",
@@ -924,11 +941,9 @@ sysprof_unwind_frame_cb (Dwfl_Frame *state, void *arg)
 
   Dwarf_Addr pc_adjusted = pc - (isactivation ? 0 : 1);
   Dwarf_Addr sp;
-  /* TODO: Need to generalize this code beyond x86 architectures. */
   struct sysprof_unwind_info *sui = (struct sysprof_unwind_info *)arg;
   int is_abi32 = (sui->last_abi == PERF_SAMPLE_REGS_ABI_32);
-  /* DWARF register order cf. elfutils backends/{x86_64,i386}_initreg.c: */
-  int user_regs_sp = is_abi32 ? 4 : 7;
+  int user_regs_sp = sp_reg_index(default_ebl, is_abi32);
   int rc = dwfl_frame_reg (state, user_regs_sp, &sp);
   if (rc < 0)
     {
@@ -1376,7 +1391,16 @@ https://sourceware.org/cgit/elfutils/tree/README.eu-stacktrace?h=users/serhei/eu
 	error (EXIT_BAD, errno, N_("Could not initialize Dwfl table"));
 
       /* TODO: Generalize to other architectures. */
-      default_ebl = ebl_openbackend_machine(EM_X86_64);
+      struct utsname u;
+      uname(&u);
+      int em = EM_NONE;
+      if (strcmp(u.machine, "x86_64") == 0) em = EM_X86_64;
+      else if (strcmp(u.machine, "i686") == 0 || strcmp(u.machine, "i386") == 0) em = EM_386;
+      else if (strcmp(u.machine, "aarch64") == 0) em = EM_AARCH64;
+      else if (strcmp(u.machine, "armv7l") == 0) em = EM_ARM;
+      else
+	error (EXIT_BAD, errno, N_("Unsupported architecture: %s"), u.machine);
+      default_ebl = ebl_openbackend_machine(em);
 
       struct sysprof_unwind_info sui;
       sui.output_fd = output_fd;
