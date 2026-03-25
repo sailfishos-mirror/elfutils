@@ -15,7 +15,21 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* TODO Run the prototype e.g.
+/* TODO(REVIEW.1) Need to make sure the following options produce reasonable output:
+   - eu-stackprof --gmon # print only fatal errors, summary table
+   - eu-stackprof --gmon -v # print what, exactly?
+   - eu-stackprof --gmon -vv # print one line per freshly loaded executable?
+   - eu-stackprof --gmon -vvvv # print one line per stackframe
+   - eu-stackprof --gmon -vvvvv # print additional mainfile/debugfile info per stackframe
+   - eu-stackprof --gmon -vvvvvv # print extra_tmi (no-longer-relevant debug output?)
+   - eu-stackprof # without gmon, make sure the summary table still printed -- may need to move code around
+   - eu-stackprof --gmon -
+   - eu-stackprof --gmon -o directory
+   - also add --maxdepth option to allow eu-stackprof to work as detailed unwinding testcase even with gmon mode?
+
+   TODO(REVIEW.2) Need to make sure clog/cerr are used appropriately for output redirection.
+
+   The prototype can be run e.g.
    sudo env LD_LIBRARY_PATH=...prefix/lib:$LD_LIBRARY_PATH ...prefix/bin/eu-stackprof --gmon -vvvv
 */
 
@@ -116,13 +130,14 @@ static const Dwfl_Callbacks dwfl_cfi_callbacks =
 
 #endif /* FIND_DEBUGINFO */
 
+
 ////////////////////////////////////////////////////////////////////////
 // class decls
 
 // Unwind statistics for a Dwfl and associated process.
 struct UnwindDwflStats {
   Dwfl *dwfl;
-  char *comm;  // XXX need dtor to free?  or std::string?
+  char *comm;  // TODO(REVIEW.3) need dtor to free?  or std::string?
   int max_frames; /* for diagnostic purposes */
   int total_samples; /* for diagnostic purposes */
   int lost_samples; /* for diagnostic purposes */
@@ -212,7 +227,6 @@ public:
   Ebl *ebl() { return this->default_ebl; }
 };
 
-
 // A PerfConsumer receives both raw and decoded (fields split out into function parameters)
 // perf event records from a PerfReader.  Pure interface.
 class PerfConsumer
@@ -250,7 +264,6 @@ public:
 			     const char *filename) {}
 };
 
-
 // A StatsPerfConsumer is a toy concrete object that accepts decoded
 // perf events and logs and records basic stats about them.
 class StatsPerfConsumer: public PerfConsumer
@@ -283,7 +296,6 @@ public:
   void process(const perf_event_header* sample);
 };
 
-
 // An UnwindSample records an unwound call stack from a perf-event
 // sample.
 struct UnwindSample
@@ -298,9 +310,7 @@ struct UnwindSample
   Dwarf_Addr sp; /* for diagnostic purposes */
 };
 
-
 class UnwindSampleConsumer;
-
 
 // A PerfConsumerUnwinder accepts decoded perf events, and produces
 // UnwindSample objects from them for relaying to an
@@ -368,8 +378,8 @@ class UnwindStatsConsumer: public UnwindSampleConsumer
 {
   UnwindStatsTable *stats;
 
-  /* TODO subsumed by stats? */
-  unordered_map<int,unsigned> event_unwind_counts; /* TODO by pid? */
+  /* TODO(REVIEW.4) subsumed by stats? might want to remove  */
+  unordered_map<int/*pid*/,unsigned> event_unwind_counts;
 
 public:
   UnwindStatsConsumer(UnwindStatsTable *usc) : stats(usc) {}
@@ -400,18 +410,12 @@ public:
   int maxframes() { return 1; }
 };
 
-
-
-
-
 // hypothetical: FlamegraphUnwindSampleConsumer, taking in a bigger maxdepth
 // hypothetical: PprofUnwindSampleConsumer, https://github.com/google/pprof
 
 
-
 ////////////////////////////////////////////////////////////////////////
-// command line parsing
-
+// command line parsing and main()
 
 /* Name and version of program.  */
 ARGP_PROGRAM_VERSION_HOOK_DEF = print_version;
@@ -445,7 +449,6 @@ static const struct argp argp =
     options, parse_opt, "[--] [CMD]...", N_("Collect systemwide stack-trace profiles."),
     NULL, NULL, NULL
   };
-
 
 // How to divide the program counter histograms in gmon output:
 enum hist_split_method {
@@ -492,7 +495,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
 
     case 'G':
-      /* TODO: Error if -g is not set? */
+      /* TODO(REVIEW.5): Error if -g is not set? */
       if (strcmp (arg, "none") == 0)
 	gmon_hist_split = HIST_SPLIT_NONE;
       else if (strcmp (arg, "even") == 0)
@@ -564,7 +567,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
   return 0;
 }
 
-
 sig_atomic_t interrupted;
 
 void sigint_handler(int sig)
@@ -573,8 +575,6 @@ void sigint_handler(int sig)
   if (interrupted > 1)
     _exit(1);
 }
-
-
 
 int
 main (int argc, char *argv[])
@@ -705,7 +705,7 @@ main (int argc, char *argv[])
       if (gmon)
 	{
 	  tab = new UnwindStatsTable();
-	  usc = new GprofUnwindSampleConsumer(tab); /* TODO also reduce maxdepth */
+	  usc = new GprofUnwindSampleConsumer(tab);
 	  pcu = new PerfConsumerUnwinder(usc, tab);
 	  pr = new PerfReader(&attr, pcu, pid);
 	}
@@ -770,7 +770,7 @@ main (int argc, char *argv[])
 PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
 {
   this->page_size = getpagesize();
-  this->page_count = 64; /* TODO: Decide on a large-enough power-of-2. */
+  this->page_count = 64; /* XXX May want to verify if this is a large-enough power-of-2.  */
   this->mmap_size = this->page_size * (this->page_count + 1); // total mmap size, incl header page
   this->event_wraparound_temp.resize(this->mmap_size); // NB: never resize this object again!
   this->consumer = consumer;
@@ -796,10 +796,13 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   attr->sample_type = (PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME);
   attr->sample_type |= PERF_SAMPLE_REGS_USER;
   attr->sample_type |= PERF_SAMPLE_STACK_USER;
-  // maybe: ask for PERF_SAMPLE_CALLCHAIN, in case kernel can unwind for us?
+  // XXX Maybe: ask for PERF_SAMPLE_CALLCHAIN, in case kernel can
+  // unwind for us?  Would want an option to control this, to allow
+  // eu-stackprof to exercise our own unwinding functionality when
+  // testing.
   attr->mmap = 1;
   attr->mmap2 = 1;
-  attr->exclude_kernel = 1; /* TODO: Probably don't care about this for our initial usecase. */
+  attr->exclude_kernel = 1; /* in-kernel unwinding not relevant for our usecase */
   attr->disabled = 1; /* will get enabled soon */
   attr->task = 1; // catch FORK/EXIT
   attr->comm = 1; // catch EXEC
@@ -855,8 +858,6 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
     throw runtime_error("ERROR: no perf events opened");
 }
 
-
-
 PerfReader::~PerfReader()
 {
   for (auto fd : this->perf_fds)
@@ -865,8 +866,6 @@ PerfReader::~PerfReader()
     munmap((void*) m, this->mmap_size);
   ebl_closebackend (this->default_ebl);
 }
-
-
 
 uint64_t millis_monotonic()
 {
@@ -936,7 +935,7 @@ void PerfReader::process_some()
 		    size_t len_first = base + ring_buffer_size - copy_start;
 		    size_t len_secnd = ehdr_size - len_first;
 		    uint8_t *event_temp = this->event_wraparound_temp.data();
-		    memcpy(event_temp, copy_start, len_first);	     // part at end of mmap'd region
+		    memcpy(event_temp, copy_start, len_first);       // part at end of mmap'd region
 		    memcpy(event_temp + len_first, base, len_secnd); // part at beginning of mmap'd region
 		    ehdr = (perf_event_header*) event_temp;
 		  }
@@ -949,7 +948,6 @@ void PerfReader::process_some()
 	  }
     }
 }
-
 
 void PerfReader::decode_event(const perf_event_header* ehdr)
 {
@@ -1035,7 +1033,6 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
 }
 
 
-
 ////////////////////////////////////////////////////////////////////////
 // perf event consumers
 
@@ -1108,6 +1105,7 @@ void StatsPerfConsumer::process(const perf_event_header* ehdr)
 {
   this->event_type_counts[ehdr->type] ++;
 }
+
 
 //////////////////////////////////////////////////////////////////////
 // unwind stats table for PerfConsumerUnwinder + downstream consumers
@@ -1196,9 +1194,9 @@ UnwindModuleStats *UnwindStatsTable::buildid_find_or_create (string buildid, Dwf
   return &this->buildid_tab[buildid];
 }
 
+
 ////////////////////////////////////////////////////////////////////////
 // real perf consumer: unwind helpers
-
 
 PerfConsumerUnwinder::PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust)
     : consumer(usc), stats(ust) {
@@ -1216,7 +1214,6 @@ PerfConsumerUnwinder::PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStat
 PerfConsumerUnwinder::~PerfConsumerUnwinder() {
   dwflst_tracker_end (this->tracker);
 }
-
 
 /* TODO: Could be relocated to libdwfl/linux-pid-attach.c
    to remove some duplication of existing linux-pid-attach code. */
@@ -1445,6 +1442,11 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
     {
       Dwfl_Module *m = dwfl_addrmodule(this->last_us.dwfl, pc);
       /* TODO: Handle (m == NULL)? */
+      if (m == NULL)
+	{
+	  cerr << format("* pid {:d} pc={:x} -> MODULE NOT FOUND\n",
+			 this->last_us, pid);
+	}
       const unsigned char *desc;
       GElf_Addr vaddr;
       int build_id_len = dwfl_module_build_id (m, &desc, &vaddr);
@@ -1452,14 +1454,14 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
       for (int i = 0; i < build_id_len; ++i)
 	cerr << format("{:02x}", static_cast<int>(desc[i]));
 
-      /* TODO also extract mainfile= debugfile= */
       const char *mainfile;
       const char *debugfile;
       const char *modname = dwfl_module_info (m, NULL, NULL, NULL, NULL,
 					      NULL, &mainfile, &debugfile);
       cerr << format(" module={} mainfile={} debugfile={}\n",
 			  modname, mainfile, debugfile);
-      /* TODO: Also store this data for the final buildid summary? */
+      /* TODO: Also store this data to avoid repeated extraction for
+	 the final buildid summary?  */
 #ifdef DEBUG_MODULES
       Dwarf_Addr bias;
       Dwarf_CFI *cfi_eh = dwfl_module_eh_cfi (m, &bias);
@@ -1488,26 +1490,35 @@ int pcu_unwind_frame_cb(Dwfl_Frame *state, void *arg)
   return pcu->unwind_frame_cb(state);
 }
 
+
 ////////////////////////////////////////////////////////////////////////
 // real perf consumer: event handler callbacks
 
 void PerfConsumerUnwinder::process_comm(const perf_event_header *sample,
 					uint32_t pid, uint32_t tid, bool exec, const char *comm)
 {
-  // have dwflst ditch data for process and start anew, if EXEC
+  // XXX: Could have dwflst ditch data for process and start anew, if EXEC.
 }
+
 void PerfConsumerUnwinder::process_exit(const perf_event_header *sample,
 					uint32_t pid, uint32_t ppid,
 					uint32_t tid, uint32_t ptid)
 {
-  // have dwflst ditch data for process
+  // XXX: Could have dwflst ditch data for process.
 }
+
 void PerfConsumerUnwinder::process_fork(const perf_event_header *sample,
 					uint32_t pid, uint32_t ppid,
 					uint32_t tid, uint32_t ptid)
 {
-  // have dwflst begin tracking a new process
+  // XXX(REVIEW.6): Could have dwflst begin tracking a new process, but
+  // this will likely happen automatically when a packet is received
+  // from it.  The short duration between fork/exec typically means
+  // elfutils will pick up on the post-exec process -- we would have
+  // to work hard to replicate a situation where
+  // process_fork/process_comm handling are needed.
 }
+
 void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
 					  uint64_t ip,
 					  uint32_t pid, uint32_t tid,
@@ -1586,7 +1597,6 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
   return;
 }
 
-
 void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
 					 uint32_t pid, uint32_t tid,
 					 uint64_t addr, uint64_t len, uint64_t pgoff,
@@ -1608,7 +1618,7 @@ void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
 
 UnwindStatsConsumer::~UnwindStatsConsumer()
 {
-  /* TODO: Perhaps move this to a this->stats->show_summary() method, also invokable from GmonUnwindSampleConsumer? */
+  /* TODO(REVIEW.7): Perhaps move this to a this->stats->show_summary() method, also invokable from GmonUnwindSampleConsumer? */
   if (show_summary)
     {
 #define PERCENT(x,tot) ((x+tot == 0)?0.0:((double)x)/((double)tot)*100.0)
@@ -1640,7 +1650,6 @@ void UnwindStatsConsumer::process(const UnwindSample* sample)
 {
   this->event_unwind_counts[sample->pid] ++;
 }
-
 
 int UnwindStatsConsumer::maxframes()
 {
@@ -1686,11 +1695,11 @@ void GprofUnwindSampleConsumer::record_gmon_hist(std::ostream &of, map<uint64_t,
   // write one histogram from low_pc ... high_pc
   uint32_t num_buckets = (high_pc-low_pc)/alignment + 1;
   double result_scale = (double)((high_pc-low_pc)/sizeof(uint16_t))/num_buckets;
-  if (verbose > 2)
+  if (verbose > 5)
+    /* It's the @scale value that must be kept within 0.000001 of 0.5 to
+       keep gprof from complaining. */
     clog << format("DEBUG +hist {:x}..{:x} (alignment {}) of {} buckets @scale {}\n",
 		   low_pc, high_pc, alignment, num_buckets, result_scale);
-  /* TODO(PROBLEM): It's the @scale value that must be kept within
-     0.000001 of 0.5 to keep gprof from complaining. */
 
   // write histogram record header
   unsigned char tag = GMON_TAG_TIME_HIST;
@@ -1726,7 +1735,7 @@ void GprofUnwindSampleConsumer::record_gmon_hist(std::ostream &of, map<uint64_t,
       for (auto it = histogram.lower_bound(bucket_addr);
 	       it != histogram.upper_bound(bucket_addr+alignment-1);
 	       it ++)
-	count += it->second; // TODO: check for overflow here!
+	count += it->second; // TODO(REVIEW.8): check for overflow here!
       bucket_addr += alignment;
       of.write(reinterpret_cast<const char *>(&count), sizeof(count));
     }
@@ -1749,10 +1758,9 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
     if (symlink(target_path.c_str(), exe_symlink_path.c_str()) == -1) {
       // Handle error, e.g., print errno or throw exception
       cerr << "symlink failed: " << strerror(errno) << endl;
-      //return; /* TODO: We may want to re-create the symlink on repeated runs. */
+      //return; /* TODO(REVIEW.9): We may want to re-create the symlink on repeated runs since deleting the output data is annoying.  */
     }
 
-  // TODO(REVIEW.4): plop buildid_to_{mainfile,debugfile} bits into per-gmon-out json files
   json_object *metadata = json_object_new_object();
   if (!metadata) {
   json_fail:
@@ -1817,7 +1825,6 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
   uint32_t version = GMON_VERSION;
   memcpy (&ghdr.version[0], reinterpret_cast<const char *>(&version), 4);
   memset (&ghdr.spare[0], 0, sizeof(ghdr.spare));
-  /* TODO: Also include libpfm event info -- in a separate file? */
   of.write(reinterpret_cast<const char *>(&ghdr), sizeof(ghdr));
 
   if (m.histogram.size() > 0)
@@ -1833,12 +1840,11 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 	}
       else if (gmon_hist_split == HIST_SPLIT_EVEN)
 	{
-	  /* TODO(EXPERIMENTAL/WIP): Attempt to satisfy gprof's
-	     histogram scale consistency check, which requires all
-	     values '(double)(high_pc-low_pc)/num_buckets' to fall
-	     within EPSILON.  In practice, we can only be sure of this
-	     if we cover the address space with histograms all one
-	     size.  */
+	  /* This option attempts to satisfy gprof's histogram scale
+	     consistency check, which requires all values
+	     '(double)(high_pc-low_pc)/num_buckets' to fall within
+	     EPSILON.  In practice, we can only be sure of this if we
+	     cover the address space with histograms all one size.  */
 
 	  /* Keep the search for 'optimal' size simple -- we just need
 	     a plausible order of magnitude.  XXX Some rechecking of
@@ -1870,13 +1876,11 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 		  opt_est = size_est;
 		}
 	      // if (opt_est > prev_est) break; /* XXX: We've hit the lowest point. */
-	      //cerr << format("DEBUG total size {} -> {} histograms of size {}",
-	      //               size_est, size_est / size_inc, next_size) << endl;
 	      next_size = 2 * next_size;
 	    }
 
 	  /* Partition into histograms of opt_size.
-	     TODO: Need to check if low_pc must be aligned.  */
+	     TODO(REVIEW.10): Need to check if low_pc must be aligned.  */
 	  uint64_t prev_pc = low_pc;
 	  uint64_t pc = prev_pc;
 	  /* XXX Iterate histogram ascending by key, faster than by addr. */
@@ -1894,7 +1898,8 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 	      prev_pc = pc;
 	    }
 	  /* Record a final histogram from low_pc to low_pc+opt_size.
-	     TODO: Edge case -- adjust for overflow of low_pc+opt_size at end of address space. */
+	     TODO(REVIEW.11): Edge case -- adjust for overflow of
+	     low_pc+opt_size at end of address space.  */
 	  this->record_gmon_hist(of, m.histogram,
 				 low_pc, low_pc+opt_size-1 /* >= prev_pc */,
 				 alignment);
@@ -1963,8 +1968,8 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
     {
       const string& buildid = p.first;
       UnwindModuleStats& m = p.second;
-      /* TODO(REVIEW.4): Write the buildid-->path mapping to a secondary
-	 (json?) metadata file.  That makes for a reasonable hint;
+      /* In record_gmon_out we will write the buildid-->path mapping
+	 to a json metadata file.  That makes for a reasonable hint;
 	 debuginfod-find can be used as a mostly-functional fallback
 	 (for packaged rather than locally built executables) if the
 	 results are moved to another system.  */
@@ -2019,7 +2024,7 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   if (build_id_len <= 0)
     return; // TODO: report/tabulate hit outside known modules
 
-  /* TODO(REVIEW.5): Is it better to use the unconverted build_id_desc as hash key? */
+  /* TODO(REVIEW.12): Is it better to use the unconverted build_id_desc as hash key? */
   string buildid;
   for (int i = 0; i < build_id_len; ++i) {
     buildid += format("{:02x}", static_cast<int>(desc[i]));
@@ -2035,7 +2040,7 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
     buildid_to_mainfile[buildid] = mainfile;
   if (debugfile && !buildid_to_debugfile.count(buildid))
     buildid_to_debugfile[buildid] = debugfile;
-  /* TODO(REVIEW.6): Also monitor for collisions here. */
+  /* TODO(REVIEW.13): Also monitor for collisions here. */
 
   UnwindModuleStats *buildid_ent = this->stats->buildid_find_or_create(buildid, mod);
 
