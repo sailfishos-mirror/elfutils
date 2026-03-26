@@ -99,7 +99,7 @@ void debuginfod_end (debuginfod_client *c) { }
 #include <regex.h>
 #include <string.h>
 #include <stdbool.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include <time.h>
 #include <utime.h>
 #include <sys/syscall.h>
@@ -109,6 +109,10 @@ void debuginfod_end (debuginfod_client *c) { }
 #include <curl/curl.h>
 #include <fnmatch.h>
 #include <json-c/json.h>
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 /* If fts.h is included before config.h, its indirect inclusions may not
    give us the right LFS aliases of these functions, so map them manually.  */
