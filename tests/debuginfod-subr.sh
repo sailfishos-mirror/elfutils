@@ -23,8 +23,7 @@ set -o errtrace
 . $srcdir/test-subr.sh  # includes set -e
 
 type curl 2>/dev/null || (echo "need curl"; exit 77)
-type rpm2cpio 2>/dev/null || (echo "need rpm2cpio"; exit 77)
-type cpio 2>/dev/null || (echo "need cpio"; exit 77)
+type bsdtar 2>/dev/null || (echo "need bsdtar"; exit 77)
 type bzcat 2>/dev/null || (echo "need bzcat"; exit 77)
 type ss 2>/dev/null || (echo "need ss"; exit 77)
 bsdtar --version | grep -q zstd && zstd=true || zstd=false

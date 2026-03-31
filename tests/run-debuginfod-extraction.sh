@@ -91,7 +91,7 @@ for i in $newrpms; do
     mkdir $subdir;
     cd $subdir;
     ls -lah ../$i
-    rpm2cpio ../$i | cpio -ivd;
+    bsdtar -xf ../$i || true;
     cd ..;
 done
 sourcefiles=$(find -name \*\\.debug -type f \
