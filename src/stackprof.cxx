@@ -178,7 +178,6 @@ struct UnwindStatsTable
   UnwindStatsTable () {}
   ~UnwindStatsTable () {}
 
-  UnwindDwflStats *pid_find(pid_t pid);
   UnwindDwflStats *pid_find_or_create(pid_t pid);
   string pid_find_comm(pid_t pid);
   Dwfl *pid_find_dwfl(pid_t pid);
@@ -1101,13 +1100,6 @@ void StatsPerfConsumer::process(const perf_event_header* ehdr)
 //////////////////////////////////////////////////////////////////////
 // unwind stats table for PerfConsumerUnwinder + downstream consumers
 
-UnwindDwflStats *UnwindStatsTable::pid_find (pid_t pid)
-{
-  if (this->dwfl_tab.count(pid) == 0)
-    this->dwfl_tab.emplace(pid, UnwindDwflStats());
-  return &this->dwfl_tab[pid];
-}
-
 UnwindDwflStats *UnwindStatsTable::pid_find_or_create (pid_t pid)
 {
   if (this->dwfl_tab.count(pid) == 0)
@@ -1732,7 +1724,8 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
     if (symlink(target_path.c_str(), exe_symlink_path.c_str()) == -1) {
       // Handle error, e.g., print errno or throw exception
       cerr << format("WARNING: symlink failed: {}\n", strerror(errno));
-      //return; /* TODO(REVIEW.9): We may want to re-create the symlink on repeated runs since deleting the output data is annoying.  */
+      // NB: no return needed here; proceed to write out other bits.
+      // A smart enough consumer will make do with buildid based executable lookup.
     }
 
   json_object *metadata = json_object_new_object();
@@ -1857,7 +1850,6 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 	     TODO(REVIEW.10): Need to check if low_pc must be aligned.  */
 	  uint64_t prev_pc = low_pc;
 	  uint64_t pc = prev_pc;
-	  /* XXX Iterate histogram ascending by key, faster than by addr. */
 	  for (const auto& p : m.histogram)
 	    {
 	      pc = p.first;
@@ -2002,7 +1994,7 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   if (build_id_len <= 0)
     return; // TODO: report/tabulate hit outside known modules
 
-  /* TODO(REVIEW.12): Is it better to use the unconverted build_id_desc as hash key? */
+  // possible optimization would be to use the unconverted build_id_desc as hash key
   string buildid;
   for (int i = 0; i < build_id_len; ++i) {
     buildid += format("{:02x}", static_cast<int>(desc[i]));
