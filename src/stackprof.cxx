@@ -85,8 +85,7 @@
 #include "../libebl/libebl.h"
 #include "../libdwfl_stacktrace/libdwfl_stacktrace.h"
 
-using namespace std;
-
+using namespace std; // so we don't have to std:: prefix everything in here
 
 ////////////////////////////////////////////////////////////////////////
 // find_debuginfo callbacks
@@ -187,6 +186,8 @@ struct UnwindStatsTable
 
   UnwindModuleStats *buildid_find(string buildid);
   UnwindModuleStats *buildid_find_or_create(string buildid, Dwfl_Module *mod);
+
+  void print_summary() const;
 };
 
 class PerfConsumer;
@@ -1170,6 +1171,32 @@ UnwindModuleStats *UnwindStatsTable::buildid_find_or_create (string buildid, Dwf
   return &this->buildid_tab[buildid];
 }
 
+void UnwindStatsTable::print_summary () const
+{
+#define PERCENT(x,tot) ((x+tot == 0)?0.0:((double)x)/((double)tot)*100.0)
+  int total_samples = 0;
+  int total_lost_samples = 0;
+  clog << "\n=== pid / sample counts ===\n";
+  for (auto& p : this->dwfl_tab)
+    {
+      pid_t pid = p.first;
+      const UnwindDwflStats& d = p.second;
+      clog << format(N_("{} {} -- max {} frames, received {} samples, lost {} samples ({:.1f}%) (last {}, worst {})\n"),
+	       pid, d.comm, d.max_frames,
+	       d.total_samples, d.lost_samples,
+	       PERCENT(d.lost_samples, d.total_samples),
+	       dwfl_unwound_source_str(d.last_unwound),
+	       dwfl_unwound_source_str(d.worst_unwound));
+      total_samples += d.total_samples;
+      total_lost_samples += d.lost_samples;
+    }
+  clog << "===\n";
+  clog << format(N_("TOTAL -- received {} samples, lost {} samples, loaded {} processes\n"),
+	  total_samples, total_lost_samples,
+	  this->dwfl_tab.size() /* TODO: If implementing eviction, need to maintain a separate count of evicted pids. */);
+  clog << "\n";
+#undef PERCENT
+}
 
 ////////////////////////////////////////////////////////////////////////
 // real perf consumer: unwind helpers
@@ -1467,21 +1494,23 @@ int pcu_unwind_frame_cb(Dwfl_Frame *state, void *arg)
 void PerfConsumerUnwinder::process_comm(const perf_event_header *sample,
 					uint32_t pid, uint32_t tid, bool exec, const string &comm)
 {
-  // XXX: Could have dwflst ditch data for process and start anew, if EXEC.
+  // NB: Could have dwflst ditch data for process and start anew, if EXEC.
+  // XXX: REVIEW.6a is this needed to avoid gradual memory leaks or pid reuse?
 }
 
 void PerfConsumerUnwinder::process_exit(const perf_event_header *sample,
 					uint32_t pid, uint32_t ppid,
 					uint32_t tid, uint32_t ptid)
 {
-  // XXX: Could have dwflst ditch data for process.
+  // NB: Could have dwflst ditch data for process.
+  // XXX: REVIEW.6a is this needed to avoid gradual memory leaks or pid reuse?
 }
 
 void PerfConsumerUnwinder::process_fork(const perf_event_header *sample,
 					uint32_t pid, uint32_t ppid,
 					uint32_t tid, uint32_t ptid)
 {
-  // XXX(REVIEW.6): Could have dwflst begin tracking a new process, but
+  // NB: Could have dwflst begin tracking a new process, but
   // this will likely happen automatically when a packet is received
   // from it.  The short duration between fork/exec typically means
   // elfutils will pick up on the post-exec process -- we would have
@@ -1504,7 +1533,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
   if (show_frames)
     clog << "\n"; /* extra newline for padding */
 
-  Elf *elf = NULL; // XXX: when is this released?
+  Elf *elf = NULL; // Released during dwflst_tracker_end
   bool cached = false;
   Dwfl *dwfl = this->find_dwfl (pid, regs, nregs, &elf, &cached);
   UnwindDwflStats *dwfl_ent = NULL;
@@ -1588,32 +1617,7 @@ void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
 
 UnwindStatsConsumer::~UnwindStatsConsumer()
 {
-  /* TODO(REVIEW.7): Perhaps move this to a this->stats->show_summary() method, also invokable from GmonUnwindSampleConsumer? */
-  if (show_summary)
-    {
-#define PERCENT(x,tot) ((x+tot == 0)?0.0:((double)x)/((double)tot)*100.0)
-      int total_samples = 0;
-      int total_lost_samples = 0;
-      clog << "\n=== pid / sample counts ===\n";
-      for (auto& p : this->stats->dwfl_tab)
-	{
-	  pid_t pid = p.first;
-	  UnwindDwflStats& d = p.second;
-	  clog << format(N_("{} {} -- max {} frames, received {} samples, lost {} samples ({:.1f}%) (last {}, worst {})\n"),
-		   pid, d.comm, d.max_frames,
-		   d.total_samples, d.lost_samples,
-		   PERCENT(d.lost_samples, d.total_samples),
-		   dwfl_unwound_source_str(d.last_unwound),
-		   dwfl_unwound_source_str(d.worst_unwound));
-	  total_samples += d.total_samples;
-	  total_lost_samples += d.lost_samples;
-	}
-      clog << "===\n";
-      clog << format(N_("TOTAL -- received {} samples, lost {} samples, loaded {} processes\n"),
-	      total_samples, total_lost_samples,
-	      this->stats->dwfl_tab.size() /* TODO: If implementing eviction, need to maintain a separate count of evicted pids. */);
-      clog << "\n";
-    }
+  this->stats->print_summary();
 }
 
 void UnwindStatsConsumer::process(const UnwindSample* sample)
@@ -1741,14 +1745,14 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
   if (NULL == buildid_js) goto json_fail;
   json_object_object_add(metadata, "buildid", buildid_js);
   if (buildid_to_mainfile.count(buildid) != 0) {
-    const char *mainfile = buildid_to_mainfile[buildid].c_str();
-    json_object *mainfile_js = json_object_new_string(mainfile);
+    const string &mainfile = buildid_to_mainfile[buildid];
+    json_object *mainfile_js = json_object_new_string(mainfile.c_str());
     if (NULL == mainfile_js) goto json_fail;
     json_object_object_add(metadata, "mainfile", mainfile_js);
   }
   if (buildid_to_debugfile.count(buildid) != 0) {
-    const char *debugfile = buildid_to_debugfile[buildid].c_str();
-    json_object *debugfile_js = json_object_new_string(debugfile);
+    const string &debugfile = buildid_to_debugfile[buildid];
+    json_object *debugfile_js = json_object_new_string(debugfile.c_str());
     if (NULL == debugfile_js) goto json_fail;
     json_object_object_add(metadata, "debugfile", debugfile_js);
   }
@@ -1931,33 +1935,37 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
 {
   if (show_summary)
-    clog << "\n=== buildid / sample counts ===\n";
+    {
+      clog << "\n=== buildid / sample counts ===\n";
+    }
 
   UnwindStatsTable::buildid_map_t m (this->stats->buildid_tab.begin(), this->stats->buildid_tab.end());
   for (auto& p : m) // traverse in sorted order
     {
       const string& buildid = p.first;
       UnwindModuleStats& m = p.second;
-      /* In record_gmon_out we will write the buildid-->path mapping
-	 to a json metadata file.  That makes for a reasonable hint;
-	 debuginfod-find can be used as a mostly-functional fallback
-	 (for packaged rather than locally built executables) if the
-	 results are moved to another system.  */
-      const char *mainfile = NULL;
-      if (buildid_to_mainfile.count(buildid) != 0)
-	mainfile = buildid_to_mainfile[buildid].c_str();
-      const char *debugfile = NULL;
-      if (buildid_to_debugfile.count(buildid) != 0)
-	debugfile = buildid_to_debugfile[buildid].c_str();
-      if (show_summary)
-	clog << format(N_("buildid {} ({}{}{}) -- received {} distinct pcs, {} callgraph arcs\n"), /* TODO also count samples / estimated histogram size? */
-		 buildid.c_str(),
-		 mainfile == NULL ? "<unknown>" : mainfile,
-		 debugfile == NULL ? "" : " +debugfile ",
-		 debugfile == NULL ? "" : debugfile,
-		 m.histogram.size(),
-		 m.callgraph.size());
       this->record_gmon_out(buildid, m);
+      if (show_summary)
+        {
+          /* In record_gmon_out we will write the buildid-->path mapping
+             to a json metadata file.  That makes for a reasonable hint;
+             debuginfod-find can be used as a mostly-functional fallback
+             (for packaged rather than locally built executables) if the
+             results are moved to another system.  */
+          string mainfile = "<unknown>";
+          if (buildid_to_mainfile.count(buildid) != 0)
+            mainfile = buildid_to_mainfile[buildid];
+          string debugfile = "";
+          if (buildid_to_debugfile.count(buildid) != 0)
+            debugfile = buildid_to_debugfile[buildid];
+          clog << format(N_("buildid {} ({}{}{}) -- received {} distinct pcs, {} callgraph arcs\n"), /* TODO also count samples / estimated histogram size? */
+                         buildid,
+                         mainfile,
+                         debugfile.empty() ? "" : " +debugfile ",
+                         debugfile,
+                         m.histogram.size(),
+                         m.callgraph.size());
+        }
     }
   if (show_summary)
     {
@@ -2000,15 +2008,17 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
     buildid += format("{:02x}", static_cast<int>(desc[i]));
   }
 
-  const char *mainfile;
-  const char *debugfile;
+  const char *mainfile_cstr;
+  const char *debugfile_cstr;
   Dwarf_Addr low_addr;
   Dwarf_Addr high_addr;
   dwfl_module_info (mod, NULL, &low_addr, &high_addr, NULL,
-		    NULL, &mainfile, &debugfile);
-  if (mainfile && !buildid_to_mainfile.count(buildid))
+		    NULL, &mainfile_cstr, &debugfile_cstr);
+  string mainfile = mainfile_cstr ? mainfile_cstr : "<unknown>";
+  string debugfile = debugfile_cstr ? debugfile_cstr : "";
+  if (!buildid_to_mainfile.count(buildid))
     buildid_to_mainfile[buildid] = mainfile;
-  if (debugfile && !buildid_to_debugfile.count(buildid))
+  if (!buildid_to_debugfile.count(buildid))
     buildid_to_debugfile[buildid] = debugfile;
   /* TODO(REVIEW.13): Also monitor for collisions here. */
 
@@ -2020,9 +2030,8 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   if ((last_pc < low_addr || last_pc > high_addr))
     {
       if (verbose)
-	clog << format(N_("{}: Skipping pc={:x} raw_pc={:x} outside module range start={:x}..end={:x}"),
-		       mainfile == NULL ? "<unknown>" : mainfile,
-		       pc, last_pc, low_addr, high_addr) << "\n";
+	clog << format(N_("{}: Skipping pc={:x} raw_pc={:x} outside module range start={:x}..end={:x}\n"),
+		       mainfile, pc, last_pc, low_addr, high_addr);
       return;
     }
   (void) i;
@@ -2038,9 +2047,8 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
       if (last_pc < low_addr || last_pc > high_addr)
 	{
 	  if (verbose)
-	    clog << format(N_("{}: Skipping pc={:x} raw_pc={:x} outside module range start={:x}..end={:x}"),
-			   mainfile == NULL ? "<unknown>" : mainfile,
-			   pc2, last_pc, low_addr, high_addr) << "\n";
+	    clog << format(N_("{}: Skipping pc={:x} raw_pc={:x} outside module range start={:x}..end={:x}\n"),
+			   mainfile, pc2, last_pc, low_addr, high_addr);
 	  return;
 	}
       (void) j;
