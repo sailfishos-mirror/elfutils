@@ -493,7 +493,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
 
     case 'G':
-      /* TODO(REVIEW.5): Error if -g is not set? */
+      gmon = true; /* Automatically enable gmon mode if they set a gmon option. */
       if (strcmp (arg, "none") == 0)
 	gmon_hist_split = HIST_SPLIT_NONE;
       else if (strcmp (arg, "even") == 0)
@@ -503,6 +503,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
 
     case 'o':
+      gmon = true;
       output_dir = arg;
       break;
 
