@@ -115,7 +115,7 @@ nop_find_debuginfo (Dwfl_Module *mod __attribute__((unused)),
 		    char **debuginfo_file_name __attribute__((unused)))
 {
 #ifdef DEBUG_MODULES
-  cerr << "nop_find_debuginfo: modname=" << modname << " file_name=" << file_name << " debuglink_file=" << debuglink_file << endl;
+  cerr << format("nop_find_debuginfo: modname={} file_name={} debuglink_file={}\n", modname, file_name, debuglink_file);
 #endif
   return -1;
 }
@@ -135,7 +135,7 @@ static const Dwfl_Callbacks dwfl_cfi_callbacks =
 // Unwind statistics for a Dwfl and associated process.
 struct UnwindDwflStats {
   Dwfl *dwfl;
-  std::string comm;
+  string comm;
   int max_frames; /* for diagnostic purposes */
   int total_samples; /* for diagnostic purposes */
   int lost_samples; /* for diagnostic purposes */
@@ -162,7 +162,7 @@ struct UnwindModuleStats {
       histogram[pc]++;
   }
   void record_callgraph_arc(Dwarf_Addr from, Dwarf_Addr to) {
-    std::pair<uint64_t, uint64_t> arc(from, to);
+    pair<uint64_t, uint64_t> arc(from, to);
     if (callgraph.count(arc) == 0)
       callgraph[arc]=1;
     else
@@ -181,7 +181,7 @@ struct UnwindStatsTable
 
   UnwindDwflStats *pid_find(pid_t pid);
   UnwindDwflStats *pid_find_or_create(pid_t pid);
-  const char *pid_find_comm(pid_t pid);
+  string pid_find_comm(pid_t pid);
   Dwfl *pid_find_dwfl(pid_t pid);
   void pid_store_dwfl(pid_t pid, Dwfl *dwfl);
 
@@ -241,7 +241,7 @@ public:
   virtual void process(const perf_event_header* sample) {}
 
   virtual void process_comm(const perf_event_header* sample,
-			    uint32_t pid, uint32_t tid, bool exec, const char* comm) {}
+			    uint32_t pid, uint32_t tid, bool exec, const string& comm) {}
   virtual void process_exit(const perf_event_header* sample,
 			    uint32_t pid, uint32_t ppid,
 			    uint32_t tid, uint32_t ptid) {}
@@ -272,7 +272,7 @@ public:
   StatsPerfConsumer() {}
   ~StatsPerfConsumer(); // report to stdout
   void process_comm(const perf_event_header* sample,
-		    uint32_t pid, uint32_t tid, bool exec, const char* comm);
+		    uint32_t pid, uint32_t tid, bool exec, const string& comm);
   void process_exit(const perf_event_header* sample,
 			    uint32_t pid, uint32_t ppid,
 		    uint32_t tid, uint32_t ptid);
@@ -337,7 +337,7 @@ public:
   int unwind_frame_cb(Dwfl_Frame *state);
 
   void process_comm(const perf_event_header* sample,
-		    uint32_t pid, uint32_t tid, bool exec, const char* comm);
+		    uint32_t pid, uint32_t tid, bool exec, const string& comm);
   void process_exit(const perf_event_header* sample,
 		    uint32_t pid, uint32_t ppid,
 		    uint32_t tid, uint32_t ptid);
@@ -398,7 +398,7 @@ class GprofUnwindSampleConsumer: public UnwindSampleConsumer
   UnwindStatsTable *stats;
   unordered_map<string, string> buildid_to_mainfile;
   unordered_map<string, string> buildid_to_debugfile;
-  void record_gmon_hist(std::ostream &of, map<uint64_t, uint32_t> &histogram, uint64_t low_pc, uint64_t high_pc, uint64_t alignment);
+  void record_gmon_hist(ostream &of, map<uint64_t, uint32_t> &histogram, uint64_t low_pc, uint64_t high_pc, uint64_t alignment);
 
 public:
   GprofUnwindSampleConsumer(UnwindStatsTable *usc) : stats(usc) {}
@@ -531,8 +531,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 	pfm_err_t rc = pfm_initialize();
 	if (rc != PFM_SUCCESS)
 	  {
-	    cerr << "ERROR: pfm_initialized failed"
-		 << ": " << pfm_strerror(rc) << endl;
+	    cerr << format("ERROR: pfm_initialized failed: {}\n", pfm_strerror(rc));
 	    exit(1);
 	  }
 
@@ -552,7 +551,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 	      {
 		ret = pfm_get_event_info(i, PFM_OS_PERF_EVENT_EXT, &info);
 		if (ret == PFM_SUCCESS)
-		  clog << pinfo.name << "::" << info.name << endl;
+		  clog << format("{}::{}\n", pinfo.name, info.name);
 	      }
 	  }
       }
@@ -589,7 +588,7 @@ main (int argc, char *argv[])
 
   if (pid > 0 && remaining < argc) // got a pid AND a cmd? reject
     {
-      cerr << "ERROR: Must not specify both -p PID and CMD" << endl;
+      cerr << format("ERROR: Must not specify both -p PID and CMD\n");
       exit(1);
     }
 
@@ -607,8 +606,7 @@ main (int argc, char *argv[])
 	  pfm_err_t rc = pfm_initialize();
 	  if (rc != PFM_SUCCESS)
 	    {
-	      cerr << "ERROR: pfm_initialized failed"
-		   << ": " << pfm_strerror(rc) << endl;
+	      cerr << format("ERROR: pfm_initialized failed: {}\n", pfm_strerror(rc));
 	      exit(1);
 	    }
 	  char* fstr = nullptr;
@@ -618,13 +616,12 @@ main (int argc, char *argv[])
 					 PFM_OS_PERF_EVENT_EXT, &arg);
 	  if (rc != PFM_SUCCESS)
 	    {
-	      cerr << "ERROR: pfm_get_os_event_encoding failed"
-		   << ": " << pfm_strerror(rc) << endl;
+	      cerr << format("ERROR: pfm_get_os_event_encoding failed: {}\n", pfm_strerror(rc));
 	      exit(1);
 	    }
 	  if (verbose)
 	    {
-	      clog << "libpfm expanded " << libpfm_event << " to " << fstr << endl;
+	      clog << format("libpfm expanded {} to {}\n", libpfm_event, fstr);
 	    }
 	  libpfm_event_decoded = fstr; // overwrite
 	  free(fstr);
@@ -656,8 +653,7 @@ main (int argc, char *argv[])
 	  int rc = pipe (pipefd); // will use pipefd[] >= 0 as flag for synchronization just below
 	  if (rc < 0)
 	    {
-	      cerr << "ERROR: pipe failed"
-		   << ": " << strerror(errno) << endl;
+	      cerr << format("ERROR: pipe failed: {}\n", strerror(errno));
 	      exit(1);
 	    }
 
@@ -669,15 +665,13 @@ main (int argc, char *argv[])
 	      int rc = read (pipefd[0], &dummy, 1); // block until parent is ready
 	      if (rc != 1)
 		{
-		  cerr << "ERROR: child sync read failed"
-		       << ": " << strerror(errno) << endl;
+		  cerr << format("ERROR: child sync read failed: {}\n", strerror(errno));
 		  exit(1);
 		}
 	      close (pipefd[0]);
 	      execvp (argv[remaining], & argv[remaining] /* not +1: child argv[0] included! */ );
 	      // notreached unless error
-	      cerr << "ERROR: execvp failed"
-		   << ": " << strerror(errno) << endl;
+	      cerr << format("ERROR: execvp failed: {}\n", strerror(errno));
 	      exit(1);
 	    }
 	  else if (pid > 0) // in parent
@@ -687,8 +681,7 @@ main (int argc, char *argv[])
 	    }
 	  else // error
 	    {
-	      cerr << "ERROR: fork failed"
-		   << ": " << strerror(errno) << endl;
+	      cerr << format("ERROR: fork failed: {}\n", strerror(errno));
 	      exit(1);
 	    }
 	}
@@ -732,9 +725,9 @@ main (int argc, char *argv[])
       if (verbose)
 	{
 	  clog << "Starting stack profile collection ";
-	  if (pid) clog << "pid " << pid;
+	  if (pid) clog << format("pid {}", pid);
 	  else clog << "systemwide";
-	  clog << endl;
+	  clog << "\n";
 	}
 
       while (true) // main loop
@@ -755,7 +748,7 @@ main (int argc, char *argv[])
     }
   catch (const exception& e)
     {
-      cerr << e.what() << endl;
+      cerr << format("{}\n", e.what());
     }
 
   return 0;
@@ -782,7 +775,7 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   else if (strcmp(u.machine, "i686") == 0 || strcmp(u.machine, "i386") == 0) em = EM_386;
   else if (strcmp(u.machine, "aarch64") == 0 || strcmp(u.machine, "armv7l")) em = EM_ARM;
   else {
-    cerr << "ERROR: Unsupported architecture: " << u.machine << endl;
+    cerr << format("ERROR: Unsupported architecture: {}\n", u.machine);
     exit(1);
   }
   this->default_ebl = ebl_openbackend_machine(em);
@@ -820,7 +813,7 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
 	clog << ((x % 8) ? "" : " ")
 	     << ((x % 32) ? "" : "\n")
 	     << format("{:02x}", (unsigned)bytes[x]);
-      clog << endl;
+      clog << "\n";
     }
 
   // Iterate over all cpus, even if attaching to a single pid, because
@@ -834,15 +827,13 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
 		       PERF_FLAG_FD_CLOEXEC);
       if (fd < 0)
 	{
-	  cerr << "WARNING: unable to open perf event for cpu " << cpu
-	       << ": " << strerror(errno) << endl;
+	  cerr << format("WARNING: unable to open perf event for cpu {}: {}\n", cpu, strerror(errno));
 	  continue;
 	}
       void *buf = mmap(NULL, this->mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
       if (buf == MAP_FAILED)
 	{
-	  cerr << "ERROR: perf event mmap failed"
-	       << ": " << strerror(errno) << endl;
+	  cerr << format("ERROR: perf event mmap failed: {}\n", strerror(errno));
 	  close(fd);
 	  continue;
 	}
@@ -1035,11 +1026,11 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
 // perf event consumers
 
 void StatsPerfConsumer::process_comm(const perf_event_header *sample,
-				     uint32_t pid, uint32_t tid, bool exec, const char *comm)
+				     uint32_t pid, uint32_t tid, bool exec, const string &comm)
 {
   if (show_events)
     {
-      clog << "process_comm: pid=" << pid << " tid=" << tid << " exec=" << exec << " comm=" << comm << endl;
+      clog << format("process_comm: pid={} tid={} exec={} comm={}\n", pid, tid, exec, comm);
     }
 }
 
@@ -1049,7 +1040,7 @@ void StatsPerfConsumer::process_exit(const perf_event_header *sample,
 {
   if (show_events)
     {
-      clog << "process_exit: pid=" << pid << " ppid=" << ppid << " tid=" << tid << " ptid=" << ptid << endl;
+      clog << format("process_exit: pid={} ppid={} tid={} ptid={}\n", pid, ppid, tid, ptid);
     }
 }
 
@@ -1059,7 +1050,7 @@ void StatsPerfConsumer::process_fork(const perf_event_header *sample,
 {
   if (show_events)
     {
-      clog << "process_fork: pid=" << pid << " ppid=" << ppid << " tid=" << tid << " ptid=" << ptid << endl;
+      clog << format("process_fork: pid={} ppid={} tid={} ptid={}\n", pid, ppid, tid, ptid);
     }
 }
 
@@ -1095,7 +1086,7 @@ StatsPerfConsumer::~StatsPerfConsumer()
 {
   for (const auto& kv : this->event_type_counts)
     {
-      clog << "event type " << kv.first << " count " << kv.second << endl;
+      clog << format("event type {} count {}\n", kv.first, kv.second);
     }
 }
 
@@ -1122,40 +1113,24 @@ UnwindDwflStats *UnwindStatsTable::pid_find_or_create (pid_t pid)
   return &this->dwfl_tab[pid];
 }
 
-static const char *unknown_comm = "<unknown>";
+static const string unknown_comm = "<unknown>";
 
-const char *UnwindStatsTable::pid_find_comm (pid_t pid)
+string UnwindStatsTable::pid_find_comm (pid_t pid)
 {
   UnwindDwflStats *entry = this->pid_find_or_create(pid);
   if (entry == NULL)
     return unknown_comm;
   if (!entry->comm.empty())
-    return entry->comm.c_str();
-  char name[64];
-  int i = snprintf (name, sizeof(name), "/proc/%ld/comm", (long) pid);
-  FILE *procfile = fopen(name, "r");
-  char *buf = NULL;
-  size_t linelen = 0;
-  if (procfile == NULL)
-    goto fail;
-  i = getline(&buf, &linelen, procfile);
-  if (i < 0)
-    {
-      free(buf);
-      goto fail;
-    }
-  for (i = linelen - 1; i > 0; i--)
-    if (buf[i] == '\n')
-	buf[i] = '\0';
+    return entry->comm;
+  string name = format("/proc/{}/comm", pid);
+  ifstream procfile(name);
+  string buf;
+  if (!procfile || !getline(procfile, buf))
+    entry->comm = unknown_comm;
+  else
+    entry->comm = buf;
 
-  entry->comm = buf;
-  free(buf);
-  fclose(procfile);
-  goto done;
- fail:
-  entry->comm = unknown_comm;
- done:
-  return entry->comm.c_str();
+  return entry->comm;
 }
 
 Dwfl *UnwindStatsTable::pid_find_dwfl (pid_t pid)
@@ -1219,29 +1194,26 @@ PerfConsumerUnwinder::~PerfConsumerUnwinder() {
    to remove some duplication of existing linux-pid-attach code. */
 int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
 {
-  char buffer[36];
-  FILE *procfile;
   int err = 0; /* The errno to return. XXX libdwfl would also set this for dwfl->attacherr.  */
 
   /* Make sure to report the actual PID (thread group leader) to
      dwfl_attach_state.  */
-  snprintf (buffer, sizeof (buffer), "/proc/%ld/status", (long) *pid);
-  procfile = fopen (buffer, "r");
-  if (procfile == NULL)
+  string buffer = format("/proc/{}/status", *pid);
+  ifstream procfile(buffer);
+  if (!procfile)
     {
       err = errno;
     fail:
       return err;
     }
 
-  char *line = NULL;
-  size_t linelen = 0;
-  while (getline (&line, &linelen, procfile) >= 0)
-    if (startswith (line, "Tgid:"))
+  string line;
+  while (getline (procfile, line))
+    if (startswith (line.c_str(), "Tgid:"))
       {
 	errno = 0;
 	char *endptr;
-	long val = strtol (&line[5], &endptr, 10);
+	long val = strtol (&line.c_str()[5], &endptr, 10);
 	if ((errno == ERANGE && val == LONG_MAX)
 	    || *endptr != '\n' || val < 0 || val != (pid_t) val)
 	  *pid = 0;
@@ -1249,8 +1221,6 @@ int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int 
 	  *pid = (pid_t) val;
 	break;
       }
-  free (line);
-  fclose(procfile);
 
   if (*pid == 0)
     {
@@ -1258,25 +1228,22 @@ int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int 
       goto fail;
     }
 
-  char name[64];
-  int i = snprintf (name, sizeof (name), "/proc/%ld/task", (long) *pid);
-  if (i <= 0 || i >= (ssize_t) sizeof (name) - 1)
-    {
-      errno = -ENOMEM;
-      goto fail;
-    }
-  DIR *dir = opendir (name);
-  if (dir == NULL)
-    {
-      err = errno;
-      goto fail;
-    }
-  else
-    closedir(dir);
+  {
+    string name = format("/proc/{}/task", *pid);
+    DIR *dir = opendir (name.c_str());
+    if (dir == NULL)
+      {
+        err = errno;
+        goto fail;
+      }
+    else
+      closedir(dir);
+  }
 
-  i = snprintf (name, sizeof (name), "/proc/%ld/exe", (long) *pid);
-  assert (i > 0 && i < (ssize_t) sizeof (name) - 1);
-  *elf_fd = open (name, O_RDONLY);
+  {
+    string name = format("/proc/{}/exe", *pid);
+    *elf_fd = open (name.c_str(), O_RDONLY);
+  }
   if (*elf_fd >= 0)
     {
       *elf = elf_begin (*elf_fd, ELF_C_READ_MMAP, NULL);
@@ -1286,7 +1253,7 @@ int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int 
 	     to associate the Dwfl with one of the existing Dwfl_Module
 	     ELF images (to know the machine/class backend to use).  */
 	  if (verbose)
-	    cerr << N_("WARNING: find_procfile pid ") << (long long)*pid << ": elf not found" << endl;
+	    cerr << format(N_("WARNING: find_procfile pid {}: elf not found\n"), (long long)*pid);
 	  close (*elf_fd);
 	  *elf_fd = -1;
 	}
@@ -1304,14 +1271,14 @@ Dwfl *PerfConsumerUnwinder::init_dwfl(pid_t pid)
   if (err < 0)
     {
       if (verbose)
-	cerr << "WARNING: dwfl_linux_proc_report pid " << (long long) pid << ": " << dwfl_errmsg (-1) << endl;
+	cerr << format("WARNING: dwfl_linux_proc_report pid {}: {}\n", (long long) pid, dwfl_errmsg(-1));
       return NULL;
     }
   err = dwfl_report_end (dwfl, NULL, NULL);
   if (err != 0)
     {
       if (verbose)
-	cerr << "WARNING: dwfl_report_end pid " << (long long) pid << ": " << dwfl_errmsg (-1) << endl;
+	cerr << format("WARNING: dwfl_report_end pid {}: {}\n", (long long) pid, dwfl_errmsg(-1));
       return NULL;
     }
 
@@ -1345,7 +1312,7 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
   if (nregs < expected_frame_nregs(this->reader->ebl()))
     {
       if (verbose)
-	cerr << N_("WARNING: find_dwfl: nregs=") << nregs << ", expected at least " << ebl_frame_nregs(this->reader->ebl()) << endl;
+	cerr << format(N_("WARNING: find_dwfl: nregs={}, expected at least {}\n"), nregs, ebl_frame_nregs(this->reader->ebl()));
       return NULL;
     }
 
@@ -1362,7 +1329,7 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
   if (err < 0)
     {
       if (verbose)
-	cerr << "WARNING: find_procfile pid " << (long long) pid << ": " << dwfl_errmsg (-1) << endl;
+	cerr << format("WARNING: find_procfile pid {}: {}\n", (long long) pid, dwfl_errmsg(-1));
       return NULL;
     }
 
@@ -1392,7 +1359,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
   if (! dwfl_frame_pc (state, &pc, &isactivation))
     {
       if (verbose)
-	cerr << "WARNING: dwfl_frame_pc: " << dwfl_errmsg(-1) << endl;
+	cerr << format("WARNING: dwfl_frame_pc: {}\n", dwfl_errmsg(-1));
       return DWARF_CB_ABORT;
     }
 
@@ -1405,7 +1372,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
   if (rc < 0)
     {
       if (verbose)
-	cerr << "WARNING: dwfl_frame_reg: " << dwfl_errmsg(-1) << endl;
+	cerr << format("WARNING: dwfl_frame_reg: {}\n", dwfl_errmsg(-1));
       return DWARF_CB_ABORT;
     }
 
@@ -1497,7 +1464,7 @@ int pcu_unwind_frame_cb(Dwfl_Frame *state, void *arg)
 // real perf consumer: event handler callbacks
 
 void PerfConsumerUnwinder::process_comm(const perf_event_header *sample,
-					uint32_t pid, uint32_t tid, bool exec, const char *comm)
+					uint32_t pid, uint32_t tid, bool exec, const string &comm)
 {
   // XXX: Could have dwflst ditch data for process and start anew, if EXEC.
 }
@@ -1529,12 +1496,12 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
 					  uint32_t nregs, const uint64_t *regs,
 					  uint64_t data_size, const uint8_t *data)
 {
-  const char *comm = NULL;
+  string comm;
   if (show_summary)
     comm = this->stats->pid_find_comm(pid);
 
   if (show_frames)
-    clog << endl; /* extra newline for padding */
+    clog << "\n"; /* extra newline for padding */
 
   Elf *elf = NULL; // XXX: when is this released?
   bool cached = false;
@@ -1551,11 +1518,11 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
 	}
       if (verbose && show_summary)
 	{
-	  cerr << "WARNING: find_dwfl pid " << (long long)pid << " (" << comm << ") (failed)" << endl;
+	  cerr << format("WARNING: find_dwfl pid {} ({}) (failed)\n", (long long)pid, comm);
 	}
       else
 	{
-	  cerr << "WARNING: find_dwfl pid " << (long long)pid << " (failed)" << endl;
+	  cerr << format("WARNING: find_dwfl pid {} (failed)\n", (long long)pid);
 	}
       return;
     }
@@ -1580,7 +1547,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
     {
       if (verbose)
 	{
-	  cerr << "WARNING: dwflst_perf_sample_getframes pid " << (long long)pid << ": " << dwfl_errmsg(-1) << endl;
+	  cerr << format("WARNING: dwflst_perf_sample_getframes pid {}: {}\n", (long long)pid, dwfl_errmsg(-1));
 	}
     }
   if (show_summary)
@@ -1626,7 +1593,7 @@ UnwindStatsConsumer::~UnwindStatsConsumer()
 #define PERCENT(x,tot) ((x+tot == 0)?0.0:((double)x)/((double)tot)*100.0)
       int total_samples = 0;
       int total_lost_samples = 0;
-      clog << endl << "=== pid / sample counts ===" << endl;
+      clog << "\n=== pid / sample counts ===\n";
       for (auto& p : this->stats->dwfl_tab)
 	{
 	  pid_t pid = p.first;
@@ -1644,7 +1611,7 @@ UnwindStatsConsumer::~UnwindStatsConsumer()
       clog << format(N_("TOTAL -- received {} samples, lost {} samples, loaded {} processes\n"),
 	      total_samples, total_lost_samples,
 	      this->stats->dwfl_tab.size() /* TODO: If implementing eviction, need to maintain a separate count of evicted pids. */);
-      clog << endl;
+      clog << "\n";
     }
 }
 
@@ -1692,7 +1659,7 @@ struct gmon_hist_hdr {
 
 };
 
-void GprofUnwindSampleConsumer::record_gmon_hist(std::ostream &of, map<uint64_t, uint32_t> &histogram, uint64_t low_pc, uint64_t high_pc, uint64_t alignment)
+void GprofUnwindSampleConsumer::record_gmon_hist(ostream &of, map<uint64_t, uint32_t> &histogram, uint64_t low_pc, uint64_t high_pc, uint64_t alignment)
 {
   // write one histogram from low_pc ... high_pc
   uint32_t num_buckets = (high_pc-low_pc)/alignment + 1;
@@ -1759,14 +1726,14 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
   if (target_path != unknown_comm) // skip .exe symlink if there's no path
     if (symlink(target_path.c_str(), exe_symlink_path.c_str()) == -1) {
       // Handle error, e.g., print errno or throw exception
-      cerr << "WARNING: symlink failed: " << strerror(errno) << endl;
+      cerr << format("WARNING: symlink failed: {}\n", strerror(errno));
       //return; /* TODO(REVIEW.9): We may want to re-create the symlink on repeated runs since deleting the output data is annoying.  */
     }
 
   json_object *metadata = json_object_new_object();
   if (!metadata) {
   json_fail:
-    cerr << "ERROR: json allocation failed: " << strerror(errno) << endl;
+    cerr << format("ERROR: json allocation failed: {}\n", strerror(errno));
     return;
   }
   json_object *buildid_js = json_object_new_string(buildid.c_str());
@@ -1963,7 +1930,7 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
 {
   if (show_summary)
-    clog << endl << "=== buildid / sample counts ===" << endl;
+    clog << "\n=== buildid / sample counts ===\n";
 
   UnwindStatsTable::buildid_map_t m (this->stats->buildid_tab.begin(), this->stats->buildid_tab.end());
   for (auto& p : m) // traverse in sorted order
@@ -1996,7 +1963,7 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
       clog << "===\n";
       clog << format(N_("TOTAL -- received {} buildids\n"), this->stats->buildid_tab.size());
     }
-  clog << endl;
+  clog << "\n";
 }
 
 void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
@@ -2054,7 +2021,7 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
       if (verbose)
 	clog << format(N_("{}: Skipping pc={:x} raw_pc={:x} outside module range start={:x}..end={:x}"),
 		       mainfile == NULL ? "<unknown>" : mainfile,
-		       pc, last_pc, low_addr, high_addr) << endl;
+		       pc, last_pc, low_addr, high_addr) << "\n";
       return;
     }
   (void) i;
@@ -2072,7 +2039,7 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
 	  if (verbose)
 	    clog << format(N_("{}: Skipping pc={:x} raw_pc={:x} outside module range start={:x}..end={:x}"),
 			   mainfile == NULL ? "<unknown>" : mainfile,
-			   pc2, last_pc, low_addr, high_addr) << endl;
+			   pc2, last_pc, low_addr, high_addr) << "\n";
 	  return;
 	}
       (void) j;
