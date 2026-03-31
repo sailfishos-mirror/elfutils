@@ -135,7 +135,7 @@ static const Dwfl_Callbacks dwfl_cfi_callbacks =
 // Unwind statistics for a Dwfl and associated process.
 struct UnwindDwflStats {
   Dwfl *dwfl;
-  char *comm;  // TODO(REVIEW.3) need dtor to free?  or std::string?
+  std::string comm;
   int max_frames; /* for diagnostic purposes */
   int total_samples; /* for diagnostic purposes */
   int lost_samples; /* for diagnostic purposes */
@@ -1129,31 +1129,33 @@ const char *UnwindStatsTable::pid_find_comm (pid_t pid)
   UnwindDwflStats *entry = this->pid_find_or_create(pid);
   if (entry == NULL)
     return unknown_comm;
-  if (entry->comm != NULL)
-    return entry->comm;
+  if (!entry->comm.empty())
+    return entry->comm.c_str();
   char name[64];
   int i = snprintf (name, sizeof(name), "/proc/%ld/comm", (long) pid);
   FILE *procfile = fopen(name, "r");
+  char *buf = NULL;
   size_t linelen = 0;
   if (procfile == NULL)
     goto fail;
-  i = getline(&entry->comm, &linelen, procfile);
+  i = getline(&buf, &linelen, procfile);
   if (i < 0)
     {
-      free(entry->comm);
+      free(buf);
       goto fail;
     }
   for (i = linelen - 1; i > 0; i--)
-    if (entry->comm[i] == '\n')
-	entry->comm[i] = '\0';
+    if (buf[i] == '\n')
+	buf[i] = '\0';
 
+  entry->comm = buf;
+  free(buf);
   fclose(procfile);
   goto done;
  fail:
-  entry->comm = (char *)malloc(16);
-  snprintf (entry->comm, 16, unknown_comm);
+  entry->comm = unknown_comm;
  done:
-  return entry->comm;
+  return entry->comm.c_str();
 }
 
 Dwfl *UnwindStatsTable::pid_find_dwfl (pid_t pid)
