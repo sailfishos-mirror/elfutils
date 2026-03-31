@@ -27,8 +27,6 @@
    - eu-stackprof --gmon -o directory
    - also add --maxdepth option to allow eu-stackprof to work as detailed unwinding testcase even with gmon mode?
 
-   TODO(REVIEW.2) Need to make sure clog/cerr are used appropriately for output redirection.
-
    The prototype can be run e.g.
    sudo env LD_LIBRARY_PATH=...prefix/lib:$LD_LIBRARY_PATH ...prefix/bin/eu-stackprof --gmon -vvvv
 */
@@ -554,7 +552,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 	      {
 		ret = pfm_get_event_info(i, PFM_OS_PERF_EVENT_EXT, &info);
 		if (ret == PFM_SUCCESS)
-		  cout << pinfo.name << "::" << info.name << endl;
+		  clog << pinfo.name << "::" << info.name << endl;
 	      }
 	  }
       }
@@ -784,7 +782,7 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   else if (strcmp(u.machine, "i686") == 0 || strcmp(u.machine, "i386") == 0) em = EM_386;
   else if (strcmp(u.machine, "aarch64") == 0 || strcmp(u.machine, "armv7l")) em = EM_ARM;
   else {
-    cerr << "Unsupported architecture: " << u.machine << endl;
+    cerr << "ERROR: Unsupported architecture: " << u.machine << endl;
     exit(1);
   }
   this->default_ebl = ebl_openbackend_machine(em);
@@ -1097,7 +1095,7 @@ StatsPerfConsumer::~StatsPerfConsumer()
 {
   for (const auto& kv : this->event_type_counts)
     {
-      cout << "event type " << kv.first << " count " << kv.second << endl;
+      clog << "event type " << kv.first << " count " << kv.second << endl;
     }
 }
 
@@ -1286,7 +1284,7 @@ int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int 
 	     to associate the Dwfl with one of the existing Dwfl_Module
 	     ELF images (to know the machine/class backend to use).  */
 	  if (verbose)
-	    cerr << N_("find_procfile pid ") << (long long)*pid << ": elf not found" << endl;
+	    cerr << N_("WARNING: find_procfile pid ") << (long long)*pid << ": elf not found" << endl;
 	  close (*elf_fd);
 	  *elf_fd = -1;
 	}
@@ -1304,14 +1302,14 @@ Dwfl *PerfConsumerUnwinder::init_dwfl(pid_t pid)
   if (err < 0)
     {
       if (verbose)
-	cerr << "dwfl_linux_proc_report pid " << (long long) pid << ": " << dwfl_errmsg (-1) << endl;
+	cerr << "WARNING: dwfl_linux_proc_report pid " << (long long) pid << ": " << dwfl_errmsg (-1) << endl;
       return NULL;
     }
   err = dwfl_report_end (dwfl, NULL, NULL);
   if (err != 0)
     {
       if (verbose)
-	cerr << "dwfl_report_end pid " << (long long) pid << ": " << dwfl_errmsg (-1) << endl;
+	cerr << "WARNING: dwfl_report_end pid " << (long long) pid << ": " << dwfl_errmsg (-1) << endl;
       return NULL;
     }
 
@@ -1345,7 +1343,7 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
   if (nregs < expected_frame_nregs(this->reader->ebl()))
     {
       if (verbose)
-	cerr << N_("find_dwfl: nregs=") << nregs << ", expected " << ebl_frame_nregs(this->reader->ebl()) << endl;
+	cerr << N_("WARNING: find_dwfl: nregs=") << nregs << ", expected at least " << ebl_frame_nregs(this->reader->ebl()) << endl;
       return NULL;
     }
 
@@ -1362,7 +1360,7 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
   if (err < 0)
     {
       if (verbose)
-	cerr << "find_procfile pid " << (long long) pid << ": " << dwfl_errmsg (-1) << endl;
+	cerr << "WARNING: find_procfile pid " << (long long) pid << ": " << dwfl_errmsg (-1) << endl;
       return NULL;
     }
 
@@ -1392,7 +1390,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
   if (! dwfl_frame_pc (state, &pc, &isactivation))
     {
       if (verbose)
-	cerr << "dwfl_frame_pc: " << dwfl_errmsg(-1) << endl;
+	cerr << "WARNING: dwfl_frame_pc: " << dwfl_errmsg(-1) << endl;
       return DWARF_CB_ABORT;
     }
 
@@ -1405,7 +1403,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
   if (rc < 0)
     {
       if (verbose)
-	cerr << "dwfl_frame_reg: " << dwfl_errmsg(-1) << endl;
+	cerr << "WARNING: dwfl_frame_reg: " << dwfl_errmsg(-1) << endl;
       return DWARF_CB_ABORT;
     }
 
@@ -1422,7 +1420,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 	  uint64_t rel_pc = pc_adjusted;
 	  int j = dwfl_module_relocate_address (m, &rel_pc);
 	  (void) j;
-	  cerr << format("* frame {:d}: rel_pc={:x} raw_pc={:x} sp={:x}+{:x} [{}]\n",
+	  clog << format("* frame {:d}: rel_pc={:x} raw_pc={:x} sp={:x}+{:x} [{}]\n",
 			 this->last_us.addrs.size(), rel_pc, pc_adjusted, this->last_us.base, (sp - this->last_us.base), dwfl_unwound_source_str(unwound_source));
 	}
     }
@@ -1434,40 +1432,42 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 	  uint64_t rel_pc = pc_adjusted;
 	  int j = dwfl_module_relocate_address (m, &rel_pc);
 	  (void) j;
-	  cerr << format(N_("* frame {:d}: rel_pc={:x} raw_pc={:x} sp={:x}+{:x} [dwfl_ent not found]\n"),
+	  clog << format(N_("* frame {:d}: rel_pc={:x} raw_pc={:x} sp={:x}+{:x} [dwfl_ent not found]\n"),
 			 this->last_us.addrs.size(), rel_pc, pc_adjusted, this->last_us.base, (sp - this->last_us.base));
 	}
     }
   if (show_tmi)
     {
       Dwfl_Module *m = dwfl_addrmodule(this->last_us.dwfl, pc);
-      /* TODO: Handle (m == NULL)? */
       if (m == NULL)
 	{
-	  cerr << format("* pid {:d} pc={:x} -> MODULE NOT FOUND\n",
-			 this->last_us, pid);
+	  clog << format("* pid {:d} pc={:x} -> MODULE NOT FOUND\n",
+			 this->last_us.pid, pc);
 	}
-      const unsigned char *desc;
-      GElf_Addr vaddr;
-      int build_id_len = dwfl_module_build_id (m, &desc, &vaddr);
-      cerr << format("* pid {:d} build_id=", this->last_us.pid);
-      for (int i = 0; i < build_id_len; ++i)
-	cerr << format("{:02x}", static_cast<int>(desc[i]));
+      else
+	{
+	  const unsigned char *desc;
+	  GElf_Addr vaddr;
+	  int build_id_len = dwfl_module_build_id (m, &desc, &vaddr);
+	  clog << format("* pid {:d} build_id=", this->last_us.pid);
+	  for (int i = 0; i < build_id_len; ++i)
+	    clog << format("{:02x}", static_cast<int>(desc[i]));
 
-      const char *mainfile;
-      const char *debugfile;
-      const char *modname = dwfl_module_info (m, NULL, NULL, NULL, NULL,
-					      NULL, &mainfile, &debugfile);
-      cerr << format(" module={} mainfile={} debugfile={}\n",
-			  modname, mainfile, debugfile);
-      /* TODO: Also store this data to avoid repeated extraction for
-	 the final buildid summary?  */
+	  const char *mainfile;
+	  const char *debugfile;
+	  const char *modname = dwfl_module_info (m, NULL, NULL, NULL, NULL,
+						  NULL, &mainfile, &debugfile);
+	  clog << format(" module={} mainfile={} debugfile={}\n",
+			 modname, mainfile, debugfile);
+	  /* TODO: Also store this data to avoid repeated extraction for
+	     the final buildid summary?  */
 #ifdef DEBUG_MODULES
-      Dwarf_Addr bias;
-      Dwarf_CFI *cfi_eh = dwfl_module_eh_cfi (m, &bias);
-      if (cfi_eh == NULL)
-	cerr << format("* pc={:x} -> NO EH_CFI\n", pc);
+	  Dwarf_Addr bias;
+	  Dwarf_CFI *cfi_eh = dwfl_module_eh_cfi (m, &bias);
+	  if (cfi_eh == NULL)
+	    clog << format("* pc={:x} -> NO EH_CFI\n", pc);
 #endif
+	}
     }
 
   this->last_us.sp = sp;
@@ -1532,7 +1532,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
     comm = this->stats->pid_find_comm(pid);
 
   if (show_frames)
-    cout << endl; /* extra newline for padding */
+    clog << endl; /* extra newline for padding */
 
   Elf *elf = NULL; // XXX: when is this released?
   bool cached = false;
@@ -1549,11 +1549,11 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
 	}
       if (verbose && show_summary)
 	{
-	  cerr << "find_dwfl pid " << (long long)pid << " (" << comm << ") (failed)" << endl;
+	  cerr << "WARNING: find_dwfl pid " << (long long)pid << " (" << comm << ") (failed)" << endl;
 	}
       else
 	{
-	  cerr << "find_dwfl pid " << (long long)pid << " (failed)" << endl;
+	  cerr << "WARNING: find_dwfl pid " << (long long)pid << " (failed)" << endl;
 	}
       return;
     }
@@ -1561,7 +1561,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
   if (show_events)
     {
       bool is_abi32 = (abi == PERF_SAMPLE_REGS_ABI_32);
-      cerr << format("find_dwfl pid {:d} {} ({}): hdr_size={:d} size={:d} {} pc={:x} sp={:x}+{:d}\n",
+      clog << format("find_dwfl pid {:d} {} ({}): hdr_size={:d} size={:d} {} pc={:x} sp={:x}+{:d}\n",
 			  (long long)pid, (cached ? "(cached)" : ""), comm, sample->size, data_size, (is_abi32 ? "(32-bit)" : ""), ip, this->last_us.base, 0);
     }
 
@@ -1578,7 +1578,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
     {
       if (verbose)
 	{
-	  cerr << "dwflst_perf_sample_getframes pid " << (long long)pid << ": " << dwfl_errmsg(-1) << endl;
+	  cerr << "WARNING: dwflst_perf_sample_getframes pid " << (long long)pid << ": " << dwfl_errmsg(-1) << endl;
 	}
     }
   if (show_summary)
@@ -1624,7 +1624,7 @@ UnwindStatsConsumer::~UnwindStatsConsumer()
 #define PERCENT(x,tot) ((x+tot == 0)?0.0:((double)x)/((double)tot)*100.0)
       int total_samples = 0;
       int total_lost_samples = 0;
-      cout << endl << "=== pid / sample counts ===" << endl;
+      clog << endl << "=== pid / sample counts ===" << endl;
       for (auto& p : this->stats->dwfl_tab)
 	{
 	  pid_t pid = p.first;
@@ -1642,7 +1642,7 @@ UnwindStatsConsumer::~UnwindStatsConsumer()
       clog << format(N_("TOTAL -- received {} samples, lost {} samples, loaded {} processes\n"),
 	      total_samples, total_lost_samples,
 	      this->stats->dwfl_tab.size() /* TODO: If implementing eviction, need to maintain a separate count of evicted pids. */);
-      cout << endl;
+      clog << endl;
     }
 }
 
@@ -1757,14 +1757,14 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
   if (target_path != unknown_comm) // skip .exe symlink if there's no path
     if (symlink(target_path.c_str(), exe_symlink_path.c_str()) == -1) {
       // Handle error, e.g., print errno or throw exception
-      cerr << "symlink failed: " << strerror(errno) << endl;
+      cerr << "WARNING: symlink failed: " << strerror(errno) << endl;
       //return; /* TODO(REVIEW.9): We may want to re-create the symlink on repeated runs since deleting the output data is annoying.  */
     }
 
   json_object *metadata = json_object_new_object();
   if (!metadata) {
   json_fail:
-    cerr << "json allocation failed: " << strerror(errno) << endl;
+    cerr << "ERROR: json allocation failed: " << strerror(errno) << endl;
     return;
   }
   json_object *buildid_js = json_object_new_string(buildid.c_str());
@@ -1808,7 +1808,7 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
   ofstream of (filename, ios::binary);
   if (!of)
     {
-      cerr << format(N_("buildid {} -- could not open '{}' for writing\n"), buildid, filename);
+      cerr << format(N_("ERROR: buildid {} -- could not open '{}' for writing\n"), buildid, filename);
     }
 
   /* Write gmon header.  It and other headers mostly hold
@@ -1961,7 +1961,7 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
 {
   if (show_summary)
-    cout << endl << "=== buildid / sample counts ===" << endl;
+    clog << endl << "=== buildid / sample counts ===" << endl;
 
   UnwindStatsTable::buildid_map_t m (this->stats->buildid_tab.begin(), this->stats->buildid_tab.end());
   for (auto& p : m) // traverse in sorted order
@@ -1994,7 +1994,7 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
       clog << "===\n";
       clog << format(N_("TOTAL -- received {} buildids\n"), this->stats->buildid_tab.size());
     }
-  cout << endl;
+  clog << endl;
 }
 
 void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
