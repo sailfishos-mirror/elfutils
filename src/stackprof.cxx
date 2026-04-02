@@ -16,20 +16,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 /* TODO(REVIEW.1) Need to make sure the following options produce reasonable output:
-   - eu-stackprof --gmon # print only fatal errors, summary table
-   - eu-stackprof --gmon -v # print what, exactly?
-   - eu-stackprof --gmon -vv # print one line per freshly loaded executable?
-   - eu-stackprof --gmon -vvvv # print one line per stackframe
-   - eu-stackprof --gmon -vvvvv # print additional mainfile/debugfile info per stackframe
-   - eu-stackprof --gmon -vvvvvv # print extra_tmi (no-longer-relevant debug output?)
-   - eu-stackprof # without gmon, make sure the summary table still printed -- may need to move code around
-   - eu-stackprof --gmon -
-   - eu-stackprof --gmon -o directory
-   - also add --maxdepth option to allow eu-stackprof to work as detailed unwinding testcase even with gmon mode?
-
-   The prototype can be run e.g.
-   sudo env LD_LIBRARY_PATH=...prefix/lib:$LD_LIBRARY_PATH ...prefix/bin/eu-stackprof --gmon -vvvv
-*/
+   - for -v, use show_pids, not show_samples (don't show a pid twice?)
+   - clog/cerr redirection -- these both end up in stderr, switch clog to cout?
+ */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -402,7 +391,7 @@ public:
   ~GprofUnwindSampleConsumer(); // write out all the gmon.$BUILDID.out files
   void record_gmon_out(const string& buildid, UnwindModuleStats& m); // write out one gmon.$BUILDID.out file
   void process(const UnwindSample* sample); // accumulate hits / callgraph edges (need maxdepth=1 only)
-  int maxframes() { return 1; }
+  int maxframes();
 };
 
 // hypothetical: FlamegraphUnwindSampleConsumer, taking in a bigger maxdepth
@@ -424,16 +413,18 @@ ARGP_PROGRAM_BUG_ADDRESS_DEF = PACKAGE_BUGREPORT;
 static const struct argp_option options[] =
 {
   { NULL, 0, NULL, OPTION_DOC, N_("Output options:"), 1 },
-  { "verbose", 'v', NULL, 0, N_ ("Increase verbosity of logging messages."), 0 },
+  { "verbose", 'v', NULL, 0, N_ ("Increase verbosity of logging messages (shows samples/frames/more)."), 0 },
+  /* TODO: Add "quiet" option suppressing summary table. */
   { "gmon", 'g', NULL, 0, N_("Generate gmon.BUILDID.out files for each binary."), 0 },
   { "hist-split",'G', HIST_SPLIT_OPTS, 0, N_("Histogram splitting method for gmon, default 'even'."), 0 },
+  { "maxframes", 'n', "MAXFRAMES", 0, N_("Maximum number of frames to unwind, default 1 with --gmon, 256 otherwise."), 0 }, /* TODO */
   { "output", 'o', "DIR", 0, N_("Output directory for gmon files."), 0 },
   { "force", 'f', NULL, 0, N_("Unlink output files to force writing as new."), 0 },
   { "pid", 'p', "PID", 0, N_("Profile given PID, and its future children."), 0 },
 #ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H
   { "event", 'e', "EVENT", 0, N_("Sample given LIBPFM event specification."), 0 },
 #define ARGP_KEY_EVENT_LIST 0x1000
-  { "event-list", ARGP_KEY_EVENT_LIST, NULL, 0, N_("Sample given LIBPFM event specification."), 0 },  
+  { "event-list", ARGP_KEY_EVENT_LIST, NULL, 0, N_("Sample given LIBPFM event specification."), 0 },
 #endif
   { NULL, 0, NULL, 0, NULL, 0 }
 };
@@ -459,16 +450,17 @@ static hist_split_method gmon_hist_split = HIST_SPLIT_EVEN;
 static string output_dir = ".";
 static bool output_force = false; // overwrite preexisting output files?
 static int pid;
-static unsigned long def_maxframes = 256;
+static int opt_maxframes = -1; // set to >= 0 to override default maxframes in consumer
 static string libpfm_event;
 static string libpfm_event_decoded;
 static perf_event_attr attr;
 static bool branch_record = false; // using accurate branch recording for call-graph arcs rather than backtrace heuristics
 
-// Verbosity beyond level 1:
-static bool show_summary = false;
+// Verbosity categories:
+static bool show_summary = true; /* XXX could suppress with --quiet */
 static bool show_events = false;
 static bool show_frames = false;
+static bool show_debugfile = false;
 static bool show_tmi = false; /* -> perf, cfi details */
 
 static error_t
@@ -508,8 +500,13 @@ parse_opt (int key, char *arg, struct argp_state *state)
       pid = atoi(arg);
       break;
 
-    case 'd':
-      def_maxframes = atoi(arg);
+    case 'n':
+      opt_maxframes = atoi(arg);
+      if (opt_maxframes < 0)
+	{
+	  argp_error (state, N_("-n MAXFRAMES should be 0 or higher."));
+	  return EINVAL;
+	}
       break;
 
     case 'f':
@@ -579,10 +576,11 @@ main (int argc, char *argv[])
   bool has_cmd = false;
   (void) argp_parse (&argp, argc, argv, 0, &remaining, NULL);
 
-  if (verbose > 1) show_summary = true;
-  if (verbose > 2) show_events = true;
-  if (verbose > 3) show_frames = true;
-  if (verbose > 4) show_tmi = true;
+  /* show_summary is true by default */
+  if (verbose > 0) show_events = true;
+  if (verbose > 1) show_frames = true;
+  if (verbose > 2) show_debugfile = true;
+  if (verbose > 3) show_tmi = true;
 
   if (pid > 0 && remaining < argc) // got a pid AND a cmd? reject
     {
@@ -639,10 +637,11 @@ main (int argc, char *argv[])
 
       if (show_summary)
 	{
-	  clog << format("perf_event_attr configuration type={:x} config={:x} {}{} \n",
+	  clog << format("starting perf_event_attr configuration type={:x} config={:x} {}{} \n",
 			      attr.type, attr.config,
 			      (attr.freq ? "sample_freq=" : "sample_period="),
 			      (attr.freq ? attr.sample_freq : attr.sample_period));
+	  clog << endl;
 	}
 
       if (remaining < argc) // got a CMD... suffix?  ok start it
@@ -1422,7 +1421,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 			 this->last_us.addrs.size(), rel_pc, pc_adjusted, this->last_us.base, (sp - this->last_us.base));
 	}
     }
-  if (show_tmi)
+  if (show_debugfile)
     {
       Dwfl_Module *m = dwfl_addrmodule(this->last_us.dwfl, pc);
       if (m == NULL)
@@ -1616,7 +1615,7 @@ void UnwindStatsConsumer::process(const UnwindSample* sample)
 
 int UnwindStatsConsumer::maxframes()
 {
-  return def_maxframes;
+  return opt_maxframes >= 0 ? opt_maxframes : 256;
 }
 
 
@@ -2046,4 +2045,10 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
       (void) j;
       buildid_ent->record_callgraph_arc(pc2, pc);
     }
+}
+
+int
+GprofUnwindSampleConsumer::maxframes()
+{
+  return opt_maxframes >= 0 ? opt_maxframes : 1;
 }
