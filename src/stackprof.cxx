@@ -376,9 +376,6 @@ class UnwindStatsConsumer: public UnwindSampleConsumer
 {
   UnwindStatsTable *stats;
 
-  /* TODO(REVIEW.4) subsumed by stats? might want to remove  */
-  unordered_map<int/*pid*/,unsigned> event_unwind_counts;
-
 public:
   UnwindStatsConsumer(UnwindStatsTable *usc) : stats(usc) {}
   ~UnwindStatsConsumer();
@@ -1614,7 +1611,7 @@ UnwindStatsConsumer::~UnwindStatsConsumer()
 
 void UnwindStatsConsumer::process(const UnwindSample* sample)
 {
-  this->event_unwind_counts[sample->pid] ++;
+  /* Most of the logic is handled by UnwindStatsTable. */
 }
 
 int UnwindStatsConsumer::maxframes()
@@ -1926,6 +1923,9 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 
 GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
 {
+  if (show_summary)
+    this->stats->print_summary ();
+
   if (show_summary)
     {
       clog << "\n=== buildid / sample counts ===\n";
