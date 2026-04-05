@@ -373,10 +373,6 @@ public:
 };
 
 
-extern "C" {
-struct gmon_hist_hdr;
-}
-
 // An GprofUnwindSampleConsumer instance consumes UnwindSamples and tabulates
 // them by buildid, for eventual writing out into gmon.out format files.
 class GprofUnwindSampleConsumer: public UnwindSampleConsumer
@@ -483,11 +479,11 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
     case 'G':
       gmon = true; /* Automatically enable gmon mode if they set a gmon option. */
-      if (strcmp (arg, "none") == 0)
+      if (std::string_view(arg) == "none")
 	gmon_hist_split = HIST_SPLIT_NONE;
-      else if (strcmp (arg, "even") == 0)
+      else if (std::string_view(arg) == "even")
 	gmon_hist_split = HIST_SPLIT_EVEN;
-      else if (strcmp (arg, "flex") == 0)
+      else if (std::string_view(arg) == "flex")
 	gmon_hist_split = HIST_SPLIT_FLEX;
       break;
 
@@ -637,7 +633,7 @@ main (int argc, char *argv[])
 
       if (show_summary)
 	{
-	  clog << format("starting perf_event_attr configuration type={:x} config={:x} {}{} \n",
+	  clog << format("perf_event_attr configuration type={:x} config={:x} {}{} \n",
 			      attr.type, attr.config,
 			      (attr.freq ? "sample_freq=" : "sample_period="),
 			      (attr.freq ? attr.sample_freq : attr.sample_period));
@@ -768,9 +764,10 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   struct utsname u;
   uname(&u);
   int em = EM_NONE;
-  if (strcmp(u.machine, "x86_64") == 0) em = EM_X86_64;
-  else if (strcmp(u.machine, "i686") == 0 || strcmp(u.machine, "i386") == 0) em = EM_386;
-  else if (strcmp(u.machine, "aarch64") == 0 || strcmp(u.machine, "armv7l")) em = EM_ARM;
+  std::string_view machine = u.machine;
+  if (machine == "x86_64") em = EM_X86_64;
+  else if (machine == "i686" || machine == "i386") em = EM_386;
+  else if (machine == "aarch64" || machine == "armv7l") em = EM_ARM;
   else {
     cerr << format("ERROR: Unsupported architecture: {}\n", u.machine);
     exit(1);
@@ -1443,7 +1440,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 	  const char *modname = dwfl_module_info (m, NULL, NULL, NULL, NULL,
 						  NULL, &mainfile, &debugfile);
 	  clog << format(" module={} mainfile={} debugfile={}\n",
-			 modname, mainfile, debugfile);
+			 modname, mainfile, debugfile?debugfile:"<none>");
 	  /* TODO: Also store this data to avoid repeated extraction for
 	     the final buildid summary?  */
 #ifdef DEBUG_MODULES
@@ -1623,8 +1620,6 @@ int UnwindStatsConsumer::maxframes()
 // unwind data consumers // gprof
 
 /* gmon.out file format bits */
-extern "C" {
-
 #define GMON_MAGIC "gmon"
 #define GMON_VERSION 1
 
@@ -1650,7 +1645,6 @@ struct gmon_hist_hdr {
   char _dimension_string[16];
 };
 
-};
 
 void GprofUnwindSampleConsumer::record_gmon_hist(ostream &of, map<uint64_t, uint32_t> &histogram, uint64_t low_pc, uint64_t high_pc, uint64_t alignment)
 {
@@ -1680,14 +1674,12 @@ void GprofUnwindSampleConsumer::record_gmon_hist(ostream &of, map<uint64_t, uint
   uint32_t prof_rate = attr.sample_freq;
   of.write(reinterpret_cast<const char *>(&prof_rate), sizeof(prof_rate));
   // dimension string is 15 chars long (not null terminated)
-  char dimension_string[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-  if (libpfm_event != "")
-    strncpy(dimension_string, libpfm_event.c_str(), 15);
-  else
-    strcpy(dimension_string, "ticks");
-  of.write(reinterpret_cast<const char *>(dimension_string), 15);
+  std::string dimension_base = libpfm_event.empty() ? "ticks" :
+    libpfm_event.substr(0, 15);
+  dimension_base.resize(15, '\0');  // ensure exactly 15 bytes
+  of.write(dimension_base.data(), 15);
   // dimension character abbreviation: just take the first char of above
-  of.write(reinterpret_cast<const char *>(dimension_string), 1);
+  of.write(dimension_base.data(), 1);
 
   // write histogram buckets
   uint64_t bucket_addr = low_pc;
@@ -1930,12 +1922,12 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
       clog << "\n=== buildid / sample counts ===\n";
     }
 
-  UnwindStatsTable::buildid_map_t m (this->stats->buildid_tab.begin(), this->stats->buildid_tab.end());
-  for (auto& p : m) // traverse in sorted order
+  UnwindStatsTable::buildid_map_t sorted_map (this->stats->buildid_tab.begin(), this->stats->buildid_tab.end());
+  for (auto& p : sorted_map) // traverse in sorted order
     {
       const string& buildid = p.first;
-      UnwindModuleStats& m = p.second;
-      this->record_gmon_out(buildid, m);
+      UnwindModuleStats& module_stats = p.second;
+      this->record_gmon_out(buildid, module_stats);
       if (show_summary)
         {
           /* In record_gmon_out we will write the buildid-->path mapping
@@ -1954,8 +1946,8 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
                          mainfile,
                          debugfile.empty() ? "" : " +debugfile ",
                          debugfile,
-                         m.histogram.size(),
-                         m.callgraph.size());
+                         module_stats.histogram.size(),
+                         module_stats.callgraph.size());
         }
     }
   if (show_summary)
@@ -1965,6 +1957,14 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
     }
   clog << "\n";
 }
+
+
+int
+GprofUnwindSampleConsumer::maxframes()
+{
+  return 1; // gprof only needs one level of backtracing
+}
+
 
 void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
 {
@@ -2047,8 +2047,3 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
     }
 }
 
-int
-GprofUnwindSampleConsumer::maxframes()
-{
-  return opt_maxframes >= 0 ? opt_maxframes : 1;
-}
