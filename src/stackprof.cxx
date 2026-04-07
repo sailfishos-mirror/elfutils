@@ -1684,13 +1684,32 @@ void GprofUnwindSampleConsumer::record_gmon_hist(ostream &of, map<uint64_t, uint
 
   // write histogram buckets
   uint64_t bucket_addr = low_pc;
+  int n_overflows = 0, max_overflows = 5; // limit 'bucket overflow' spam
   for (uint32_t bucket = 0; bucket < num_buckets; bucket++)
     {
       uint16_t count = 0;
       for (auto it = histogram.lower_bound(bucket_addr);
 	       it != histogram.upper_bound(bucket_addr+alignment-1);
 	       it ++)
-	count += it->second; // TODO(REVIEW.8): check for overflow here!
+	{
+	  if (numeric_limits<uint16_t>::max() <= (int) count + (int) it->second)
+	    {
+	      count = numeric_limits<uint16_t>::max();
+	      // XXX: a provisional error message to give a sense of
+	      // whether this happens often-enough to do something
+	      // more complex, such as adjusting the histogram
+	      // granularity:
+	      if (n_overflows >= max_overflows) break;
+	      n_overflows++;
+	      cerr << format("WARNING: histogram bucket overflow at {:x}{}",
+			     bucket_addr,
+			     n_overflows == max_overflows ?
+			     " (... and probably more)" : "")
+		   << endl;
+	      break;
+	    }
+	  count += it->second;
+	}
       bucket_addr += alignment;
       of.write(reinterpret_cast<const char *>(&count), sizeof(count));
     }
