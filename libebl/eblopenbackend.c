@@ -309,17 +309,9 @@ openbackend (Elf *elf, const char *emulation, GElf_Half machine)
 	/* Well, we know the emulation name now.  */
 	result->emulation = machines[cnt].emulation;
 
-	/* We access some data structures directly.  Make sure the 32 and
-	   64 bit variants are laid out the same.  */
-	eu_static_assert (offsetof (Elf32_Ehdr, e_machine)
-			  == offsetof (Elf64_Ehdr, e_machine));
-	eu_static_assert (sizeof (((Elf32_Ehdr *) 0)->e_machine)
-			  == sizeof (((Elf64_Ehdr *) 0)->e_machine));
-	eu_static_assert (offsetof (Elf, state.elf32.ehdr)
-			  == offsetof (Elf, state.elf64.ehdr));
-
 	/* Prefer taking the information from the ELF file.  */
-	if (elf == NULL)
+	GElf_Ehdr ehdr;
+	if (elf == NULL || gelf_getehdr (elf, &ehdr) == NULL)
 	  {
 	    result->machine = machines[cnt].em;
 	    result->class = machines[cnt].class;
@@ -327,9 +319,9 @@ openbackend (Elf *elf, const char *emulation, GElf_Half machine)
 	  }
 	else
 	  {
-	    result->machine = elf->state.elf32.ehdr->e_machine;
-	    result->class = elf->state.elf32.ehdr->e_ident[EI_CLASS];
-	    result->data = elf->state.elf32.ehdr->e_ident[EI_DATA];
+	    result->machine = ehdr.e_machine;
+	    result->class = ehdr.e_ident[EI_CLASS];
+	    result->data = ehdr.e_ident[EI_DATA];
 	  }
 
         if (machines[cnt].init &&
