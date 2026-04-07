@@ -17,7 +17,6 @@
 
 /* TODO(REVIEW.1) Need to make sure the following options produce reasonable output:
    - for -v, use show_pids, not show_samples (don't show a pid twice?)
-   - clog/cerr redirection -- these both end up in stderr, switch clog to cout?
  */
 
 #ifdef HAVE_CONFIG_H
@@ -1439,8 +1438,10 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 	  const char *debugfile;
 	  const char *modname = dwfl_module_info (m, NULL, NULL, NULL, NULL,
 						  NULL, &mainfile, &debugfile);
-	  clog << format(" module={} mainfile={} debugfile={}\n",
-			 modname, mainfile, debugfile?debugfile:"<none>");
+	  clog << format("module={} mainfile={} debugfile={}\n",
+			 modname,
+			 mainfile ? mainfile : "<none>",
+			 debugfile ? debugfile : "<none>");
 	  /* TODO: Also store this data to avoid repeated extraction for
 	     the final buildid summary?  */
 #ifdef DEBUG_MODULES
@@ -1573,7 +1574,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
       if (this->last_us.addrs.size() > (unsigned long)dwfl_ent->max_frames)
 	dwfl_ent->max_frames = this->last_us.addrs.size();
       dwfl_ent->total_samples++;
-      if (this->last_us.addrs.size() <= 2)
+      if (this->maxframes > 2 && this->last_us.addrs.size() <= 2)
 	dwfl_ent->lost_samples++;
     }
 
@@ -1962,7 +1963,10 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
 int
 GprofUnwindSampleConsumer::maxframes()
 {
-  return 1; // gprof only needs one level of backtracing
+  // gprof only needs one level of backtracing,
+  // but user can override consumer's preference
+  // with --maxframes option:
+  return opt_maxframes >= 0 ? opt_maxframes : 1;
 }
 
 
