@@ -15,10 +15,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* TODO(REVIEW.1) Need to make sure the following options produce reasonable output:
-   - for -v, use show_pids, not show_samples (don't show a pid twice?)
- */
-
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -408,7 +404,7 @@ ARGP_PROGRAM_BUG_ADDRESS_DEF = PACKAGE_BUGREPORT;
 static const struct argp_option options[] =
 {
   { NULL, 0, NULL, OPTION_DOC, N_("Output options:"), 1 },
-  { "verbose", 'v', NULL, 0, N_ ("Increase verbosity of logging messages (shows samples/frames/more)."), 0 },
+  { "verbose", 'v', NULL, 0, N_ ("Increase verbosity of logging messages (modules/samples/frames/more)."), 0 },
   /* TODO: Add "quiet" option suppressing summary table. */
   { "gmon", 'g', NULL, 0, N_("Generate gmon.BUILDID.out files for each binary."), 0 },
   { "hist-split",'G', HIST_SPLIT_OPTS, 0, N_("Histogram splitting method for gmon, default 'even'."), 0 },
@@ -453,7 +449,8 @@ static bool branch_record = false; // using accurate branch recording for call-g
 
 // Verbosity categories:
 static bool show_summary = true; /* XXX could suppress with --quiet */
-static bool show_events = false;
+static bool show_modules = false; /* -> first sample for each module */
+static bool show_samples = false; /* -> every sample */
 static bool show_frames = false;
 static bool show_debugfile = false;
 static bool show_tmi = false; /* -> perf, cfi details */
@@ -572,10 +569,11 @@ main (int argc, char *argv[])
   (void) argp_parse (&argp, argc, argv, 0, &remaining, NULL);
 
   /* show_summary is true by default */
-  if (verbose > 0) show_events = true;
-  if (verbose > 1) show_frames = true;
-  if (verbose > 2) show_debugfile = true;
-  if (verbose > 3) show_tmi = true;
+  if (verbose > 0) show_modules = true;
+  if (verbose > 1) show_samples = true;
+  if (verbose > 2) show_frames = true;
+  if (verbose > 3) show_debugfile = true;
+  if (verbose > 4) show_tmi = true;
 
   if (pid > 0 && remaining < argc) // got a pid AND a cmd? reject
     {
@@ -1021,7 +1019,7 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
 void StatsPerfConsumer::process_comm(const perf_event_header *sample,
 				     uint32_t pid, uint32_t tid, bool exec, const string &comm)
 {
-  if (show_events)
+  if (show_modules)
     {
       clog << format("process_comm: pid={} tid={} exec={} comm={}\n", pid, tid, exec, comm);
     }
@@ -1031,7 +1029,7 @@ void StatsPerfConsumer::process_exit(const perf_event_header *sample,
 				     uint32_t pid, uint32_t ppid,
 				     uint32_t tid, uint32_t ptid)
 {
-  if (show_events)
+  if (show_modules)
     {
       clog << format("process_exit: pid={} ppid={} tid={} ptid={}\n", pid, ppid, tid, ptid);
     }
@@ -1041,7 +1039,7 @@ void StatsPerfConsumer::process_fork(const perf_event_header *sample,
 				     uint32_t pid, uint32_t ppid,
 				     uint32_t tid, uint32_t ptid)
 {
-  if (show_events)
+  if (show_modules)
     {
       clog << format("process_fork: pid={} ppid={} tid={} ptid={}\n", pid, ppid, tid, ptid);
     }
@@ -1055,7 +1053,7 @@ void StatsPerfConsumer::process_sample(const perf_event_header *sample,
 				       uint32_t nregs, const uint64_t *regs,
 				       uint64_t data_size, const uint8_t *data)
 {
-  if (show_events)
+  if (show_samples)
     {
       clog << format("process_sample: pid={:d} tid={:d} ip={:x} time={:d} abi={:d} nregs={:d} data_size={:d}\n",
 			  pid, tid, ip, time, abi, nregs, data_size);
@@ -1068,7 +1066,7 @@ void StatsPerfConsumer::process_mmap2(const perf_event_header *sample,
 				      uint8_t build_id_size, const uint8_t *build_id,
 				      const char *filename)
 {
-  if (show_events)
+  if (show_modules)
     {
       clog << format("process_mmap2: pid={:d} tid={:d} addr={:x} len={:x} pgoff={:x} build_id_size={:d} filename={:s}\n",
 			  pid, tid, addr, len, pgoff, (unsigned)build_id_size, filename);
@@ -1523,12 +1521,19 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
   bool cached = false;
   Dwfl *dwfl = this->find_dwfl (pid, regs, nregs, &elf, &cached);
   UnwindDwflStats *dwfl_ent = NULL;
+  bool first_load = false; /* -> for show_modules: pid is loaded first time */
+  if (show_summary || show_modules)
+    {
+      if (dwfl_ent == NULL)
+	dwfl_ent = this->stats->pid_find_or_create(pid);
+      if (dwfl_ent->total_samples == 0)
+	first_load = true;
+    }
   if (dwfl == NULL)
     {
-      if (show_summary)
+      if (show_summary || show_modules)
 	{
-	  if (dwfl_ent == NULL)
-	    dwfl_ent = this->stats->pid_find_or_create(pid);
+	  /* dwfl_ent loaded above */
 	  dwfl_ent->total_samples++;
 	  dwfl_ent->lost_samples++;
 	}
@@ -1543,7 +1548,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
       return;
     }
 
-  if (show_events)
+  if (show_samples || (first_load && show_modules))
     {
       bool is_abi32 = (abi == PERF_SAMPLE_REGS_ABI_32);
       clog << format("find_dwfl pid {:d} {} ({}): hdr_size={:d} size={:d} {} pc={:x} sp={:x}+{:d}\n",
@@ -1563,14 +1568,13 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
     {
       if (verbose)
 	{
+	  /* REVIEW.1a: may want some excess-output-suppression here, based on number of msgs.  */
 	  cerr << format("WARNING: dwflst_perf_sample_getframes pid {}: {}\n", (long long)pid, dwfl_errmsg(-1));
 	}
     }
   if (show_summary)
     {
-      /* For final diagnostics. */
-      if (dwfl_ent == NULL)
-	dwfl_ent = this->stats->pid_find_or_create(pid);
+      /* For final diagnostics.  dwfl_ent loaded above */
       if (this->last_us.addrs.size() > (unsigned long)dwfl_ent->max_frames)
 	dwfl_ent->max_frames = this->last_us.addrs.size();
       dwfl_ent->total_samples++;
