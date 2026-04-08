@@ -253,6 +253,12 @@ loops in the symbolic directory tree might lead to \fIinfinite
 traversal\fP.
 
 .TP
+.B "\-M LEVELS"  "\-\-max\-depth=LEVELS"
+Limit the depth of directory traversal to \fILEVELS\fP levels
+below the source paths - as in \fIfind\ -maxdepth\fP.
+The default is unlimited depth; minimum is 0.
+
+.TP
 .B "\-\-fdcache\-mbs=MB"
 Configure limits on a cache that keeps recently extracted files from
 archives.  Up to a total of MB megabytes will be kept extracted, in
