@@ -122,6 +122,7 @@ struct UnwindDwflStats {
   int max_frames; /* for diagnostic purposes */
   int total_samples; /* for diagnostic purposes */
   int lost_samples; /* for diagnostic purposes */
+  int shown_errors; /* for diagnostic purposes */
   Dwfl_Unwound_Source last_unwound; /* track CFI source, for diagnostic purposes */
   Dwfl_Unwound_Source worst_unwound; /* track CFI source, for diagnostic purposes */
 };
@@ -630,7 +631,7 @@ main (int argc, char *argv[])
 
       if (show_summary)
 	{
-	  clog << format("perf_event_attr configuration type={:x} config={:x} {}{} \n",
+	  clog << format("perf_event_attr configuration type={:x} config={:x} {}{}\n",
 			      attr.type, attr.config,
 			      (attr.freq ? "sample_freq=" : "sample_period="),
 			      (attr.freq ? attr.sample_freq : attr.sample_period));
@@ -712,7 +713,7 @@ main (int argc, char *argv[])
 	  close(pipefd[1]);
 	}
 
-      if (verbose)
+      if (show_summary)
 	{
 	  clog << "Starting stack profile collection ";
 	  if (pid) clog << format("pid {}", pid);
@@ -1522,7 +1523,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
   Dwfl *dwfl = this->find_dwfl (pid, regs, nregs, &elf, &cached);
   UnwindDwflStats *dwfl_ent = NULL;
   bool first_load = false; /* -> for show_modules: pid is loaded first time */
-  if (show_summary || show_modules)
+  if (verbose || show_summary || show_modules)
     {
       if (dwfl_ent == NULL)
 	dwfl_ent = this->stats->pid_find_or_create(pid);
@@ -1551,8 +1552,12 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
   if (show_samples || (first_load && show_modules))
     {
       bool is_abi32 = (abi == PERF_SAMPLE_REGS_ABI_32);
-      clog << format("find_dwfl pid {:d} {} ({}): hdr_size={:d} size={:d} {} pc={:x} sp={:x}+{:d}\n",
-			  (long long)pid, (cached ? "(cached)" : ""), comm, sample->size, data_size, (is_abi32 ? "(32-bit)" : ""), ip, this->last_us.base, 0);
+      clog << format("find_dwfl {}pid {:d} {}({}): hdr_size={:d} size={:d}{} pc={:x} sp={:x}+{:d}\n",
+		     first_load ? "newly seen " : "", (long long)pid,
+		     (cached ? "(cached) " : ""), comm,
+		     sample->size, data_size,
+		     (is_abi32 ? " (32-bit)" : ""), ip,
+		     this->last_us.base, 0);
     }
 
   this->last_us.addrs.clear();
@@ -1566,10 +1571,14 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
 					 pcu_unwind_frame_cb, this);
   if (rc < 0)
     {
-      if (verbose)
+      /* dwfl_ent loaded above */
+      if (verbose && dwfl_ent->shown_errors < 10)
 	{
-	  /* REVIEW.1a: may want some excess-output-suppression here, based on number of msgs.  */
-	  cerr << format("WARNING: dwflst_perf_sample_getframes pid {}: {}\n", (long long)pid, dwfl_errmsg(-1));
+	  dwfl_ent->shown_errors ++;
+	  cerr << format("WARNING: dwflst_perf_sample_getframes pid {}: {}{}\n",
+			 (long long)pid, dwfl_errmsg(-1),
+			 dwfl_ent->shown_errors >= 10 ?
+			 " (...suppressing further warnings for this pid)" : "");
 	}
     }
   if (show_summary)
@@ -1707,8 +1716,8 @@ void GprofUnwindSampleConsumer::record_gmon_hist(ostream &of, map<uint64_t, uint
 	      n_overflows++;
 	      cerr << format("WARNING: histogram bucket overflow at {:x}{}",
 			     bucket_addr,
-			     n_overflows == max_overflows ?
-			     " (... and probably more)" : "")
+			     n_overflows >= max_overflows ?
+			     " (... suppressing further warnings for this histogram)" : "")
 		   << endl;
 	      break;
 	    }
@@ -1939,11 +1948,9 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
 {
   if (show_summary)
-    this->stats->print_summary ();
-
-  if (show_summary)
     {
-      clog << "\n=== buildid / sample counts ===\n";
+      this->stats->print_summary ();
+      clog << "=== buildid / sample counts ===\n";
     }
 
   UnwindStatsTable::buildid_map_t sorted_map (this->stats->buildid_tab.begin(), this->stats->buildid_tab.end());
