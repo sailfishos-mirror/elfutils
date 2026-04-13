@@ -4,6 +4,10 @@ version.h: New macro _ELFUTILS_THREAD_SAFE added to <elfutils/version.h>.
            Defined to 1 when the elfutils libraries are built with thread
            safety support enabled.  Otherwise it is left undefined.
 
+stackprof: New, self-contained profiling tool that uses perf_events
+           to record profile data in gmon.out format.  Replaces
+           the earlier eu-stacktrace tool.
+
 Version 0.195 "Handwritten"
 
 CONTRIBUTING: elfutils has adopted a policy on the use of Large Language
