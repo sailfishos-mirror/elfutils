@@ -20,7 +20,7 @@ EXTRA_DIST = COPYING-GFDL README
 
 # Section 1, Executable programs or shell commands
 # The tools manpages that depend on program prefix (will get eu- prefixed)
-dist_man1_MANS=readelf.1 elfclassify.1 srcfiles.1
+dist_man1_MANS=readelf.1 elfclassify.1 srcfiles.1 stackprof.1
 
 # Tools that don't get a program prefix
 notrans_dist_man1_MANS= debuginfod-find.1
