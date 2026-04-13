@@ -912,10 +912,66 @@ fi
 AC_CHECK_PROG(HAVE_ZSTD, zstd, yes, no)
 AM_CONDITIONAL([HAVE_ZSTD],[test "x$HAVE_ZSTD" = "xyes"])
 
-# For tests that need to use C++11
-AX_CXX_COMPILE_STDCXX(11, noext, optional)
+# For tests and programs that need to use C++20
+AX_CXX_COMPILE_STDCXX(20, noext, optional)
+AS_IF([test "x$HAVE_CXX20" = "x1"], [HAVE_CXX20=yes], [HAVE_CXX20=no])
+AM_CONDITIONAL([HAVE_CXX20],[test "x$HAVE_CXX20" = "xyes"])
+
+AS_IF([test "x$HAVE_CXX20" = "xno"], [
+  # For tests that need to use C++11, when C++20 is unavailable
+  AX_CXX_COMPILE_STDCXX(11, noext, optional)
+])
 AS_IF([test "x$HAVE_CXX11" = "x1"], [HAVE_CXX11=yes], [HAVE_CXX11=no])
 AM_CONDITIONAL([HAVE_CXX11],[test "x$HAVE_CXX11" = "xyes"])
+
+# Look for debuginfod & stackprof dependencies, minimum versions as per rhel7.
+PKG_PROG_PKG_CONFIG
+PKG_CHECK_MODULES([libcurl],[libcurl >= 7.29.0],[have_libcurl=yes],[have_libcurl=no])
+PKG_CHECK_MODULES([jsonc],[json-c >= 0.11],[have_jsonc=yes],[have_jsonc=no])
+
+# For eu-stackprof
+AC_ARG_ENABLE([stackprof],[AS_HELP_STRING([--enable-stackprof], [Build eu-stackprof])],
+  [], [enable_stackprof=auto])
+# optional:
+AC_CHECK_HEADERS([perfmon/pfmlib_perf_event.h])
+AM_CONDITIONAL([HAVE_LIBPFM], [test "x${ac_cv_header_perfmon_pfmlib_perf_event_h}" = "xyes" ])
+AC_CHECK_LIB(pfm, pfm_get_os_event_encoding, [AC_SUBST(libpfm_LIBS, '-lpfm')])
+# required:
+AC_CHECK_HEADERS([linux/perf_event.h])
+AC_CHECK_MEMBER([struct perf_event_attr.build_id],
+  [have_perf_event_attr_build_id=yes],
+  [have_perf_event_attr_build_id=no],
+  [[#include <linux/perf_event.h>]])
+HAVE_CXX20_FORMAT=no
+AS_IF([test "x$HAVE_CXX20" = "xyes"], [
+  old_CXXFLAGS="$CXXFLAGS"
+  CXXFLAGS="$CXXFLAGS -std=c++20"
+  AC_LANG_PUSH([C++])
+  AC_CACHE_CHECK([for c++20 format.h], ac_cv_have_cxx20_format_h,
+    [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <format>])],
+               ac_cv_have_cxx20_format_h=yes, ac_cv_have_cxx20_format_h=no)])
+  AC_LANG_POP
+  CXXFLAGS="$old_CXXFLAGS"
+])
+case $host_cpu in
+  i?86|x86_64|amd64|arm*|aarch64*)
+    stackprof_arch_supported=yes
+    ;;
+  *)
+    stackprof_arch_supported=no
+    ;;
+esac
+if test "x$enable_stackprof" = "xno"; then
+   true
+elif test "x${stackprof_arch_supported}x${ac_cv_header_linux_perf_event_h}x${have_perf_event_attr_build_id}x${have_jsonc}x${ac_cv_have_cxx20_format_h}x${HAVE_CXX20}" = "xyesxyesxyesxyesxyesxyes"; then
+   enable_stackprof=yes
+elif test "x$enable_stackprof" = "xyes"; then
+   AC_MSG_ERROR([Unable to build eu-stackprof, unsupported host cpu or missing linux <perf_event.h> with build_id or C++20 with <format.h>])
+else
+   enable_stackprof=no
+fi
+AM_CONDITIONAL([ENABLE_STACKPROF],[test "x$enable_stackprof" = "xyes"])
+AS_IF([test "x$enable_stackprof" = "xyes"],[AC_DEFINE([ENABLE_STACKPROF], [1], [Build eu-stackprof])])
 
 AC_CHECK_HEADERS([execinfo.h])
 
@@ -925,11 +981,6 @@ AC_CHECK_HEADERS([execinfo.h])
 AC_ARG_ENABLE([libdebuginfod],[AS_HELP_STRING([--enable-libdebuginfod], [Build debuginfod client library (can be =dummy)])])
 AC_ARG_ENABLE([debuginfod],[AS_HELP_STRING([--enable-debuginfod], [Build debuginfod server])])
 AC_ARG_ENABLE([debuginfod-ima-verification],[AS_HELP_STRING([--enable-debuginfod-ima-verification],[enable per-file signature verification])])
-#
-# Look for various packages, minimum versions as per rhel7.
-PKG_PROG_PKG_CONFIG
-PKG_CHECK_MODULES([libcurl],[libcurl >= 7.29.0],[have_libcurl=yes],[have_libcurl=no])
-PKG_CHECK_MODULES([jsonc],[json-c >= 0.11],[have_jsonc=yes],[have_jsonc=no])
 #
 # pronounce judgement on ability to build client, overridden by =yes/=no
 if test "x$enable_libdebuginfod" = "xno"; then
@@ -966,6 +1017,8 @@ AS_IF([test "x$with_libarchive" = "xyes" -a "x$have_libarchive" != "xyes"], [
 if test "x$enable_debuginfod" = "xno"; then
    true
 elif test "x$have_jsonc$HAVE_CXX11$have_libarchive$have_sqlite3" = "xyesyesyesyes"; then
+   enable_debuginfod=yes
+elif test "x$have_jsonc$HAVE_CXX20$have_libarchive$have_sqlite3" = "xyesyesyesyes"; then
    enable_debuginfod=yes
 elif test "x$enable_debuginfod" = "xyes"; then
    AC_MSG_ERROR([unable to build debuginfod, missing libmicrohttpd, sqlite3 or libarchive])
@@ -1115,14 +1168,16 @@ AC_MSG_NOTICE([
     libdebuginfod client support       : ${enable_libdebuginfod}
     Debuginfod server support          : ${enable_debuginfod}
     Default DEBUGINFOD_URLS            : ${default_debuginfod_urls}
-    Debuginfod RPM sig checking        : ${enable_debuginfod_ima_verification} 
+    Debuginfod RPM sig checking        : ${enable_debuginfod_ima_verification}
     Default DEBUGINFOD_IMA_CERT_PATH   : ${default_debuginfod_ima_cert_path}
     ${program_prefix}stacktrace support              : ${enable_stacktrace}
+    ${program_prefix}stackprof support               : ${enable_stackprof}
 
   EXTRA TEST FEATURES (used with make check)
     have bunzip2 installed (required)  : ${HAVE_BUNZIP2}
     have zstd installed                : ${HAVE_ZSTD}
     C++11                              : ${HAVE_CXX11}
+    C++20                              : ${HAVE_CXX20}
     debug branch prediction            : ${use_debugpred}
     gprof support                      : ${use_gprof}
     gcov support                       : ${use_gcov}
