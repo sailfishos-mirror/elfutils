@@ -1,6 +1,6 @@
 ## Process this file with automake to create Makefile.in
 ##
-## Copyright (C) 1996-2019 Red Hat, Inc.
+## Copyright (C) 1996-2026 Red Hat, Inc.
 ## This file is part of elfutils.
 ##
 ## This file is free software; you can redistribute it and/or modify
@@ -313,7 +313,7 @@ TESTS += run-debuginfod-ima-verification.sh
 endif
 endif
 
-if HAVE_CXX11
+if HAVE_CXX20
 check_PROGRAMS += funcretval_test++11
 funcretval_test__11_SOURCES = funcretval_test++11.cxx
 TESTS += run-funcretval++11.sh
@@ -322,6 +322,14 @@ endif
 check_PROGRAMS += funcretval_test_struct
 funcretval_test_struct_SOURCES = funcretval_test_struct.c
 TESTS += run-funcretval-struct-native.sh
+
+if ENABLE_STACKPROF
+TESTS += run-stackprof-user.sh run-stackprof-user-gprof.sh
+TESTS += run-stackprof-system.sh run-stackprof-system-gprof.sh
+endif
+if HAVE_LIBPFM
+export HAVE_LIBPFM = 1
+endif
 
 EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     run-ar-N.sh \
@@ -717,6 +725,8 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     testfile-sysroot.tar.bz2 run-sysroot.sh \
 	     run-test-manyfuncs.sh manyfuncs.c \
 	     run-debuginfod-seekable.sh thread-safety-subr.sh \
+	     run-stackprof-user.sh run-stackprof-user-gprof.sh \
+	     run-stackprof-system.sh run-stackprof-system-gprof.sh \
 	     run-eu-search-cfi.sh run-eu-search-macros.sh \
 	     run-eu-search-lines.sh run-eu-search-die.sh
 
