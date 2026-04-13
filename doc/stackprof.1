@@ -19,15 +19,17 @@
 eu-stackprof \- collect a multi-process stack profile
 
 .SH "SYNOPSIS"
-.B eu-stackprof [\fB\-v\fR|\fB\-vv\fR|...] [\fB\-\-gmon\fR] [\fB\-o\fR \fB\fIDEST\fP] [\fB\fIOPTION\fP]...
+.B eu-stackprof \fR[\fB\-v\fR|\fB\-vv\fR|...] [\fB\-\-gmon\fR] [\fB\-o\fR \fB\fIDEST\fR] [\fB\fIOPTION\fR]... [\-\- \fICMD\fR...]
 
 .SH "DESCRIPTION"
 
 \fBeu-stackprof\fR collects stack profile data from Linux perf_events,
 either systemwide across all processes or targeted to a particular
-process and any children forked from it. Results are saved as
-\fBgmon.out\fR files in the \fIgprof\fR\|(1) format, and are intended
-to be useful for statistics collection with profiledb.
+process (existing PID via \fB\-p\fR or newly launched from provided
+command line arguments) and any children forked from it. Superuser
+privileges are required to access the perf_events interface. Results
+are saved as \fBgmon.out\fR files in the \fIgprof\fR\|(1) format, and
+are intended to be useful for statistics collection with profiledb.
 
 .SH "OPTIONS"
 
@@ -42,8 +44,9 @@ List available libpfm events and exit.
 
 .TP
 \fB\-f, \-\-force\fR
-If the output directory for \fB\-\-gmon\fR already contains files,
-overwrite them with the newly collected data.
+If the output directory for \fB\-\-gmon\fR already contains files
+identified by the encountered build-ids, overwrite them with the newly
+collected data.
 
 .TP
 \fB\-g, \-\-gmon\fR
@@ -117,19 +120,24 @@ and libpfm event information.
 
 Profile system-wide; write gmon.out files to current directory:
 .SAMPLE
-eu-stackprof --gmon
+sudo eu-stackprof --gmon
 .ESAMPLE
 
 Profile PID 1211 and children forked from it; log one line per stack
-sample; write gmon.out files to results/, replacing already-existing
-files:
+sample; write gmon.out files to results/, replacing any
+already-existing files with the same build-ids:
 .SAMPLE
-eu-stackprof -vv --gmon -o results/ -p 1211 --force
+sudo eu-stackprof -vv --gmon -o results/ -p 1211 --force
+.ESAMPLE
+
+Likewise, launch \fBvim\fR and profile it:
+.SAMPLE
+sudo eu-stackprof --gmon -o results/ --force -- vim test.txt
 .ESAMPLE
 
 Profile system-wide; log one line per stack frame:
 .SAMPLE
-eu-stackprof -vvv
+sudo eu-stackprof -vvv
 .ESAMPLE
 
 .SH "SEE ALSO"
