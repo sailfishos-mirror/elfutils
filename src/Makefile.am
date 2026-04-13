@@ -32,9 +32,6 @@ bin_PROGRAMS = readelf nm size strip elflint findtextrel addr2line \
 	       elfcmp objdump ranlib strings ar unstrip stack elfcompress \
 	       elfclassify srcfiles
 
-if ENABLE_STACKTRACE
-bin_PROGRAMS += stacktrace
-endif
 if ENABLE_STACKPROF
 bin_PROGRAMS += stackprof
 endif
@@ -124,9 +121,6 @@ strings_LDADD = $(libelf) $(libeu) $(argp_LDADD)
 ar_LDADD = libar.a $(libelf) $(libeu) $(argp_LDADD) $(obstack_LIBS)
 unstrip_LDADD = $(libebl) $(libelf) $(libdw) $(libeu) $(argp_LDADD)
 stack_LDADD = $(libebl) $(libelf) $(libdw) $(libeu) $(argp_LDADD) $(demanglelib)
-if ENABLE_STACKTRACE
-stacktrace_LDADD = $(libebl) $(libelf) $(libdw) $(libeu) $(argp_LDADD)
-endif
 elfcompress_LDADD = $(libebl) $(libelf) $(libdw) $(libeu) $(argp_LDADD)
 elfclassify_LDADD = $(libelf) $(libdw) $(libeu) $(argp_LDADD)
 srcfiles_SOURCES = srcfiles.cxx
