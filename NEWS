@@ -1,3 +1,8 @@
+Version 0.196
+
+stackprof: New, self-contained profiling tool that uses perf_events
+           to record profile data in gmon.out format.
+
 Version 0.195 "Handwritten"
 
 CONTRIBUTING: elfutils has adopted a policy on the use of Large Language
