@@ -115,8 +115,10 @@ scn_dwarf_type (Dwarf *result, size_t shstrndx, Elf_Scn *scn)
 	return TYPE_GNU_LTO;
       else if (strcmp (scnname, ".debug_cu_index") == 0
 	       || strcmp (scnname, ".debug_tu_index") == 0
+	       || strcmp (scnname, ".debug_dwp") == 0
 	       || strcmp (scnname, ".zdebug_cu_index") == 0
-	       || strcmp (scnname, ".zdebug_tu_index") == 0)
+	       || strcmp (scnname, ".zdebug_tu_index") == 0
+	       || strcmp (scnname, ".zdebug_dwp") == 0)
 	return TYPE_DWO;
       else if (startswith (scnname, ".debug_") || startswith (scnname, ".zdebug_"))
 	{
