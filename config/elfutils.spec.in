@@ -14,6 +14,13 @@ Summary: A collection of utilities and DSOs to handle ELF files and DWARF data
 %global enable_stacktrace 0
 %endif
 
+# eu-stackprof currently only supports x86/ARM
+%ifarch %{all_x86} %{arm}
+%global enable_stackprof 1
+%else
+%global enable_stackprof 0
+%endif
+
 Requires: elfutils-libelf = %{version}-%{release}
 Requires: elfutils-libs = %{version}-%{release}
 # Can be a Recommends if rpm supports that
@@ -63,6 +70,11 @@ BuildRequires: rpm-sign
 # For eu-stacktrace
 %if %{enable_stacktrace}
 BuildRequires: sysprof-capture-devel
+%endif
+
+# For eu-stackprof
+%if %{enable_stackprof}
+BuildRequires: libpfm-devel
 %endif
 
 %define _gnu %{nil}
@@ -279,6 +291,9 @@ fi
 %{_bindir}/eu-stack
 %if %{enable_stacktrace}
 %{_bindir}/eu-stacktrace
+%endif
+%if %{enable_stackprof}
+%{_bindir}/eu-stackprof
 %endif
 %{_bindir}/eu-strings
 %{_bindir}/eu-strip

@@ -45,6 +45,7 @@ src/readelf.c
 src/size.c
 src/stack.c
 src/stacktrace.c
+src/stackprof.cxx
 src/strings.c
 src/strip.c
 src/threadlib.c

@@ -35,6 +35,9 @@ bin_PROGRAMS = readelf nm size strip elflint findtextrel addr2line \
 if ENABLE_STACKTRACE
 bin_PROGRAMS += stacktrace
 endif
+if ENABLE_STACKPROF
+bin_PROGRAMS += stackprof
+endif
 
 noinst_LIBRARIES = libar.a
 
@@ -127,7 +130,14 @@ endif
 elfcompress_LDADD = $(libebl) $(libelf) $(libdw) $(libeu) $(argp_LDADD)
 elfclassify_LDADD = $(libelf) $(libdw) $(libeu) $(argp_LDADD)
 srcfiles_SOURCES = srcfiles.cxx
-srcfiles_LDADD = $(libdw) $(libelf) $(libeu)  $(argp_LDADD) $(libarchive_LIBS) $(libdebuginfod)
+srcfiles_LDADD = $(libdw) $(libelf) $(libeu) $(argp_LDADD) $(libarchive_LIBS) $(libdebuginfod)
+if ENABLE_STACKPROF
+stackprof_SOURCES = stackprof.cxx
+# TODO(REVIEW) do we need the CPPFLAGS?
+stackprof_CPPFLAGS = $(AM_CPPFLAGS)
+stackprof_CXXFLAGS = -Wall
+stackprof_LDADD = $(libebl) $(libdw) $(libelf) $(libeu) $(argp_LDADD) $(libpfm_LIBS) $(jsonc_LIBS)
+endif
 
 installcheck-binPROGRAMS: $(bin_PROGRAMS)
 	bad=0; pid=$$$$; list="$(bin_PROGRAMS)"; for p in $$list; do \
