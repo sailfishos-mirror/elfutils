@@ -11,7 +11,7 @@ jobs:
       - name: setup packages
         run: |
           yum upgrade -y
-          yum install -y binutils file tar xz-devel make gcc gcc-g++ coreutils git autoconf automake gettext-devel lsb-release bzip2 zlib-devel bzip2-devel libzstd-devel zstd m4 gettext gawk flex bison pkgconf procps bsdtar curl cpio rpm rpm-devel ima-evm-utils-devel openssl-devel rpm-sign rpm-build iproute socat jq fish sysprof-capture-devel libarchive-devel json-c-devel libmicrohttpd-devel libcurl-devel sqlite-devel valgrind valgrind-devel libubsan systemd
+          yum install -y binutils file tar xz-devel make gcc gcc-g++ coreutils git autoconf automake gettext-devel lsb-release bzip2 zlib-devel bzip2-devel libzstd-devel zstd m4 gettext gawk flex bison pkgconf procps bsdtar curl cpio rpm rpm-devel ima-evm-utils-devel openssl-devel rpm-sign rpm-build iproute socat jq fish libarchive-devel json-c-devel libmicrohttpd-devel libcurl-devel sqlite-devel valgrind valgrind-devel libubsan systemd
 
       - name: checkout git
         run: |
