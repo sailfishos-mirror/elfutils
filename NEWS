@@ -1,6 +1,56 @@
+Version 0.195 "Handwritten"
+
+CONTRIBUTING: elfutils has adopted a policy on the use of Large Language
+              Models (LLMs).  Contributions containing output generated
+              by LLMs are not currently being accepted.
+
 debuginfod: Introduce --home-redirect and --home-html switches allowing
             for redirecting to custom URL and/or serving a custom html
             file, if document root is requested.  Related: PR33635.
+
+            New command line option --max-depth that limits scanner depth.
+
+            Metadata queries now support lookup by build-id.
+
+            New function debuginfod_default_progressfn added to
+            libdebuginfod.
+
+debuginfod-find: Fixed bug where DEBUGINFOD_PROGRESS environment variable
+                 was ignored if debuginfod-find was invoked without -v.
+
+elflint: Recognize .debug_*.dwo sections, .relro_padding sections as well
+         as SHT_AARCH64_ATTRIBUTES, SHT_LLVM_LTO and SHT_LLVM_ADDRSIG.
+
+         Accept R_X86_64_DTPOFF64 in ET_REL files.
+
+         Add lints for PT_LOAD, PT_INTERP and PT_PHDR segments.
+
+libdw: Added language constants for Erlang, Elixir and Gleam.
+
+       Fixed bug that caused sections in DWARF package files (.dwp) to be
+       missed if section .debug_dwp is present.
+
+libdwfl: Improved handling of Linux kernel object files with sh_addr
+         fields set to non-zero.
+
+libdwfl_stacktrace: AArch64 and 32-bit ARM support added.  The
+                    libdwfl_stacktrace library interface is experimental
+                    and may be subject to API/ABI changes.
+
+libelf: New man pages for gelf.h functions.
+
+        Fixed gelf_getmove and gelf_update_move assertion failures caused
+        by incorrect ELFCLASS32/ELFCLASS64 handling.
+
+        elf_update now correctly handles binaries with 65280+ sections
+        when section zero headers aren't loaded.
+
+readelf: Improved support for DWARF Package Files (.dwp) sections.
+
+         Improved output format for .gcc_except_table.
+
+stacktrace: This experimental tool is scheduled to be removed in the next
+            release and replaced with the upcoming eu-stackprof tool.
 
 Version 0.194 "Manual Labour"
 
