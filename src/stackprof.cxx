@@ -69,7 +69,7 @@
 #include "../libebl/libebl.h"
 #include "../libdwfl_stacktrace/libdwfl_stacktrace.h"
 
-using namespace std; // so we don't have to std:: prefix everything in here
+using namespace std;
 
 ////////////////////////////////////////////////////////////////////////
 // find_debuginfo callbacks
@@ -79,11 +79,11 @@ using namespace std; // so we don't have to std:: prefix everything in here
 static char *debuginfo_path = NULL;
 
 static const Dwfl_Callbacks dwfl_cfi_callbacks =
-  {
-    .find_elf = dwflst_tracker_linux_proc_find_elf,
-    .find_debuginfo = dwfl_standard_find_debuginfo,
-    .debuginfo_path = &debuginfo_path,
-  };
+{
+  .find_elf = dwflst_tracker_linux_proc_find_elf,
+  .find_debuginfo = dwfl_standard_find_debuginfo,
+  .debuginfo_path = &debuginfo_path,
+};
 
 #else
 
@@ -176,9 +176,8 @@ struct UnwindStatsTable
 
 class PerfConsumer;
 
-// A PerfReader creates perf_events file descriptors, monitors the
-// mmap'd ring buffers for events, and dispatches decoded forms to a
-// PerfConsumer.
+// A PerfReader creates perf_events fds, monitors for events,
+// and dispatches decoded forms to a PerfConsumer.
 class PerfReader
 {
 private:
@@ -187,8 +186,8 @@ private:
   vector<perf_event_mmap_page *> perf_headers;
   vector<pollfd> pollfds;
 
-  PerfConsumer* consumer; // pluralize!
-  Ebl* default_ebl;
+  PerfConsumer *consumer; // XXX: pluralize
+  Ebl *default_ebl;
   uint64_t sample_regs_user;
   int sample_regs_count;
   bool enabled;
@@ -200,9 +199,8 @@ private:
   void decode_event(const perf_event_header* ehdr);
 
 public:
-  // PerfReader(perf_event_attr* attr, int pid, PerfConsumer* consumer); // attach to process hierarchy; may modify *attr
-  PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid=-1);          // systemwide; may modify *attr
-
+  // PerfReader(perf_event_attr* attr, int pid, PerfConsumer* consumer); // TODO attach to process hierarchy; may modify *attr
+  PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid=-1); // TODO systemwide; may modify *attr
   ~PerfReader();
 
   void process_some(); // run briefly, relay decoded perf_events to consumer
@@ -247,40 +245,38 @@ public:
 			     const char *filename) {}
 };
 
-// A StatsPerfConsumer is a toy concrete object that accepts decoded
-// perf events and logs and records basic stats about them.
+// A StatsPerfConsumer collects basic stats about perf event records.
 class StatsPerfConsumer: public PerfConsumer
 {
   unordered_map<int,unsigned> event_type_counts;
 
 public:
   StatsPerfConsumer() {}
-  ~StatsPerfConsumer(); // report to stdout
+  ~StatsPerfConsumer(); // report to clog
   void process_comm(const perf_event_header* sample,
 		    uint32_t pid, uint32_t tid, bool exec, const string& comm);
   void process_exit(const perf_event_header* sample,
-			    uint32_t pid, uint32_t ppid,
+		    uint32_t pid, uint32_t ppid,
 		    uint32_t tid, uint32_t ptid);
   void process_fork(const perf_event_header* sample,
-			    uint32_t pid, uint32_t ppid,
+		    uint32_t pid, uint32_t ppid,
 		    uint32_t tid, uint32_t ptid);
   void process_sample(const perf_event_header* sample,
-			      uint64_t ip,
-			      uint32_t pid, uint32_t tid,
-			      uint64_t time,
-			      uint64_t abi,
-			      uint32_t nregs, const uint64_t *regs,
+		      uint64_t ip,
+		      uint32_t pid, uint32_t tid,
+		      uint64_t time,
+		      uint64_t abi,
+		      uint32_t nregs, const uint64_t *regs,
 		      uint64_t data_size, const uint8_t *data);
   void process_mmap2(const perf_event_header* sample,
-			     uint32_t pid, uint32_t tid,
-			     uint64_t addr, uint64_t len, uint64_t pgoff,
-			     uint8_t build_id_size, const uint8_t *build_id,
+		     uint32_t pid, uint32_t tid,
+		     uint64_t addr, uint64_t len, uint64_t pgoff,
+		     uint8_t build_id_size, const uint8_t *build_id,
 		     const char *filename);
   void process(const perf_event_header* sample);
 };
 
-// An UnwindSample records an unwound call stack from a perf-event
-// sample.
+// An UnwindSample records an unwound call stack from a perf sample.
 struct UnwindSample
 {
   const perf_event_header *event;
@@ -295,9 +291,8 @@ struct UnwindSample
 
 class UnwindSampleConsumer;
 
-// A PerfConsumerUnwinder accepts decoded perf events, and produces
-// UnwindSample objects from them for relaying to an
-// UnwindSampleConsumer.
+// A PerfConsumerUnwinder accepts decoded perf events, and relays
+// UnwindSample objects to an UnwindSampleConsumer.
 class PerfConsumerUnwinder: public PerfConsumer
 {
   UnwindSampleConsumer *consumer;
@@ -354,8 +349,7 @@ public:
   virtual int maxframes() = 0;
 };
 
-
-// An UnwindStatsConsumer is a toy that just collects statistics about
+// An UnwindStatsConsumer collects basic stats about
 // a received stream of UnwindSamples.
 class UnwindStatsConsumer: public UnwindSampleConsumer
 {
@@ -368,8 +362,7 @@ public:
   int maxframes();
 };
 
-
-// An GprofUnwindSampleConsumer instance consumes UnwindSamples and tabulates
+// A GprofUnwindSampleConsumer instance consumes UnwindSamples and tabulates
 // them by buildid, for eventual writing out into gmon.out format files.
 class GprofUnwindSampleConsumer: public UnwindSampleConsumer
 {
@@ -380,7 +373,7 @@ class GprofUnwindSampleConsumer: public UnwindSampleConsumer
 
 public:
   GprofUnwindSampleConsumer(UnwindStatsTable *usc) : stats(usc) {}
-  ~GprofUnwindSampleConsumer(); // write out all the gmon.$BUILDID.out files
+  ~GprofUnwindSampleConsumer(); // writes out all the gmon.$BUILDID.out files
   void record_gmon_out(const string& buildid, UnwindModuleStats& m); // write out one gmon.$BUILDID.out file
   void process(const UnwindSample* sample); // accumulate hits / callgraph edges (need maxdepth=1 only)
   int maxframes();
@@ -393,24 +386,21 @@ public:
 ////////////////////////////////////////////////////////////////////////
 // command line parsing and main()
 
-/* Name and version of program.  */
+/* Name, version, and bug report address.  */
 ARGP_PROGRAM_VERSION_HOOK_DEF = print_version;
-
-/* Bug report address.  */
 ARGP_PROGRAM_BUG_ADDRESS_DEF = PACKAGE_BUGREPORT;
 
 #define HIST_SPLIT_OPTS "none/even/flex"
 
-/* Definitions of arguments for argp functions.  */
 static const struct argp_option options[] =
 {
   { NULL, 0, NULL, OPTION_DOC, N_("Output options:"), 1 },
-  { "verbose", 'v', NULL, 0, N_ ("Increase verbosity of logging messages (modules/samples/frames/more)."), 0 },
+  { "verbose", 'v', NULL, 0, N_("Increase verbosity of logging messages (modules/samples/frames/more)."), 0 },
   /* TODO: Add "quiet" option suppressing summary table. */
   { "gmon", 'g', NULL, 0, N_("Generate gmon.BUILDID.out files for each binary."), 0 },
-  { "hist-split",'G', HIST_SPLIT_OPTS, 0, N_("Histogram splitting method for gmon, default 'even'."), 0 },
-  { "maxframes", 'n', "MAXFRAMES", 0, N_("Maximum number of frames to unwind, default 1 with --gmon, 256 otherwise."), 0 }, /* TODO */
-  { "output", 'o', "DIR", 0, N_("Output directory for gmon files."), 0 },
+  { "hist-split", 'G', HIST_SPLIT_OPTS, 0, N_("Histogram splitting method for gmon, default 'even'."), 0 },
+  { "maxframes", 'n', "MAXFRAMES", 0, N_("Maximum number of frames to unwind, default 1 with --gmon, 256 otherwise."), 0 },
+  { "output", 'o', "DIR", 0, N_("Output directory for gmon.BUILDID.out files."), 0 },
   { "force", 'f', NULL, 0, N_("Unlink output files to force writing as new."), 0 },
   { "pid", 'p', "PID", 0, N_("Profile given PID, and its future children."), 0 },
 #ifdef HAVE_PERFMON_PFMLIB_PERF_EVENT_H
@@ -435,7 +425,7 @@ enum hist_split_method {
   HIST_SPLIT_FLEX = 2, /* variable-size histograms */
 };
 
-// Globals set based on command line options:
+// Globals for command line options:
 static unsigned verbose;
 static bool gmon;
 static hist_split_method gmon_hist_split = HIST_SPLIT_EVEN;
@@ -446,7 +436,7 @@ static int opt_maxframes = -1; // set to >= 0 to override default maxframes in c
 static string libpfm_event;
 static string libpfm_event_decoded;
 static perf_event_attr attr;
-static bool branch_record = false; // using accurate branch recording for call-graph arcs rather than backtrace heuristics
+static bool branch_record = false; // use accurate branch recording for call-graph arcs rather than backtrace heuristics
 
 // Verbosity categories:
 static bool show_summary = true; /* XXX could suppress with --quiet */
@@ -459,8 +449,6 @@ static bool show_tmi = false; /* -> perf, cfi details */
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
-  (void)state;
-
   switch (key)
     {
     case ARGP_KEY_INIT:
@@ -475,7 +463,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
 
     case 'G':
-      gmon = true; /* Automatically enable gmon mode if they set a gmon option. */
+      gmon = true; // Automatically enable gmon mode since a gmon-related option was set.
       if (std::string_view(arg) == "none")
 	gmon_hist_split = HIST_SPLIT_NONE;
       else if (std::string_view(arg) == "even")
@@ -519,7 +507,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 	pfm_err_t rc = pfm_initialize();
 	if (rc != PFM_SUCCESS)
 	  {
-	    cerr << format("ERROR: pfm_initialized failed: {}\n", pfm_strerror(rc));
+	    cerr << format("ERROR: pfm_initialize failed: {}\n", pfm_strerror(rc));
 	    exit(1);
 	  }
 
@@ -528,9 +516,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
 	pinfo.size = sizeof(pinfo);
 	info.size = sizeof(info);
 
-	for(int j= PFM_PMU_NONE ; j< PFM_PMU_MAX; j++)
+	for (int j = PFM_PMU_NONE; j < PFM_PMU_MAX; j++)
 	  {
-	    pfm_err_t ret = pfm_get_pmu_info((pfm_pmu_t) j, &pinfo);
+	    pfm_err_t ret = pfm_get_pmu_info((pfm_pmu_t)j, &pinfo);
 	    if (ret != PFM_SUCCESS)
 	      continue;
 	    if (! pinfo.is_present)
@@ -554,18 +542,17 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
 sig_atomic_t interrupted;
 
-void sigint_handler(int sig)
+void sigint_handler (int sig)
 {
   interrupted ++;
   if (interrupted > 1)
-    _exit(1);
+    exit(1);
 }
 
-int
-main (int argc, char *argv[])
+int main (int argc, char *argv[])
 {
   int remaining;
-  int pipefd[2] = {-1, -1}; // for CMD child process post-fork sync
+  int pipefd[2] = {-1, -1}; // for post-fork sync with CMD child process
   bool has_cmd = false;
   (void) argp_parse (&argp, argc, argv, 0, &remaining, NULL);
 
@@ -596,11 +583,11 @@ main (int argc, char *argv[])
 	  pfm_err_t rc = pfm_initialize();
 	  if (rc != PFM_SUCCESS)
 	    {
-	      cerr << format("ERROR: pfm_initialized failed: {}\n", pfm_strerror(rc));
+	      cerr << format("ERROR: pfm_initialize failed: {}\n", pfm_strerror(rc));
 	      exit(1);
 	    }
-	  char* fstr = nullptr;
-	  pfm_perf_encode_arg_t arg = { .attr = &attr, .fstr=&fstr, .size = sizeof(arg) };
+	  char *fstr = nullptr;
+	  pfm_perf_encode_arg_t arg = { .attr = &attr, .fstr = &fstr, .size = sizeof(arg) };
 	  rc = pfm_get_os_event_encoding(libpfm_event.c_str(),
 					 PFM_PLM3, /* userspace, whether systemwide or not */
 					 PFM_OS_PERF_EVENT_EXT, &arg);
@@ -632,16 +619,16 @@ main (int argc, char *argv[])
       if (show_summary)
 	{
 	  clog << format("perf_event_attr configuration type={:x} config={:x} {}{}\n",
-			      attr.type, attr.config,
-			      (attr.freq ? "sample_freq=" : "sample_period="),
-			      (attr.freq ? attr.sample_freq : attr.sample_period));
+			 attr.type, attr.config,
+			 (attr.freq ? "sample_freq=" : "sample_period="),
+			 (attr.freq ? attr.sample_freq : attr.sample_period));
 	  clog << endl;
 	}
 
       if (remaining < argc) // got a CMD... suffix?  ok start it
 	{
 	  has_cmd = true;
-	  int rc = pipe (pipefd); // will use pipefd[] >= 0 as flag for synchronization just below
+	  int rc = pipe(pipefd);
 	  if (rc < 0)
 	    {
 	      cerr << format("ERROR: pipe failed: {}\n", strerror(errno));
@@ -651,23 +638,23 @@ main (int argc, char *argv[])
 	  pid = fork();
 	  if (pid == 0) // in child
 	    {
-	      close (pipefd[1]); // close write end
+	      close(pipefd[1]); // close write end
 	      char dummy;
-	      int rc = read (pipefd[0], &dummy, 1); // block until parent is ready
+	      int rc = read(pipefd[0], &dummy, 1); // block until parent is ready
 	      if (rc != 1)
 		{
 		  cerr << format("ERROR: child sync read failed: {}\n", strerror(errno));
 		  exit(1);
 		}
-	      close (pipefd[0]);
-	      execvp (argv[remaining], & argv[remaining] /* not +1: child argv[0] included! */ );
-	      // notreached unless error
+	      close(pipefd[0]);
+	      execvp(argv[remaining], &argv[remaining] /* including child argv[0] */);
+	      // fallthrough
 	      cerr << format("ERROR: execvp failed: {}\n", strerror(errno));
 	      exit(1);
 	    }
 	  else if (pid > 0) // in parent
 	    {
-	      close (pipefd[0]); // close read end
+	      close(pipefd[0]); // close read end
 	      // will write to pipefd[1] after perfreader sicced at child
 	    }
 	  else // error
@@ -677,7 +664,7 @@ main (int argc, char *argv[])
 	    }
 	}
 
-      // Create the perf processing pipeline as per command line options
+      // Create the perf processing pipeline:
       PerfReader *pr = nullptr;
       UnwindStatsTable *tab = nullptr;
       UnwindSampleConsumer *usc = nullptr;
@@ -693,11 +680,13 @@ main (int argc, char *argv[])
 	}
       else
 	{
+#if 1
 	  tab = new UnwindStatsTable();
 	  usc = new UnwindStatsConsumer(tab);
-	  pcu = new PerfConsumerUnwinder (usc, tab);
+	  pcu = new PerfConsumerUnwinder(usc, tab);
 	  pr = new PerfReader(&attr, pcu, pid);
-#if 0
+#else
+	  /* early debug mode */
 	  spc = new StatsPerfConsumer();
 	  pr = new PerfReader(&attr, spc, pid);
 #endif
@@ -709,16 +698,16 @@ main (int argc, char *argv[])
       if (pid > 0 && has_cmd) // need to release child CMD process?
 	{
 	  int rc = write(pipefd[1], "x", 1); // unblock child
-	  assert (rc == 1);
+	  assert (rc == 1); // XXX
 	  close(pipefd[1]);
 	}
 
-      if (show_summary)
+      if (show_summary) // TODO: move before child CMD release
 	{
 	  clog << "Starting stack profile collection ";
 	  if (pid) clog << format("pid {}", pid);
 	  else clog << "systemwide";
-	  clog << "\n";
+	  clog << "\n"; // TODO: replace with endl throughout?
 	}
 
       while (true) // main loop
@@ -734,7 +723,6 @@ main (int argc, char *argv[])
       delete pcu;
       delete spc;
       delete tab;
-
       // reporting done in various destructors
     }
   catch (const exception& e)
@@ -753,8 +741,8 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
 {
   this->page_size = getpagesize();
   this->page_count = 64; /* XXX May want to verify if this is a large-enough power-of-2.  */
-  this->mmap_size = this->page_size * (this->page_count + 1); // total mmap size, incl header page
-  this->event_wraparound_temp.resize(this->mmap_size); // NB: never resize this object again!
+  this->mmap_size = this->page_size * (this->page_count + 1); // total mmap size, including header page
+  this->event_wraparound_temp.resize(this->mmap_size); // NB: never resize again!
   this->consumer = consumer;
   this->consumer->set_reader(this);
   this->enabled = false;
@@ -770,6 +758,7 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
     cerr << format("ERROR: Unsupported architecture: {}\n", u.machine);
     exit(1);
   }
+  // TODO: replace above with libdwflst api
   this->default_ebl = ebl_openbackend_machine(em);
   this->sample_regs_user = ebl_perf_frame_regs_mask (this->default_ebl);
   this->sample_regs_count = bitset<64>(this->sample_regs_user).count();
@@ -796,30 +785,28 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
   if (pid > 0) // actually only once, to allow break in case of error
     attr->inherit = 1; // propagate to child processes
 
-
   if (show_tmi)
-    { // hexdump attr
+    {
       clog << "perf_event_attr hexdump: ";
-      auto bytes = (unsigned char*) attr;
-      for (size_t x = 0; x<sizeof(*attr); x++)
+      auto bytes = (unsigned char *)attr;
+      for (size_t x = 0; x < sizeof(*attr); x++)
 	clog << ((x % 8) ? "" : " ")
 	     << ((x % 32) ? "" : "\n")
 	     << format("{:02x}", (unsigned)bytes[x]);
       clog << "\n";
     }
 
-  // Iterate over all cpus, even if attaching to a single pid, because
-  // we set ->inherit=1.  That requires possible concurrency, which is
-  // enabled by per-cpu ring buffers.
+  // Iterate over all cpus to handle possible concurrency, even if
+  // attaching to a single pid, because we set ->inherit=1.
   int ncpus = sysconf(_SC_NPROCESSORS_CONF);
-  for (int cpu=0; cpu<ncpus; cpu++)
+  for (int cpu = 0; cpu < ncpus; cpu++)
     {
       int fd = syscall(__NR_perf_event_open, attr,
 		       (pid > 0 ? pid : -1), cpu, -1,
 		       PERF_FLAG_FD_CLOEXEC);
       if (fd < 0)
 	{
-	  cerr << format("WARNING: unable to open perf event for cpu {}: {}\n", cpu, strerror(errno));
+	  cerr << format("WARNING: unable to open perf fd for cpu {}: {}\n", cpu, strerror(errno));
 	  continue;
 	}
       void *buf = mmap(NULL, this->mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -830,13 +817,13 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
 	  continue;
 	}
       this->perf_fds.push_back(fd);
-      this->perf_headers.push_back((perf_event_mmap_page*) buf);
-      struct pollfd pfd = {.fd = fd, .events=POLLIN};
+      this->perf_headers.push_back((perf_event_mmap_page *)buf);
+      struct pollfd pfd = { .fd = fd, .events = POLLIN };
       this->pollfds.push_back(pfd);
     }
 
   if (this->perf_fds.size() == 0)
-    throw runtime_error("ERROR: no perf events opened");
+    throw runtime_error("ERROR: no perf fds opened");
 }
 
 PerfReader::~PerfReader()
@@ -844,7 +831,7 @@ PerfReader::~PerfReader()
   for (auto fd : this->perf_fds)
     close(fd);
   for (auto m : this->perf_headers)
-    munmap((void*) m, this->mmap_size);
+    munmap((void *)m, this->mmap_size);
   ebl_closebackend (this->default_ebl);
 }
 
@@ -869,9 +856,10 @@ ring_buffer_write_tail(volatile struct perf_event_mmap_page *base,
   base->data_tail = tail;
 }
 
+// TODO: diagnostics to see how well the buffer processing keeps from overflow
 void PerfReader::process_some()
 {
-  if (! this->enabled)
+  if (!this->enabled)
     {
       for (auto fd : this->perf_fds)
 	ioctl(fd, PERF_EVENT_IOC_ENABLE, 0 /* value ignored */);
@@ -879,10 +867,10 @@ void PerfReader::process_some()
     }
 
   uint64_t starttime = millis_monotonic();
-  uint64_t endtime = starttime + 1000; // run at most one second
+  uint64_t endtime = starttime + 1000; // run at most for one second
   uint64_t ring_buffer_size = this->page_size * this->page_count; // just the ring buffer size
 
-  while (! interrupted)
+  while (!interrupted)
     {
       uint64_t now = millis_monotonic();
       if (endtime < now)
@@ -897,28 +885,28 @@ void PerfReader::process_some()
 	    perf_event_mmap_page *header = perf_headers[i];
 	    uint64_t data_head = ring_buffer_read_head(header);
 	    uint64_t data_tail = header->data_tail;
-	    uint8_t *base = ((uint8_t *) header) + this->page_size;
+	    uint8_t *base = ((uint8_t *)header) + this->page_size;
 	    struct perf_event_header *ehdr;
 	    size_t ehdr_size;
 
 	    while (data_head != data_tail) // consume all packets in ring buffer XXX why?
 	      {
-		ehdr = (perf_event_header*) (base + (data_tail & (ring_buffer_size - 1)));
+		ehdr = (perf_event_header *) (base + (data_tail & (ring_buffer_size - 1)));
 		ehdr_size = ehdr->size;
 		if (show_tmi)
 		  clog << format("perf head={:p} tail={:p} ehdr={:p} size={:d}{:x}\n",
-				      (void*) data_head, (void*) data_tail, (void*) ehdr, ehdr_size, 0);
+				 (void *)data_head, (void *)data_tail, (void *)ehdr, ehdr_size, 0);
 
 		if (((uint8_t *)ehdr) + ehdr_size > base + ring_buffer_size) // mmap region wraparound?
 		  {
 		    // need to copy it to a contiguous temporary
-		    uint8_t *copy_start = (uint8_t*) ehdr;
+		    uint8_t *copy_start = (uint8_t *)ehdr;
 		    size_t len_first = base + ring_buffer_size - copy_start;
 		    size_t len_secnd = ehdr_size - len_first;
 		    uint8_t *event_temp = this->event_wraparound_temp.data();
 		    memcpy(event_temp, copy_start, len_first);       // part at end of mmap'd region
 		    memcpy(event_temp + len_first, base, len_secnd); // part at beginning of mmap'd region
-		    ehdr = (perf_event_header*) event_temp;
+		    ehdr = (perf_event_header *)event_temp;
 		  }
 
 		this->decode_event(ehdr);
@@ -934,77 +922,77 @@ void PerfReader::decode_event(const perf_event_header* ehdr)
 {
   consumer->process(ehdr); // allow general processing
 
-  // and decode into individual event types
+  // ... and decode into individual event types
   switch (ehdr->type)
     {
     case PERF_RECORD_SAMPLE:
       {
-	const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
-	uint64_t ip = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
-	uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-	uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-	uint64_t time = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+	const uint8_t *data = reinterpret_cast<const uint8_t *>(ehdr) + sizeof(perf_event_header);
+	uint64_t ip = *reinterpret_cast<const uint64_t *>(data); data += sizeof(uint64_t);
+	uint32_t pid = *reinterpret_cast<const uint32_t *>(data); data += sizeof(uint32_t);
+	uint32_t tid = *reinterpret_cast<const uint32_t *>(data); data += sizeof(uint32_t);
+	uint64_t time = *reinterpret_cast<const uint64_t *>(data); data += sizeof(uint64_t);
 	// PERF_SAMPLE_CALLCHAIN would be here if requested
-	uint64_t abi = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+	uint64_t abi = *reinterpret_cast<const uint64_t *>(data); data += sizeof(uint64_t);
 	uint32_t nregs = this->sample_regs_count;
-	const uint64_t* regs = reinterpret_cast<const uint64_t*>(data); data += nregs * sizeof(uint64_t);
-	uint64_t data_size = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
-	const uint8_t* stack_data = data;
+	const uint64_t *regs = reinterpret_cast<const uint64_t *>(data); data += nregs * sizeof(uint64_t);
+	uint64_t data_size = *reinterpret_cast<const uint64_t *>(data); data += sizeof(uint64_t);
+	const uint8_t *stack_data = data;
 	consumer->process_sample(ehdr, ip, pid, tid, time, abi, nregs, regs, data_size, stack_data);
 	break;
       }
     case PERF_RECORD_COMM:
       {
-	const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
-	uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-	uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-	const char* comm = reinterpret_cast<const char*>(data);
-	consumer->process_comm(ehdr, pid, tid, (ehdr->misc & PERF_RECORD_MISC_COMM_EXEC), comm);
+	const uint8_t *data = reinterpret_cast<const uint8_t *>(ehdr) + sizeof(perf_event_header);
+	uint32_t pid = *reinterpret_cast<const uint32_t *>(data); data += sizeof(uint32_t);
+	uint32_t tid = *reinterpret_cast<const uint32_t *>(data); data += sizeof(uint32_t);
+	const char *comm = reinterpret_cast<const char *>(data);
+	consumer->process_comm(ehdr, pid, tid, (ehdr->misc & PERF_RECORD_MISC_COMM_EXEC)/* XXX why? */, comm);
 	break;
       }
     case PERF_RECORD_EXIT:
       {
-	const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
-	uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-	uint32_t ppid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-	uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-	uint32_t ptid = *reinterpret_cast<const uint32_t*>(data);
+	const uint8_t *data = reinterpret_cast<const uint8_t *>(ehdr) + sizeof(perf_event_header);
+	uint32_t pid = *reinterpret_cast<const uint32_t *>(data); data += sizeof(uint32_t);
+	uint32_t ppid = *reinterpret_cast<const uint32_t *>(data); data += sizeof(uint32_t);
+	uint32_t tid = *reinterpret_cast<const uint32_t *>(data); data += sizeof(uint32_t);
+	uint32_t ptid = *reinterpret_cast<const uint32_t *>(data);
 	consumer->process_exit(ehdr, pid, ppid, tid, ptid);
 	break;
       }
     case PERF_RECORD_FORK:
       {
-	const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
-	uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-	uint32_t ppid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-	uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-	uint32_t ptid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
+	const uint8_t *data = reinterpret_cast<const uint8_t *>(ehdr) + sizeof(perf_event_header);
+	uint32_t pid = *reinterpret_cast<const uint32_t *>(data); data += sizeof(uint32_t);
+	uint32_t ppid = *reinterpret_cast<const uint32_t *>(data); data += sizeof(uint32_t);
+	uint32_t tid = *reinterpret_cast<const uint32_t *>(data); data += sizeof(uint32_t);
+	uint32_t ptid = *reinterpret_cast<const uint32_t *>(data);
 	consumer->process_fork(ehdr, pid, ppid, tid, ptid);
 	break;
       }
     case PERF_RECORD_MMAP2:
       {
-	const uint8_t* data = reinterpret_cast<const uint8_t*>(ehdr) + sizeof(perf_event_header);
-	uint32_t pid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-	uint32_t tid = *reinterpret_cast<const uint32_t*>(data); data += sizeof(uint32_t);
-	uint64_t addr = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
-	uint64_t len = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
-	uint64_t pgoff = *reinterpret_cast<const uint64_t*>(data); data += sizeof(uint64_t);
+	const uint8_t *data = reinterpret_cast<const uint8_t *>(ehdr) + sizeof(perf_event_header);
+	uint32_t pid = *reinterpret_cast<const uint32_t *>(data); data += sizeof(uint32_t);
+	uint32_t tid = *reinterpret_cast<const uint32_t *>(data); data += sizeof(uint32_t);
+	uint64_t addr = *reinterpret_cast<const uint64_t *>(data); data += sizeof(uint64_t);
+	uint64_t len = *reinterpret_cast<const uint64_t *>(data); data += sizeof(uint64_t);
+	uint64_t pgoff = *reinterpret_cast<const uint64_t *>(data); data += sizeof(uint64_t);
 	uint8_t build_id_size = 0;
-	const uint8_t* build_id = nullptr;
+	const uint8_t *build_id = nullptr;
 	if (ehdr->misc & PERF_RECORD_MISC_MMAP_BUILD_ID)
 	  {
-	    build_id_size = *reinterpret_cast<const uint8_t*>(data); data += sizeof(uint8_t);
+	    build_id_size = *reinterpret_cast<const uint8_t *>(data); data += sizeof(uint8_t);
 	    data += sizeof(uint8_t) + sizeof(uint16_t); // skip padding
-	    build_id = reinterpret_cast<const uint8_t*>(data);
+	    build_id = reinterpret_cast<const uint8_t *>(data);
 	    data += build_id_size;
 	  }
 	else
 	  {
-	    data += 4 + 4 + 8 + 8; // maj, min, ino, ino_generation
+	    data += 4 + 4 + 8 + 8; // skip maj, min, ino, ino_generation
 	  }
-	data += sizeof(uint32_t) + sizeof(uint32_t); // prot, flags
-	const char* filename = reinterpret_cast<const char*>(data);
+	data += 2 * sizeof(uint32_t); // skip prot, flags
+	const char *filename = reinterpret_cast<const char *>(data);
 	consumer->process_mmap2(ehdr, pid, tid, addr, len, pgoff, build_id_size, build_id, filename);
 	break;
       }
@@ -1057,7 +1045,7 @@ void StatsPerfConsumer::process_sample(const perf_event_header *sample,
   if (show_samples)
     {
       clog << format("process_sample: pid={:d} tid={:d} ip={:x} time={:d} abi={:d} nregs={:d} data_size={:d}\n",
-			  pid, tid, ip, time, abi, nregs, data_size);
+		     pid, tid, ip, time, abi, nregs, data_size);
     }
 }
 
@@ -1070,7 +1058,7 @@ void StatsPerfConsumer::process_mmap2(const perf_event_header *sample,
   if (show_modules)
     {
       clog << format("process_mmap2: pid={:d} tid={:d} addr={:x} len={:x} pgoff={:x} build_id_size={:d} filename={:s}\n",
-			  pid, tid, addr, len, pgoff, (unsigned)build_id_size, filename);
+		     pid, tid, addr, len, pgoff, (unsigned)build_id_size, filename);
     }
 }
 
@@ -1078,6 +1066,7 @@ StatsPerfConsumer::~StatsPerfConsumer()
 {
   for (const auto& kv : this->event_type_counts)
     {
+      // TODO: Decode event type.
       clog << format("event type {} count {}\n", kv.first, kv.second);
     }
 }
@@ -1088,7 +1077,7 @@ void StatsPerfConsumer::process(const perf_event_header* ehdr)
 }
 
 
-//////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
 // unwind stats table for PerfConsumerUnwinder + downstream consumers
 
 UnwindDwflStats *UnwindStatsTable::pid_find_or_create (pid_t pid)
@@ -1165,45 +1154,49 @@ void UnwindStatsTable::print_summary () const
       pid_t pid = p.first;
       const UnwindDwflStats& d = p.second;
       clog << format(N_("{} {} -- max {} frames, received {} samples, lost {} samples ({:.1f}%) (last {}, worst {})\n"),
-	       pid, d.comm, d.max_frames,
-	       d.total_samples, d.lost_samples,
-	       PERCENT(d.lost_samples, d.total_samples),
-	       dwfl_unwound_source_str(d.last_unwound),
-	       dwfl_unwound_source_str(d.worst_unwound));
+		     pid, d.comm, d.max_frames,
+		     d.total_samples, d.lost_samples,
+		     PERCENT(d.lost_samples, d.total_samples),
+		     dwfl_unwound_source_str(d.last_unwound),
+		     dwfl_unwound_source_str(d.worst_unwound));
       total_samples += d.total_samples;
       total_lost_samples += d.lost_samples;
     }
   clog << "===\n";
   clog << format(N_("TOTAL -- received {} samples, lost {} samples, loaded {} processes\n"),
-	  total_samples, total_lost_samples,
-	  this->dwfl_tab.size() /* TODO: If implementing eviction, need to maintain a separate count of evicted pids. */);
+		 total_samples, total_lost_samples,
+		 this->dwfl_tab.size() /* TODO: If implementing eviction, need to maintain a separate count of evicted pids. */);
   clog << "\n";
 #undef PERCENT
 }
 
+
 ////////////////////////////////////////////////////////////////////////
 // real perf consumer: unwind helpers
 
-PerfConsumerUnwinder::PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust)
-    : consumer(usc), stats(ust) {
+PerfConsumerUnwinder::PerfConsumerUnwinder(UnwindSampleConsumer *usc, UnwindStatsTable *ust)
+  : consumer(usc), stats(ust)
+{
   maxframes = usc->maxframes();
-  this->tracker = dwflst_tracker_begin (&dwfl_cfi_callbacks);
+  this->tracker = dwflst_tracker_begin(&dwfl_cfi_callbacks);
 }
 
-PerfConsumerUnwinder::PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust, PerfReader *reader)
-  : consumer(usc), stats(ust) {
+PerfConsumerUnwinder::PerfConsumerUnwinder(UnwindSampleConsumer *usc, UnwindStatsTable *ust, PerfReader *reader)
+  : consumer(usc), stats(ust)
+{
   maxframes = usc->maxframes();
   this->reader = reader;
-  this->tracker = dwflst_tracker_begin (&dwfl_cfi_callbacks);
+  this->tracker = dwflst_tracker_begin(&dwfl_cfi_callbacks);
 }
 
-PerfConsumerUnwinder::~PerfConsumerUnwinder() {
-  dwflst_tracker_end (this->tracker);
+PerfConsumerUnwinder::~PerfConsumerUnwinder()
+{
+  dwflst_tracker_end(this->tracker);
 }
 
 /* TODO: Could be relocated to libdwfl/linux-pid-attach.c
-   to remove some duplication of existing linux-pid-attach code. */
-int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
+   to remove some duplication of existing linux-pid-attach code.  */
+int PerfConsumerUnwinder::find_procfile(Dwfl *dwfl, pid_t *pid, Elf **elf, int *elf_fd)
 {
   int err = 0; /* The errno to return. XXX libdwfl would also set this for dwfl->attacherr.  */
 
@@ -1241,11 +1234,11 @@ int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int 
 
   {
     string name = format("/proc/{}/task", *pid);
-    DIR *dir = opendir (name.c_str());
+    DIR *dir = opendir(name.c_str());
     if (dir == NULL)
       {
-        err = errno;
-        goto fail;
+	err = errno;
+	goto fail;
       }
     else
       closedir(dir);
@@ -1253,19 +1246,20 @@ int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int 
 
   {
     string name = format("/proc/{}/exe", *pid);
-    *elf_fd = open (name.c_str(), O_RDONLY);
+    *elf_fd = open(name.c_str(), O_RDONLY);
   }
+
   if (*elf_fd >= 0)
     {
-      *elf = elf_begin (*elf_fd, ELF_C_READ_MMAP, NULL);
+      *elf = elf_begin(*elf_fd, ELF_C_READ_MMAP, NULL);
       if (*elf == NULL)
 	{
 	  /* Just ignore, dwfl_attach_state will fall back to trying
 	     to associate the Dwfl with one of the existing Dwfl_Module
 	     ELF images (to know the machine/class backend to use).  */
 	  if (verbose)
-	    cerr << format(N_("WARNING: find_procfile pid {}: elf not found\n"), (long long)*pid);
-	  close (*elf_fd);
+	    cerr << format(N_("WARNING: find_procfile pid {}: elf not found\n"), (long long) *pid);
+	  close(*elf_fd);
 	  *elf_fd = -1;
 	}
     }
@@ -1276,16 +1270,16 @@ int PerfConsumerUnwinder::find_procfile (Dwfl *dwfl, pid_t *pid, Elf **elf, int 
 
 Dwfl *PerfConsumerUnwinder::init_dwfl(pid_t pid)
 {
-  Dwfl *dwfl = dwflst_tracker_dwfl_begin (this->tracker);
+  Dwfl *dwfl = dwflst_tracker_dwfl_begin(this->tracker);
 
-  int err = dwfl_linux_proc_report (dwfl, pid);
+  int err = dwfl_linux_proc_report(dwfl, pid);
   if (err < 0)
     {
       if (verbose)
 	cerr << format("WARNING: dwfl_linux_proc_report pid {}: {}\n", (long long) pid, dwfl_errmsg(-1));
       return NULL;
     }
-  err = dwfl_report_end (dwfl, NULL, NULL);
+  err = dwfl_report_end(dwfl, NULL, NULL);
   if (err != 0)
     {
       if (verbose)
@@ -1301,19 +1295,20 @@ Dwfl *pcu_init_dwfl_cb (Dwflst_Process_Tracker *cb_tracker __attribute__ ((unuse
 			void *arg)
 {
   PerfConsumerUnwinder *pcu = (PerfConsumerUnwinder *)arg;
-  return pcu->init_dwfl (pid);
+  return pcu->init_dwfl(pid);
 }
 
 uint32_t expected_frame_nregs (Ebl *ebl)
 {
   int m = ebl_get_elfmachine(ebl);
-  /* For aarch64, we actually use fewer than ebl->frame_nregs to unwind. */
-  if (m == EM_ARM)
+  /* TODO: Generalize the API via libdwflst to allow any architecture.  */
+  /* For aarch64, we actually use fewer than ebl->frame_nregs to unwind.  */
+  if (m == EM_ARM) /* TODO also EM_AARCH64 */
     return 14; /* XXX 16 for 32-bit ARM */
-  /* On x86, expect everything except FLAGS: */
+  /* On x86, expect everything except FLAGS:  */
   if (m == EM_X86_64 || m == EM_386)
     return ebl_frame_nregs(ebl);
-  /* In general, it's better to be on the permissive side. */
+  /* In general, it's better to be on the permissive side.  */
   return 1;
 }
 
@@ -1328,7 +1323,7 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
     }
 
   Elf *elf = NULL;
-  Dwfl *dwfl = dwflst_tracker_find_pid (this->tracker, pid, pcu_init_dwfl_cb, this);
+  Dwfl *dwfl = dwflst_tracker_find_pid(this->tracker, pid, pcu_init_dwfl_cb, this);
   int elf_fd = -1;
   int err;
   if (dwfl != NULL && dwfl_pid(dwfl) != -1 /* dwfl is attached */)
@@ -1336,7 +1331,7 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
       *cached = true;
       goto reuse;
     }
-  err = this->find_procfile (dwfl, &pid, &elf, &elf_fd);
+  err = this->find_procfile(dwfl, &pid, &elf, &elf_fd);
   if (err < 0)
     {
       if (verbose)
@@ -1345,18 +1340,21 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
     }
 
  reuse:
+  /* TODO: bounds check? */
   this->last_us.sp = regs[this->get_sp_reg(this->last_us.elfclass == ELFCLASS32)];
   this->last_us.base = this->last_us.sp;
 
   if (!*cached)
-    this->stats->pid_store_dwfl (pid, dwfl);
+    this->stats->pid_store_dwfl(pid, dwfl);
   *out_elf = elf;
   return dwfl;
 }
 
-/* Index of stack pointer within dwarf_regs order: */
+/* TODO move above */
+/* Index of stack pointer within dwarf_regs order:  */
 int PerfConsumerUnwinder::get_sp_reg(bool is_abi32)
 {
+  /* TODO: Generalize the API via libdwflst to allow any architecture.  */
   int machine = ebl_get_elfmachine(this->reader->ebl());
   if (machine == EM_X86_64 || machine == EM_386) return is_abi32 ? 4 : 7;
   else if (machine == EM_ARM) return is_abi32 ? 13 : 31;
@@ -1367,7 +1365,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 {
   Dwarf_Addr pc;
   bool isactivation;
-  if (! dwfl_frame_pc (state, &pc, &isactivation))
+  if (! dwfl_frame_pc(state, &pc, &isactivation))
     {
       if (verbose)
 	cerr << format("WARNING: dwfl_frame_pc: {}\n", dwfl_errmsg(-1));
@@ -1379,7 +1377,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 
   int is_abi32 = (this->last_us.elfclass == ELFCLASS32);
   int user_regs_sp = this->get_sp_reg(is_abi32);
-  int rc = dwfl_frame_reg (state, user_regs_sp, &sp);
+  int rc = dwfl_frame_reg(state, user_regs_sp, &sp);
   if (rc < 0)
     {
       if (verbose)
@@ -1398,7 +1396,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 	{
 	  Dwfl_Module *m = dwfl_addrmodule(this->last_us.dwfl, pc);
 	  uint64_t rel_pc = pc_adjusted;
-	  int j = dwfl_module_relocate_address (m, &rel_pc);
+	  int j = dwfl_module_relocate_address(m, &rel_pc);
 	  (void) j;
 	  clog << format("* frame {:d}: rel_pc={:x} raw_pc={:x} sp={:x}+{:x} [{}]\n",
 			 this->last_us.addrs.size(), rel_pc, pc_adjusted, this->last_us.base, (sp - this->last_us.base), dwfl_unwound_source_str(unwound_source));
@@ -1410,7 +1408,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 	{
 	  Dwfl_Module *m = dwfl_addrmodule(this->last_us.dwfl, pc);
 	  uint64_t rel_pc = pc_adjusted;
-	  int j = dwfl_module_relocate_address (m, &rel_pc);
+	  int j = dwfl_module_relocate_address(m, &rel_pc);
 	  (void) j;
 	  clog << format(N_("* frame {:d}: rel_pc={:x} raw_pc={:x} sp={:x}+{:x} [dwfl_ent not found]\n"),
 			 this->last_us.addrs.size(), rel_pc, pc_adjusted, this->last_us.base, (sp - this->last_us.base));
@@ -1428,15 +1426,15 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 	{
 	  const unsigned char *desc;
 	  GElf_Addr vaddr;
-	  int build_id_len = dwfl_module_build_id (m, &desc, &vaddr);
+	  int build_id_len = dwfl_module_build_id(m, &desc, &vaddr);
 	  clog << format("* pid {:d} build_id=", this->last_us.pid);
 	  for (int i = 0; i < build_id_len; ++i)
 	    clog << format("{:02x}", static_cast<int>(desc[i]));
 
 	  const char *mainfile;
 	  const char *debugfile;
-	  const char *modname = dwfl_module_info (m, NULL, NULL, NULL, NULL,
-						  NULL, &mainfile, &debugfile);
+	  const char *modname = dwfl_module_info(m, NULL, NULL, NULL, NULL,
+						 NULL, &mainfile, &debugfile);
 	  clog << format("module={} mainfile={} debugfile={}\n",
 			 modname,
 			 mainfile ? mainfile : "<none>",
@@ -1445,7 +1443,7 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
 	     the final buildid summary?  */
 #ifdef DEBUG_MODULES
 	  Dwarf_Addr bias;
-	  Dwarf_CFI *cfi_eh = dwfl_module_eh_cfi (m, &bias);
+	  Dwarf_CFI *cfi_eh = dwfl_module_eh_cfi(m, &bias);
 	  if (cfi_eh == NULL)
 	    clog << format("* pc={:x} -> NO EH_CFI\n", pc);
 #endif
@@ -1456,11 +1454,11 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
   this->last_us.addrs.push_back(pc);
 
   /* e.g. gmon callgraphs only requires maxframes=1
-     (initial pc + one frame for caller ID only) */
+     (initial pc + one frame for caller ID only)  */
   if (this->last_us.addrs.size() > this->maxframes)
     {
       /* XXX without maxframes, very rarely, the unwinder can loop
-	 infinitely; worth investigating? */
+	 infinitely; worth investigating?  */
       return DWARF_CB_ABORT;
     }
   return DWARF_CB_OK;
@@ -1480,7 +1478,7 @@ void PerfConsumerUnwinder::process_comm(const perf_event_header *sample,
 					uint32_t pid, uint32_t tid, bool exec, const string &comm)
 {
   // NB: Could have dwflst ditch data for process and start anew, if EXEC.
-  // XXX: REVIEW.6a is this needed to avoid gradual memory leaks or pid reuse?
+  // XXX: is this needed to avoid gradual memory leaks or pid reuse?
 }
 
 void PerfConsumerUnwinder::process_exit(const perf_event_header *sample,
@@ -1488,7 +1486,7 @@ void PerfConsumerUnwinder::process_exit(const perf_event_header *sample,
 					uint32_t tid, uint32_t ptid)
 {
   // NB: Could have dwflst ditch data for process.
-  // XXX: REVIEW.6a is this needed to avoid gradual memory leaks or pid reuse?
+  // XXX: is this needed to avoid gradual memory leaks of pid reuse?
 }
 
 void PerfConsumerUnwinder::process_fork(const perf_event_header *sample,
@@ -1520,7 +1518,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
 
   Elf *elf = NULL; // Released during dwflst_tracker_end
   bool cached = false;
-  Dwfl *dwfl = this->find_dwfl (pid, regs, nregs, &elf, &cached);
+  Dwfl *dwfl = this->find_dwfl(pid, regs, nregs, &elf, &cached);
   UnwindDwflStats *dwfl_ent = NULL;
   bool first_load = false; /* -> for show_modules: pid is loaded first time */
   if (verbose || show_summary || show_modules)
@@ -1542,7 +1540,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
 	{
 	  cerr << format("WARNING: find_dwfl pid {} ({}) (failed)\n", (long long)pid, comm);
 	}
-      else
+      else if (verbose) // XXX
 	{
 	  cerr << format("WARNING: find_dwfl pid {} (failed)\n", (long long)pid);
 	}
@@ -1564,11 +1562,11 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
   this->last_us.elfclass = (abi == PERF_SAMPLE_REGS_ABI_32 ? ELFCLASS32 : ELFCLASS64);
   this->last_us.dwfl = dwfl;
   this->last_us.pid = pid;
-  int rc = dwflst_perf_sample_getframes (dwfl, elf, pid, tid,
-					 data, data_size,
-					 regs, nregs,
-					 this->reader->regs_mask(), abi,
-					 pcu_unwind_frame_cb, this);
+  int rc = dwflst_perf_sample_getframes(dwfl, elf, pid, tid,
+					data, data_size,
+					regs, nregs,
+					this->reader->regs_mask(), abi,
+					pcu_unwind_frame_cb, this);
   if (rc < 0)
     {
       /* dwfl_ent loaded above */
@@ -1591,7 +1589,7 @@ void PerfConsumerUnwinder::process_sample(const perf_event_header *sample,
 	dwfl_ent->lost_samples++;
     }
 
-  this->consumer->process (&this->last_us);
+  this->consumer->process(&this->last_us);
   return;
 }
 
@@ -1612,16 +1610,16 @@ void PerfConsumerUnwinder::process_mmap2(const perf_event_header *sample,
 
 
 ////////////////////////////////////////////////////////////////////////
-// unwind data consumers // basic statistics
+// unwind data consumers: basic statistics
 
 UnwindStatsConsumer::~UnwindStatsConsumer()
 {
   this->stats->print_summary();
 }
 
-void UnwindStatsConsumer::process(const UnwindSample* sample)
+void UnwindStatsConsumer::process(const UnwindSample *sample)
 {
-  /* Most of the logic is handled by UnwindStatsTable. */
+  /* Most of the logic is handled by UnwindStatsTable.  */
 }
 
 int UnwindStatsConsumer::maxframes()
@@ -1631,7 +1629,7 @@ int UnwindStatsConsumer::maxframes()
 
 
 ////////////////////////////////////////////////////////////////////////
-// unwind data consumers // gprof
+// unwind data consumers: gprof
 
 /* gmon.out file format bits */
 #define GMON_MAGIC "gmon"
@@ -1659,15 +1657,17 @@ struct gmon_hist_hdr {
   char _dimension_string[16];
 };
 
-
-void GprofUnwindSampleConsumer::record_gmon_hist(ostream &of, map<uint64_t, uint32_t> &histogram, uint64_t low_pc, uint64_t high_pc, uint64_t alignment)
+void GprofUnwindSampleConsumer::record_gmon_hist(ostream &of,
+						 map<uint64_t, uint32_t> &histogram,
+						 uint64_t low_pc, uint64_t high_pc,
+						 uint64_t alignment)
 {
   // write one histogram from low_pc ... high_pc
   uint32_t num_buckets = (high_pc-low_pc)/alignment + 1;
   double result_scale = (double)((high_pc-low_pc)/sizeof(uint16_t))/num_buckets;
   if (verbose > 5)
     /* It's the @scale value that must be kept within 0.000001 of 0.5 to
-       keep gprof from complaining. */
+       keep gprof from complaining.  */
     clog << format("DEBUG +hist {:x}..{:x} (alignment {}) of {} buckets @scale {}\n",
 		   low_pc, high_pc, alignment, num_buckets, result_scale);
 
@@ -1690,7 +1690,7 @@ void GprofUnwindSampleConsumer::record_gmon_hist(ostream &of, map<uint64_t, uint
   // dimension string is 15 chars long (not null terminated)
   std::string dimension_base = libpfm_event.empty() ? "ticks" :
     libpfm_event.substr(0, 15);
-  dimension_base.resize(15, '\0');  // ensure exactly 15 bytes
+  dimension_base.resize(15, '\0'); // ensure exactly 15 bytes
   of.write(dimension_base.data(), 15);
   // dimension character abbreviation: just take the first char of above
   of.write(dimension_base.data(), 1);
@@ -1702,8 +1702,8 @@ void GprofUnwindSampleConsumer::record_gmon_hist(ostream &of, map<uint64_t, uint
     {
       uint16_t count = 0;
       for (auto it = histogram.lower_bound(bucket_addr);
-	       it != histogram.upper_bound(bucket_addr+alignment-1);
-	       it ++)
+	   it != histogram.upper_bound(bucket_addr+alignment-1);
+	   it ++)
 	{
 	  if (numeric_limits<uint16_t>::max() <= (int) count + (int) it->second)
 	    {
@@ -1788,12 +1788,12 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 
   const char *metadata_str = json_object_to_json_string(metadata);
   if (!metadata_str) goto json_fail;
-  ofstream of_js (json_path);
+  ofstream of_js(json_path);
   of_js << metadata_str;
   of_js.close();
-  json_object_put (metadata);
+  json_object_put(metadata);
 
-  ofstream of (filename, ios::binary);
+  ofstream of(filename, ios::binary);
   if (!of)
     {
       cerr << format(N_("ERROR: buildid {} -- could not open '{}' for writing\n"), buildid, filename);
@@ -1801,18 +1801,18 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 
   /* Write gmon header.  It and other headers mostly hold
      native-endian and fixed (or native) bitwidth values.  In
-     principle, we should get the bitness/endianness from the
+     principle, we should get the bitwidth/endianness from the
      particular executable associated with the buildid.  But, being a
      live profiler, we don't really have to deal with CROSS
-     architecture work, and for now can just hard-code the bitness to
+     architecture work, and for now can just hard-code the bitwidth to
      match this host program. XXX
-   */
-  int wordsize = (sizeof (void *) == 8) ? 8 : 4;
+  */
+  int wordsize = (sizeof(void *) == 8) ? 8 : 4;
   struct gmon_hdr ghdr;
-  memcpy (&ghdr.cookie[0], GMON_MAGIC, 4);
+  memcpy(&ghdr.cookie[0], GMON_MAGIC, 4);
   uint32_t version = GMON_VERSION;
-  memcpy (&ghdr.version[0], reinterpret_cast<const char *>(&version), 4);
-  memset (&ghdr.spare[0], 0, sizeof(ghdr.spare));
+  memcpy(&ghdr.version[0], reinterpret_cast<const char *>(&version), 4);
+  memset(&ghdr.spare[0], 0, sizeof(ghdr.spare));
   of.write(reinterpret_cast<const char *>(&ghdr), sizeof(ghdr));
 
   if (m.histogram.size() > 0)
@@ -1823,7 +1823,7 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 
       if (gmon_hist_split == HIST_SPLIT_NONE)
 	{
-	  /* Put everything into one histogram. */
+	  /* Put everything into one histogram.  */
 	  this->record_gmon_hist(of, m.histogram, low_pc, high_pc, alignment);
 	}
       else if (gmon_hist_split == HIST_SPLIT_EVEN)
@@ -1863,12 +1863,12 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 		  opt_size = next_size;
 		  opt_est = size_est;
 		}
-	      // if (opt_est > prev_est) break; /* XXX: We've hit the lowest point. */
+	      // if (opt_est > prev_est) break; /* XXX: We've hit the lowest point.  */
 	      next_size = 2 * next_size;
 	    }
 
 	  /* Partition into histograms of opt_size.
-	     TODO(REVIEW.10): Need to check if low_pc must be aligned.  */
+	     TODO: Need to check if low_pc must be aligned.  */
 	  uint64_t prev_pc = low_pc;
 	  uint64_t pc = prev_pc;
 	  for (const auto& p : m.histogram)
@@ -1876,7 +1876,7 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 	      pc = p.first;
 	      if (pc - low_pc > opt_size)
 		{
-		  /* Record a histogram from low_pc to low_pc+opt_size. */
+		  /* Record a histogram from low_pc to low_pc+opt_size.  */
 		  this->record_gmon_hist(of, m.histogram,
 					 low_pc, low_pc+opt_size-1 /* >= prev_pc */,
 					 alignment);
@@ -1885,7 +1885,7 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 	      prev_pc = pc;
 	    }
 	  /* Record a final histogram from low_pc to low_pc+opt_size.
-	     TODO(REVIEW.11): Edge case -- adjust for overflow of
+	     TODO: Edge case -- adjust for overflow of
 	     low_pc+opt_size at end of address space.  */
 	  this->record_gmon_hist(of, m.histogram,
 				 low_pc, low_pc+opt_size-1 /* >= prev_pc */,
@@ -1898,7 +1898,7 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 	     for profiledb purposes?  */
 	  uint64_t prev_pc = low_pc;
 	  uint64_t pc = prev_pc;
-	  /* XXX Iterate histogram ascending by key, faster than by addr
+	  /* Iterate histogram ascending by key, faster than by addr
 	     when we just need to scan for gaps.  */
 	  for (const auto& p : m.histogram)
 	    {
@@ -1910,22 +1910,23 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 		   but this is still not enough to satisfy gprof's
 		   histogram scale calculation.  */
 		{
-		  /* Record a histogram from low_pc to prev_pc. */
+		  /* Record a histogram from low_pc to prev_pc.  */
 		  this->record_gmon_hist(of, m.histogram, low_pc, prev_pc, alignment);
 		  low_pc = pc;
 		}
 	      prev_pc = pc;
 	    }
-	  /* Record a final histogram from low_pc to pc. */
+	  /* Record a final histogram from low_pc to pc.  */
 	  this->record_gmon_hist(of, m.histogram, low_pc, pc, alignment);
 	}
     }
 
-  /* Write call graph arcs. */
+  /* Write call graph arcs.  */
   for (auto& p : m.callgraph)
     {
       unsigned char tag = GMON_TAG_CG_ARC;
       of.write(reinterpret_cast<const char *>(&tag), sizeof(tag));
+      /* p is (from,to) -> count */
       if (wordsize == 4) {
 	uint32_t addr = p.first.first;
 	of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
@@ -1937,7 +1938,6 @@ void GprofUnwindSampleConsumer::record_gmon_out(const string& buildid, UnwindMod
 	addr = p.first.second;
 	of.write(reinterpret_cast<const char *>(&addr), sizeof(addr));
       }
-      /* p is (from,to) -> count */
       uint32_t count = p.second;
       of.write(reinterpret_cast<const char *>(&count), sizeof(count));
     }
@@ -1949,37 +1949,37 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
 {
   if (show_summary)
     {
-      this->stats->print_summary ();
+      this->stats->print_summary();
       clog << "=== buildid / sample counts ===\n";
     }
 
-  UnwindStatsTable::buildid_map_t sorted_map (this->stats->buildid_tab.begin(), this->stats->buildid_tab.end());
+  UnwindStatsTable::buildid_map_t sorted_map(this->stats->buildid_tab.begin(), this->stats->buildid_tab.end());
   for (auto& p : sorted_map) // traverse in sorted order
     {
       const string& buildid = p.first;
       UnwindModuleStats& module_stats = p.second;
       this->record_gmon_out(buildid, module_stats);
       if (show_summary)
-        {
-          /* In record_gmon_out we will write the buildid-->path mapping
-             to a json metadata file.  That makes for a reasonable hint;
-             debuginfod-find can be used as a mostly-functional fallback
-             (for packaged rather than locally built executables) if the
-             results are moved to another system.  */
-          string mainfile = "<unknown>";
-          if (buildid_to_mainfile.count(buildid) != 0)
-            mainfile = buildid_to_mainfile[buildid];
-          string debugfile = "";
-          if (buildid_to_debugfile.count(buildid) != 0)
-            debugfile = buildid_to_debugfile[buildid];
-          clog << format(N_("buildid {} ({}{}{}) -- received {} distinct pcs, {} callgraph arcs\n"), /* TODO also count samples / estimated histogram size? */
-                         buildid,
-                         mainfile,
-                         debugfile.empty() ? "" : " +debugfile ",
-                         debugfile,
-                         module_stats.histogram.size(),
-                         module_stats.callgraph.size());
-        }
+	{
+	  /* In record_gmon_out we will write the buildid->path mapping
+	     to a json metadata file.  That makes for a reasonable hint;
+	     debuginfod-find can be used as a mostly-functional fallback
+	     (for packaged rather than locally-built executables) if the
+	     results are moved to another system.  */
+	  string mainfile = "<unknown>";
+	  if (buildid_to_mainfile.count(buildid) != 0)
+	    mainfile = buildid_to_mainfile[buildid];
+	  string debugfile = "";
+	  if (buildid_to_debugfile.count(buildid) != 0)
+	    debugfile = buildid_to_debugfile[buildid];
+	  clog << format(N_("buildid {} ({}{}{}) -- received {} distinct pcs, {} callgraph arcs\n"), /* TODO also count samples / estimated histogram size? */
+			 buildid,
+			 mainfile,
+			 debugfile.empty() ? "" : " +debugfile ",
+			 debugfile,
+			 module_stats.histogram.size(),
+			 module_stats.callgraph.size());
+	}
     }
   if (show_summary)
     {
@@ -1989,9 +1989,7 @@ GprofUnwindSampleConsumer::~GprofUnwindSampleConsumer()
   clog << "\n";
 }
 
-
-int
-GprofUnwindSampleConsumer::maxframes()
+int GprofUnwindSampleConsumer::maxframes()
 {
   // gprof only needs one level of backtracing,
   // but user can override consumer's preference
@@ -1999,11 +1997,10 @@ GprofUnwindSampleConsumer::maxframes()
   return opt_maxframes >= 0 ? opt_maxframes : 1;
 }
 
-
 void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
 {
   if (sample->addrs.size() < 1)
-    return; /* edge case -- no pc or callgraph arc */
+    return; // edge case -- no pc or callgraph arc
 
   Dwarf_Addr pc = sample->addrs[0];
   Dwarf_Addr pc2 = sample->addrs.size() < 2 ? 0 : sample->addrs[1];
@@ -2012,8 +2009,9 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   if (mod == NULL)
     return;
 #if 0
+  // XXX is the bias needed?
   Dwarf_Addr bias;
-  Elf *elf = dwfl_module_getelf (mod, &bias);
+  Elf *elf = dwfl_module_getelf(mod, &bias);
   (void)elf;
 #endif
 
@@ -2037,22 +2035,22 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   const char *debugfile_cstr;
   Dwarf_Addr low_addr;
   Dwarf_Addr high_addr;
-  dwfl_module_info (mod, NULL, &low_addr, &high_addr, NULL,
-		    NULL, &mainfile_cstr, &debugfile_cstr);
+  dwfl_module_info(mod, NULL, &low_addr, &high_addr, NULL,
+		   NULL, &mainfile_cstr, &debugfile_cstr);
   string mainfile = mainfile_cstr ? mainfile_cstr : "<unknown>";
   string debugfile = debugfile_cstr ? debugfile_cstr : "";
   if (!buildid_to_mainfile.count(buildid))
     buildid_to_mainfile[buildid] = mainfile;
   if (!buildid_to_debugfile.count(buildid))
     buildid_to_debugfile[buildid] = debugfile;
-  /* TODO(REVIEW.13): Also monitor for collisions here. */
+  // TODO: Also monitor for collisions here.
 
   UnwindModuleStats *buildid_ent = this->stats->buildid_find_or_create(buildid, mod);
 
   uint64_t last_pc = pc;
-  int i = dwfl_module_relocate_address (mod, &pc);
-  /* XXX: Out-of-range address seen with ld-linux.so, not useful for profiledb purposes: */
-  if ((last_pc < low_addr || last_pc > high_addr))
+  int i = dwfl_module_relocate_address(mod, &pc);
+  /* XXX: Out-of-range address seen with ld-linux.so, not useful for profiledb purposes:  */
+  if (last_pc < low_addr || last_pc > high_addr)
     {
       if (verbose)
 	clog << format(N_("{}: Skipping pc={:x} raw_pc={:x} outside module range start={:x}..end={:x}\n"),
@@ -2060,7 +2058,7 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
       return;
     }
   (void) i;
-  // XXX: could get dwfl_module_relocation_info (mod, i, NULL), but no need?
+  // XXX: could get dwfl_module_relocation_info(mod, i, NULL), but no need?
   buildid_ent->record_pc(pc);
 
   // If caller & callee are in different modules, this is a cross-shared-library
@@ -2068,7 +2066,7 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
   if (sample->addrs.size() >= 2 && mod == mod2) // intra-module call
     {
       last_pc = pc2;
-      int j = dwfl_module_relocate_address (mod, &pc2); // map pc2 also
+      int j = dwfl_module_relocate_address(mod, &pc2); // map pc2 also
       if (last_pc < low_addr || last_pc > high_addr)
 	{
 	  if (verbose)
@@ -2080,4 +2078,3 @@ void GprofUnwindSampleConsumer::process(const UnwindSample *sample)
       buildid_ent->record_callgraph_arc(pc2, pc);
     }
 }
-
