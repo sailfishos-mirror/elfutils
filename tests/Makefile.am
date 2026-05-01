@@ -722,7 +722,8 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 
 
 if USE_HELGRIND
-valgrind_cmd=valgrind -q --tool=helgrind --error-exitcode=1 --track-fds=yes
+valgrind_cmd=valgrind -q --tool=helgrind --error-exitcode=1 --track-fds=yes \
+	--track-destroy=yes
 else
 if USE_VALGRIND
 valgrind_cmd=valgrind -q --leak-check=full --error-exitcode=1 --track-fds=yes
