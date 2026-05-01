@@ -405,6 +405,18 @@ fi
 AM_CONDITIONAL(USE_VALGRIND, test "$use_valgrind" = yes -o "$use_helgrind" = yes)
 AM_CONDITIONAL(USE_HELGRIND, test "$use_helgrind" = yes)
 
+HELGRIND_TRACK_DESTROY=
+if test "$use_helgrind" = yes; then
+  AC_MSG_CHECKING([whether helgrind supports --track-destroy])
+  if valgrind --tool=helgrind --help | grep -qe "--track-destroy"; then
+    HELGRIND_TRACK_DESTROY="--track-destroy=yes"
+    AC_MSG_RESULT([yes])
+  else
+    AC_MSG_RESULT([no])
+  fi
+fi
+AC_SUBST([HELGRIND_TRACK_DESTROY])
+
 AC_ARG_WITH([valgrind],
 AS_HELP_STRING([--with-valgrind],[include directory for Valgrind headers]),
 [with_valgrind_headers=$withval], [with_valgrind_headers=no])
