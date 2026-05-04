@@ -110,8 +110,10 @@ ebl_sample_perf_regs_mapping (Ebl *ebl,
 
   if (ebl->cached_regs_mapping != NULL)
     free (ebl->cached_regs_mapping);
-  ebl->cached_perf_regs_mask = perf_regs_mask;
   ebl->cached_regs_mapping = (int *)calloc (count, sizeof(int));
+  if (ebl->cached_regs_mapping == NULL)
+    return false;
+  ebl->cached_perf_regs_mask = perf_regs_mask;
   ebl->cached_n_regs_mapping = count;
 
   int j, k; uint64_t bit;
