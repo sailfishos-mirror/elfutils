@@ -405,8 +405,8 @@ report_r_debug (uint_fast8_t elfclass, uint_fast8_t elfdata,
 	  r_debug_info_module = malloc (sizeof (*r_debug_info_module)
 					+ strlen (name1) + 1);
 	  if (unlikely (r_debug_info_module == NULL))
-	    release_buffer (&memory_closure, &buffer,
-                            &buffer_available, result);
+	    return release_buffer (&memory_closure, &buffer,
+				   &buffer_available, -1);
 	  r_debug_info_module->fd = -1;
 	  r_debug_info_module->elf = NULL;
 	  r_debug_info_module->l_ld = l_ld;
