@@ -1,3 +1,8 @@
+2026-05-05  Ekaterine Papava  <papava.e@gtu.ge>
+
+	* ka.po: New file, Georgian translation.
+	* LINGUAS: Add ka.
+
 2022-10-02  Mark Wielaard  <mark@klomp.org>
 
 	* *.po: Update for 0.188.
