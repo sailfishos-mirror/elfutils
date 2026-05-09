@@ -247,6 +247,8 @@ read_line_header (Dwarf *dbg, unsigned address_size,
   lh->header_start = linep;
 
   /* Next the minimum instruction length.  */
+  if (unlikely ((size_t) (lineendp - linep) < 1))
+    goto invalid_data;
   lh->minimum_instr_len = *linep++;
 
   /* Next the maximum operations per instruction, in version 4 format.  */
