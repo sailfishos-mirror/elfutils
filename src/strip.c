@@ -1575,7 +1575,10 @@ handle_elf (int fd, Elf *elf, const char *prefix, const char *fname,
 	      if (shdr_info[shdr_info[cnt].shdr.sh_link].idx == 0)
 		{
 		  shdr_info[shdr_info[cnt].shdr.sh_link].idx = 1;
-		  changes |= shdr_info[cnt].shdr.sh_link < cnt;
+		  /* Force another iteration in case we need to propagate this
+		     change to a previous section (either the sh_link section
+		     itself or another section that references it).  */
+		  changes = true;
 		}
 
 	      /* Handle references through sh_info.  */
@@ -1586,7 +1589,11 @@ handle_elf (int fd, Elf *elf, const char *prefix, const char *fname,
 		  else if ( shdr_info[shdr_info[cnt].shdr.sh_info].idx == 0)
 		    {
 		      shdr_info[shdr_info[cnt].shdr.sh_info].idx = 1;
-		      changes |= shdr_info[cnt].shdr.sh_info < cnt;
+		      /* Force another iteration in case we need to propagate
+			 this change to a previous section (either the sh_info
+			 section itself or another section that references
+			 it).  */
+		      changes = true;
 		    }
 		}
 
