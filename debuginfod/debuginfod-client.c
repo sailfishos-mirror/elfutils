@@ -1640,6 +1640,21 @@ debuginfod_validate_imasig (debuginfod_client *c, int fd)
       goto exit_validate;
     }
 
+    /* Don't trust the size the server sent us, double check against the
+       file size that we actually got.  That way we calculate the hash
+       over the whole file and not a shorter (possibly empty) data size.  */
+    struct stat st;
+    if (fstat (fd, &st) == -1)
+    {
+      rc = -errno;
+      goto exit_validate;
+    }
+    if (data_len != st.st_size)
+    {
+      rc = -EBADMSG;
+      goto exit_validate;
+    }
+
     char file_data[DATA_SIZE]; // imaevm.h data chunk hash size 
     ssize_t n;
     for(off_t k = 0; k < data_len; k += n)
