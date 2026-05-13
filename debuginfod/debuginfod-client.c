@@ -1008,6 +1008,7 @@ init_handle(debuginfod_client *client,
     }
   curl_easy_setopt_ck(data->handle, CURLOPT_FILETIME, (long) 1);
   curl_easy_setopt_ck(data->handle, CURLOPT_FOLLOWLOCATION, (long) 1);
+  curl_easy_setopt_ck(data->handle, CURLOPT_MAXREDIRS, (long) 6);
   curl_easy_setopt_ck(data->handle, CURLOPT_FAILONERROR, (long) 1);
   curl_easy_setopt_ck(data->handle, CURLOPT_NOSIGNAL, (long) 1);
   if (h_callback)
