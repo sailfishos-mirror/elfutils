@@ -279,6 +279,10 @@ read_line_header (Dwarf *dbg, unsigned address_size,
   /* The opcode base.  */
   lh->opcode_base = *linep++;
 
+  /* If the line header uses the NVIDIA CUBIN extension, debug_str_offset's
+     actual value will be read from the last 4 bytes of the header.  */
+  lh->debug_str_offset = 0;
+
   /* Remember array with the standard opcode length (-1 to account for
      the opcode with value zero not being mentioned).  */
   lh->standard_opcode_lengths = linep - 1;
