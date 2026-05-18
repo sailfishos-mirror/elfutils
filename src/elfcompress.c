@@ -424,7 +424,7 @@ process_file (const char *fname)
       goto cleanup;
     }
 
-  sections = xcalloc (shnum / 8 + 1, sizeof (unsigned int));
+  sections = xcalloc (shnum / WORD_BITS + 1, sizeof (unsigned int));
 
   size_t phnum;
   if (elf_getphdrnum (elf, &phnum) != 0)
