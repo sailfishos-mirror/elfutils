@@ -483,7 +483,7 @@ process_file (const char *fname)
   while ((scn = elf_nextscn (elf, scn)) != NULL)
     {
       size_t ndx = elf_ndxscn (scn);
-      if (ndx > shnum)
+      if (ndx >= shnum)
 	{
 	  error (0, 0, "Unexpected section number %zd, expected only %zd",
 		 ndx, shnum);
