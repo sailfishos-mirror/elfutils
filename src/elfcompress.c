@@ -357,6 +357,12 @@ process_file (const char *fname)
   /* Which sections match and need to be (un)compressed.  */
   unsigned int *sections = NULL;
 
+  /* Specific section names when renaming shstrtab or symtab.  */
+  char *shstrtab_name = NULL;
+  char *shstrtab_newname = NULL;
+  char *symtab_name = NULL;
+  char *symtab_newname = NULL;
+
   /* How many sections are we talking about?  */
   size_t shnum = 0;
   int res = 1;
@@ -703,12 +709,8 @@ process_file (const char *fname)
      difference later when we do compress.  */
   enum ch_type shstrtab_compressed = UNSET;
   size_t shstrtab_size = 0;
-  char *shstrtab_name = NULL;
-  char *shstrtab_newname = NULL;
   enum ch_type symtab_compressed = UNSET;
   size_t symtab_size = 0;
-  char *symtab_name = NULL;
-  char *symtab_newname = NULL;
 
   /* Collection pass.  Copy over the sections, (de)compresses matching
      sections, collect names of sections and symbol table if
@@ -1141,6 +1143,7 @@ process_file (const char *fname)
 		     shdrstrndx);
 	      goto cleanup;
 	    }
+	  shstrtab_name = xstrdup (shstrtab_name);
 
 	  shstrtab_size = shdr->sh_size;
 	  if ((shdr->sh_flags & SHF_COMPRESSED) != 0)
@@ -1282,6 +1285,7 @@ process_file (const char *fname)
 			     symtabndx);
 		      goto cleanup;
 		    }
+		  symtab_name = xstrdup (symtab_name);
 
 		  symtab_size = shdr->sh_size;
 		  if ((shdr->sh_flags & SHF_COMPRESSED) != 0)
@@ -1396,6 +1400,10 @@ cleanup:
     }
 
   free (sections);
+  free (shstrtab_name);
+  free (shstrtab_newname);
+  free (symtab_name);
+  free (symtab_newname);
   return res;
 }
 
