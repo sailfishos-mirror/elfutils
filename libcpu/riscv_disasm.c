@@ -1097,7 +1097,7 @@ riscv_disasm (Ebl *ebl,
 	      else if ((word & 0x3000) == 0x2000 && rs1 == 0)
 		{
 		  uint32_t csr = word >> 20;
-		  if (/* csr >= 0x000 && */ csr <= 0x007)
+		  if (/* csr >= 0x000 && */ csr <= 0x003)
 		    {
 		      static const char *const unprivrw[4] =
 			{
@@ -1105,7 +1105,7 @@ riscv_disasm (Ebl *ebl,
 			};
 		      mne = unprivrw[csr - 0x000];
 		    }
-		  else if (csr >= 0xc00 && csr <= 0xc03)
+		  else if (csr >= 0xc00 && csr <= 0xc02)
 		    {
 		      static const char *const unprivrolow[3] =
 			{
