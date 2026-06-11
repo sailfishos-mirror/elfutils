@@ -523,6 +523,13 @@ AC_CHECK_DECLS([reallocarray],[],[],
                [#define _GNU_SOURCE
                 #include <stdlib.h>])
 
+dnl for xmkstemp we need a random source
+AC_CHECK_DECLS([getentropy],[],[],
+	       [#include <unistd.h>])
+AC_CHECK_HEADERS([sys/random.h])
+AC_CHECK_DECLS([getrandom],[],[],
+	       [#include <sys/random.h>])
+
 AC_CHECK_FUNCS([process_vm_readv mremap])
 
 AS_IF([test "x$ac_cv_func_mremap" = "xno"],

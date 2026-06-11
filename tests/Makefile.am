@@ -206,7 +206,7 @@ TESTS = run-arextract.sh run-arsymtest.sh run-ar.sh newfile test-nlist \
 	elfshphehdr run-lfs-symbols.sh run-dwelfgnucompressed.sh \
 	run-elfgetchdr.sh \
 	run-elfgetzdata.sh run-elfputzdata.sh run-zstrptr.sh \
-	run-compress-test.sh \
+	run-compress-test.sh run-compress-test-out.sh \
 	run-readelf-zdebug.sh run-readelf-zdebug-rel.sh \
 	emptyfile vendorelf fillfile dwarf_default_lower_bound \
 	dwarf_language_lower_bound \
@@ -575,7 +575,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     testfile-zgabi32.bz2 testfile-zgabi64.bz2 \
 	     testfile-zgabi32be.bz2 testfile-zgabi64be.bz2 \
 	     run-elfgetchdr.sh run-elfgetzdata.sh run-elfputzdata.sh \
-	     run-zstrptr.sh run-compress-test.sh \
+	     run-zstrptr.sh run-compress-test.sh run-compress-test-out.sh \
 	     run-disasm-bpf.sh \
 	     testfile-bpf-dis1.expect.bz2 testfile-bpf-dis1.o.bz2 \
 	     run-reloc-bpf.sh \

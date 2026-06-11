@@ -1,5 +1,6 @@
 /* Compress or decompress an ELF file.
    Copyright (C) 2015, 2016, 2018 Red Hat, Inc.
+   Copyright (C) 2026 Mark J. Wielaard <mark@klomp.org>
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -36,6 +37,9 @@
 #include "system.h"
 #include "libeu.h"
 #include "printversion.h"
+
+/* Really should come from libgen.h, but we poisoned basename in system.h.  */
+extern char *dirname(char *path);
 
 /* Name and version of program.  */
 ARGP_PROGRAM_VERSION_HOOK_DEF = print_version;
@@ -338,9 +342,18 @@ process_file (const char *fname)
   Elf *elf = NULL;
 
   /* The output ELF.  */
-  char *fnew = NULL;
+  char *fnew = NULL; /* Name used if we don't need the split up tempname. */
   int fdnew = -1;
   Elf *elfnew = NULL;
+  bool unlink_fnew = false; /* Call unlinkat on failure.  */
+
+  /* Split up dir/base names if necessary.  */
+  char *dirc = NULL;
+  char *basec = NULL;
+  const char *bname = NULL;
+  const char *dname = NULL;
+  int dirfd = -1;
+  char *tempname = NULL; /* Name used instead of fnew for output.  */
 
   /* Buffer for (one) new section name if necessary.  */
   char *snamebuf = NULL;
@@ -370,7 +383,7 @@ process_file (const char *fname)
   fd = open (fname, O_RDONLY);
   if (fd < 0)
     {
-      error (0, errno, "Couldn't open %s\n", fname);
+      error (0, errno, "Couldn't open %s", fname);
       goto cleanup;
     }
 
@@ -611,28 +624,93 @@ process_file (const char *fname)
       scnnames = xcalloc (shnum, sizeof (char *));
     }
 
-  /* Create a new (temporary) ELF file for the result.  */
-  if (foutput == NULL)
+  /* Now deal with the output.  If we can (exclusively) open the
+     output file directly, we can just use that.  But we still need to
+     make sure that if there is a failure we unlink the correct file
+     (in case the path is manipulated between creation and
+     deletion).  */
+  fnew = xstrdup (foutput == NULL ? fname : foutput);
+  /* Split up the path into the dir and base parts.  */
+  dirc = xstrdup (fnew);
+  dname = dirname (dirc);
+  basec = xstrdup (fnew);
+  bname = xbasename (basec);
+
+  /* Pin the directory.  */
+  dirfd = open (dname, O_RDONLY | O_DIRECTORY);
+  if (dirfd < 0)
     {
-      size_t fname_len = strlen (fname);
-      fnew = xmalloc (fname_len + sizeof (".XXXXXX"));
-      strcpy (mempcpy (fnew, fname, fname_len), ".XXXXXX");
-      fdnew = mkstemp (fnew);
+      error (0, errno, "Couldn't open output dir %s", dname);
+      goto cleanup;
     }
-  else
+  fdnew = openat (dirfd, bname, O_WRONLY | O_CREAT | O_EXCL,
+		  st.st_mode & ALLPERMS);
+
+  /* If we cannot open the output exclusively for writing directly
+     (because it already exists), e.g. it might be the current input
+     file, then we want to write to a temporary file first and then
+     (atomically) replace it.  This is slightly tricky. To make sure
+     the replacement (rename) is atomic the temp file and final file
+     need to be in the same directory.  We use realpath to make sure
+     we end up in the actual directory that the output is in if it was
+     a symlink.  To make sure the directory path doesn't change
+     between temp file creation and rename we need to keep a dirfd
+     open.  */
+  if (fdnew < 0 && errno == EEXIST)
     {
-      fnew = xstrdup (foutput);
-      fdnew = open (fnew, O_WRONLY | O_CREAT, st.st_mode & ALLPERMS);
+      /* OK, it already existed (or was a symlink). Try again, but now
+	 with the resolved path.  */
+      free (fnew); fnew = NULL;
+      free (dirc); dirc = NULL;
+      free (basec); basec = NULL;
+      close (dirfd);
+      fnew = realpath (foutput == NULL ? fname : foutput, NULL);
+      if (fnew == NULL)
+	{
+	  error (0, errno, "Couldn't get realpath for %s",
+		 foutput == NULL ? fname : foutput);
+	  goto cleanup;
+	}
+
+      /* Split up the path into the dir and base parts.  */
+      dirc = xstrdup (fnew);
+      dname = dirname (dirc);
+      basec = xstrdup (fnew);
+      bname = xbasename (basec);
+
+      /* Pin the directory.  */
+      dirfd = open (dname, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
+      if (dirfd < 0)
+	{
+	  error (0, errno, "Couldn't open output dir %s", dname);
+	  goto cleanup;
+	}
+
+      /* Create a temp file inside the output dir.  This could
+	 possibly done with O_TMPFILE and then using /proc/self/fd to
+	 rename.  But it is not clear how portable that is.  */
+      size_t bname_len = strlen (bname);
+      tempname = xmalloc (bname_len + sizeof (".XXXXXX"));
+      sprintf (tempname, "%s.XXXXXX", bname);
+      fdnew = xmkstempat (dirfd, tempname);
     }
 
   if (fdnew < 0)
     {
-      error (0, errno, "Couldn't create output file %s", fnew);
-      /* Since we didn't create it we don't want to try to unlink it.  */
-      free (fnew);
-      fnew = NULL;
+      error (0, errno, "Couldn't create output file %s",
+	     tempname == NULL ? fnew : tempname);
+      /* Since we couldn't create it we don't want to try to unlink it.  */
+      if (tempname != NULL)
+	{
+	  free (tempname);
+	  tempname = NULL;
+	}
       goto cleanup;
     }
+
+  /* Did we directly opened fnew then need to unlink on failure.  */
+  if (tempname == NULL)
+    unlink_fnew = true;
 
   elfnew = elf_begin (fdnew, ELF_C_WRITE, NULL);
   if (elfnew == NULL)
@@ -1352,22 +1430,30 @@ process_file (const char *fname)
      or fchown may clear them.  */
   if (fchown (fdnew, st.st_uid, st.st_gid) != 0)
     if (verbose >= 0)
-      error (0, errno, "Couldn't fchown %s", fnew);
+      error (0, errno, "Couldn't fchown %s",
+	     tempname == NULL ? fnew : tempname);
   if (fchmod (fdnew, st.st_mode & ALLPERMS) != 0)
     if (verbose >= 0)
-      error (0, errno, "Couldn't fchmod %s", fnew);
+      error (0, errno, "Couldn't fchmod %s",
+	     tempname == NULL ? fnew : tempname);
 
   /* Finally replace the old file with the new file.  */
-  if (foutput == NULL)
-    if (rename (fnew, fname) != 0)
-      {
-	error (0, errno, "Couldn't rename %s to %s", fnew, fname);
-	goto cleanup;
-      }
+  if (tempname != NULL)
+    {
+      fsync (fdnew); /* Flush all data and metadata before replacing file.  */
+      if (renameat (dirfd, tempname, dirfd, bname) != 0)
+	{
+	  error (0, errno, "Couldn't rename %s to %s", tempname, bname);
+	  goto cleanup;
+	}
+      /* We are finally done with the temp file, don't unlink it now.  */
+      free (tempname);
+      tempname = NULL;
+    }
+  else
+    unlink_fnew = false; /* We created the output, it is complete now.  */
 
-  /* We are finally done with the new file, don't unlink it now.  */
-  free (fnew);
-  fnew = NULL;
+  /* Success! Now just cleanup.  */
   res = 0;
 
 cleanup:
@@ -1377,12 +1463,22 @@ cleanup:
   elf_end (elfnew);
   close (fdnew);
 
-  if (fnew != NULL)
+  if (tempname != NULL)
     {
-      unlink (fnew);
-      free (fnew);
-      fnew = NULL;
+      unlinkat (dirfd, tempname, 0);
+      free (tempname);
     }
+
+  if (unlink_fnew)
+    unlinkat (dirfd, bname, 0);
+
+  free (fnew);
+
+  if (dirfd >= 0)
+    close (dirfd);
+
+  free (dirc);
+  free (basec);
 
   free (snamebuf);
   if (names != NULL)
