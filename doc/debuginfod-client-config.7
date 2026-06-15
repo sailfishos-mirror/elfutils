@@ -85,9 +85,10 @@ within the limit.
 .TP
 .B $DEBUGINFOD_TIMEOUT
 This environment variable governs the download \fIcommencing\fP
-timeout for each debuginfod HTTP connection.  A server that fails to
-provide at least 100K of data within this many seconds is skipped. The
-default is 90 seconds.  (Zero or negative means "no timeout".)
+timeout, in seconds, for each debuginfod HTTP connection. A server is
+skipped if it either fails to establish a connection within the timeout or
+fails to provide at least 100K of data within the timeout. The default is
+90 seconds. (Zero or negative means "no timeout".)
 
 .TP
 .B $DEBUGINFOD_MAXTIME

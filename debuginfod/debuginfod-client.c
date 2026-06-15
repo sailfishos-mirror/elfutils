@@ -233,7 +233,9 @@ static const char *cache_xdg_name = "debuginfod_client";
 /* URLs of debuginfods, separated by url_delim. */
 static const char *url_delim =  " ";
 
-/* Timeout for debuginfods, in seconds (to get at least 100K). */
+/* Timeout for debuginfods, in seconds.  Applies separately to the server
+   connect phase and to download at least 100K once connection is
+   established. */
 static const long default_timeout = 90;
 
 /* Default retry count for download error. */
@@ -1005,6 +1007,14 @@ init_handle(debuginfod_client *client,
                            timeout);
       curl_easy_setopt_ck (data->handle, CURLOPT_LOW_SPEED_LIMIT,
                            100 * 1024L);
+
+      /* CURLOPT_LOW_SPEED_LIMIT/_TIME don't apply during the server connection
+         phase.  Set CURLOPT_CONNECTTIMEOUT_MS as well so the timeout also
+         limits how long we wait for an unresponsive server.  */
+      long connect_timeout_ms = (timeout > LONG_MAX / 1000L
+                                 ? LONG_MAX : timeout * 1000L);
+      curl_easy_setopt_ck (data->handle, CURLOPT_CONNECTTIMEOUT_MS,
+                           connect_timeout_ms);
     }
   curl_easy_setopt_ck(data->handle, CURLOPT_FILETIME, (long) 1);
   curl_easy_setopt_ck(data->handle, CURLOPT_FOLLOWLOCATION, (long) 1);
