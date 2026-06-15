@@ -82,6 +82,11 @@ AS_IF([test "$use_locks" = yes],
 
 AH_TEMPLATE([USE_LOCKS], [Defined if libraries should be thread-safe.])
 
+AS_IF([test "$use_locks" = yes],
+      [eu_thread_safe="#define _ELFUTILS_THREAD_SAFE 1"],
+      [eu_thread_safe="/* _ELFUTILS_THREAD_SAFE is not defined.  */"])
+AC_SUBST([eu_thread_safe])
+
 # Provided by gnulib's m4/std-gnu11.m4 for autoconf pre 2.70
 AC_PROG_CC
 AS_IF([test "x$ac_cv_prog_cc_c11" = "xno"],
