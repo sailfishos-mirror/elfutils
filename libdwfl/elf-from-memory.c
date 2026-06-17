@@ -304,6 +304,14 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
 
       GElf_Off start = offset & -pagesize;
       GElf_Off end = (offset + filesz + pagesize - 1) & -pagesize;
+      /* The final contents_size is the trimmed last segment's end, which
+	 may be smaller than an earlier segment's start (segments_end above
+	 tracks the last PT_LOAD, not the maximum).  Skip any segment that
+	 falls entirely past it: otherwise buffer + start would be out of
+	 bounds and end - start would underflow into a huge read length.
+	 Mirrors the file_trimmed_end check in dwfl_segment_report_module.  */
+      if (start >= (GElf_Off) contents_size)
+        continue;
       if (end > (GElf_Off) contents_size)
         end = contents_size;
       nread = (*read_memory) (arg, buffer + start,
