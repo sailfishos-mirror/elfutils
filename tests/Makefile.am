@@ -68,7 +68,7 @@ check_PROGRAMS = arextract arsymtest newfile saridx scnnames sectiondump \
 		  cu-dwp-section-info declfiles test-manyfuncs \
 		  eu_search_cfi eu_search_macros \
 		  eu_search_lines eu_search_die \
-		  ar-extract-ar \
+		  ar-extract-ar elf-from-memory \
 		  $(asm_TESTS)
 
 asm_TESTS = asm-tst1 asm-tst2 asm-tst3 asm-tst4 asm-tst5 \
@@ -238,7 +238,8 @@ TESTS = run-arextract.sh run-arsymtest.sh run-ar.sh newfile test-nlist \
 	run-sysroot.sh \
 	run-test-manyfuncs.sh \
 	run-eu-search-cfi.sh run-eu-search-macros.sh \
-	run-eu-search-lines.sh run-eu-search-die.sh
+	run-eu-search-lines.sh run-eu-search-die.sh \
+	elf-from-memory
 
 if !BIARCH
 export ELFUTILS_DISABLE_BIARCH = 1
@@ -867,6 +868,7 @@ deleted_lib_so_CFLAGS = $(fpic_CFLAGS) -fasynchronous-unwind-tables
 aggregate_size_LDADD = $(libdw) $(libelf) $(argp_LDADD)
 peel_type_LDADD = $(libdw) $(libelf) $(argp_LDADD)
 vdsosyms_LDADD = $(libeu) $(libdw) $(libelf)
+elf_from_memory_LDADD = ../libdw/libdw.a -lz $(zip_LIBS) $(libelf) $(libebl) $(libeu) -ldl -lpthread
 getsrc_die_LDADD = $(libeu) $(libdw) $(libelf)
 strptr_LDADD = $(libelf)
 newdata_LDADD = $(libelf)

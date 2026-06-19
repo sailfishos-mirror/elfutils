@@ -170,7 +170,8 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
   xlatefrom.d_type = xlateto.d_type = ELF_T_PHDR;
   xlatefrom.d_size = phnum * phentsize;
 
-  if ((size_t) nread >= phoff + phnum * phentsize)
+  if (phoff <= (size_t) nread
+      && (size_t) phnum * phentsize <= (size_t) nread - phoff)
     /* We already have all the phdrs from the initial read.  */
     xlatefrom.d_buf = buffer + phoff;
   else
