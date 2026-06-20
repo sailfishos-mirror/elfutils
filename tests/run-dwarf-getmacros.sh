@@ -707,6 +707,14 @@ file /home/petr/proj/elfutils/master/elfutils/x.c
 /file
 EOF
 
+# A .debug_macro opcode_operands_table that defines opcode 0 used to make
+# get_table_for_offset() compute op_protos[(unsigned)0 - 1] and write far
+# out of bounds.  It must now be rejected as invalid DWARF.
+testfiles testfile-macros-opcode0
+testrun_compare ${abs_builddir}/dwarf-getmacros testfile-macros-opcode0 0xb <<\EOF
+invalid DWARF
+EOF
+
 # See testfile-dwp.source.
 testfiles testfile-dwp-5 testfile-dwp-5.dwp
 testfiles testfile-dwp-4-strict testfile-dwp-4-strict.dwp

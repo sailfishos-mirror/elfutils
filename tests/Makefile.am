@@ -411,7 +411,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     testfile45.S.bz2 testfile45.expect.bz2 run-disasm-x86-64.sh \
 	     testfile46.bz2 testfile47.bz2 testfile48.bz2 testfile48.debug.bz2 \
 	     testfile49.bz2 testfile50.bz2 testfile51.bz2 \
-	     testfile-macros-0xff.bz2 \
+	     testfile-macros-0xff.bz2 testfile-macros-opcode0.bz2 \
 	     run-readelf-macro.sh testfilemacro.bz2 testfileclangmacro.bz2 \
 	     run-readelf-loc.sh testfileloc.bz2 \
 	     splitdwarf4-not-split4.dwo.bz2 \

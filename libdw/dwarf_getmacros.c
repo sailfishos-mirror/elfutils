@@ -255,10 +255,22 @@ get_table_for_offset (Dwarf *dbg, Dwarf_Word macoff,
 
   if ((flags & 0x4) != 0)
     {
+      if (readp >= endp)
+	goto invalid_dwarf;
       unsigned count = *readp++;
       for (unsigned i = 0; i < count; ++i)
 	{
+	  if (readp >= endp)
+	    goto invalid;
 	  unsigned opcode = *readp++;
+
+	  /* Opcode 0 is not allocated (and 0xff means "not stored").
+	     Reject it here: without this check the unsigned expression
+	     opcode - 1 wraps to UINT_MAX for opcode == 0, and the
+	     assignment below would write a Dwarf_Macro_Op_Proto far out
+	     of the bounds of the op_protos[255] stack array.  */
+	  if (opcode == 0)
+	    goto invalid;
 
 	  Dwarf_Macro_Op_Proto e;
 	  if (readp >= endp)
