@@ -77,6 +77,15 @@ main (void)
 
   init_ehdr (&ehdr);
   ehdr.e_phoff = (Elf64_Off) (0ULL - (uint64_t) sizeof (Elf64_Phdr));
+  /* Make sure data is in LSB order.  */
+  Elf_Data xlate_data_ehdr =
+    {
+      .d_type = ELF_T_EHDR,
+      .d_buf = &ehdr,
+      .d_size = sizeof ehdr,
+      .d_version = EV_CURRENT,
+    };
+  elf64_xlatetom (&xlate_data_ehdr, &xlate_data_ehdr, ELFDATA2LSB);
   memset (backing, 0, sizeof backing);
   memcpy (backing, &ehdr, sizeof ehdr);
   Elf *elf = elf_from_remote_memory (0, 4096, NULL, read_mem, NULL);
@@ -91,12 +100,23 @@ main (void)
 
   init_ehdr (&ehdr);
   ehdr.e_phoff = sizeof (Elf64_Ehdr);
+  /* Make sure data is in LSB order.  */
+  elf64_xlatetom (&xlate_data_ehdr, &xlate_data_ehdr, ELFDATA2LSB);
   Elf64_Phdr phdr;
   memset (&phdr, 0, sizeof phdr);
   phdr.p_type = PT_LOAD;
   phdr.p_filesz = BACKSZ;
   phdr.p_memsz = BACKSZ;
   phdr.p_align = 4096;
+  /* Make sure data is in LSB order.  */
+  Elf_Data xlate_data_phdr =
+    {
+      .d_type = ELF_T_PHDR,
+      .d_buf = &phdr,
+      .d_size = sizeof phdr,
+      .d_version = EV_CURRENT,
+    };
+  elf64_xlatetom (&xlate_data_phdr, &xlate_data_phdr, ELFDATA2LSB);
   memset (backing, 0, sizeof backing);
   memcpy (backing, &ehdr, sizeof ehdr);
   memcpy (backing + ehdr.e_phoff, &phdr, sizeof phdr);
