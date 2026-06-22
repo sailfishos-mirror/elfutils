@@ -26,6 +26,8 @@
    the GNU Lesser General Public License along with this program.  If
    not, see <http://www.gnu.org/licenses/>.  */
 
+#include "system.h"
+
 static inline bool
 x86_sample_perf_regs_mapping (Ebl *ebl,
 			      uint64_t perf_regs_mask, uint32_t abi,
@@ -63,6 +65,11 @@ x86_sample_perf_regs_mapping (Ebl *ebl,
 				    16/*r8 after flags+segment*/, 17, 18, 19, 20, 21, 22, 23,
 				    8/*ip*/};
   const int *dwarf_to_perf = is_abi32 ? regs_i386 : regs_x86_64;
+  /* regs_i386 and regs_x86_64 have different lengths; the mapping loop
+     below must not index dwarf_to_perf beyond the selected table.  */
+  size_t dwarf_to_perf_len = is_abi32 ?
+    sizeof (regs_i386) / sizeof (regs_i386[0]) :
+    sizeof (regs_x86_64) / sizeof (regs_x86_64[0]);
 
   /* Count bits and allocate regs_mapping:  */
   int j, k, count; uint64_t bit;
@@ -105,8 +112,13 @@ x86_sample_perf_regs_mapping (Ebl *ebl,
       return false;
 
   /* Locations of perf_regs in the dwarf_regs array, according to
-     perf_regs_mask and perf_to_regs[]:  */
-  for (size_t i = 0; i < ebl->frame_nregs; i++)
+     perf_regs_mask and perf_to_regs[].  Bound by both frame_nregs and
+     the selected table length: when abi does not match the backend
+     either one can be the smaller (an x86_64 ebl with an ABI_32 sample
+     has frame_nregs 17 > 9, an i386 ebl with a 64-bit sample has
+     frame_nregs 9 < 17), so take the minimum once, up front.  */
+  size_t max_reg = MIN (ebl->frame_nregs, dwarf_to_perf_len);
+  for (size_t i = 0; i < max_reg; i++)
     {
       k = dwarf_to_perf[i];
       j = perf_to_regs[k];
