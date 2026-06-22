@@ -51,33 +51,33 @@ __libdw_findabbrev (struct Dwarf_CU *cu, unsigned int code)
       mutex_lock (cu->abbrev_lock);
 
       /* Check once more in case entry was added before abbrev_lock
-	 was aquired.  */
-      if (cu->last_abbrev_offset == (size_t) -1l)
-	abb = Dwarf_Abbrev_Hash_find (&cu->abbrev_hash, code);
+	 was acquired.  */
+      abb = Dwarf_Abbrev_Hash_find (&cu->abbrev_hash, code);
 
-      while (cu->last_abbrev_offset != (size_t) -1l)
-	{
-	  size_t length;
+      if (abb == NULL)
+	while (cu->last_abbrev_offset != (size_t) -1l)
+	  {
+	    size_t length;
 
-	  /* Find the next entry.  It gets automatically added to the
-	     hash table.  */
-	  abb = __libdw_getabbrev (cu->dbg, cu, cu->last_abbrev_offset,
-				   &length);
+	    /* Find the next entry.  It gets automatically added to the
+	       hash table.  */
+	    abb = __libdw_getabbrev (cu->dbg, cu, cu->last_abbrev_offset,
+				     &length);
 
-	  if (abb == NULL || abb == DWARF_END_ABBREV)
-	    {
-	      /* Make sure we do not try to search for it again.  */
-	      cu->last_abbrev_offset = (size_t) -1l;
-	      mutex_unlock (cu->abbrev_lock);
-	      return DWARF_END_ABBREV;
-	    }
+	    if (abb == NULL || abb == DWARF_END_ABBREV)
+	      {
+		/* Make sure we do not try to search for it again.  */
+		cu->last_abbrev_offset = (size_t) -1l;
+		mutex_unlock (cu->abbrev_lock);
+		return DWARF_END_ABBREV;
+	      }
 
-	  cu->last_abbrev_offset += length;
+	    cu->last_abbrev_offset += length;
 
-	  /* Is this the code we are looking for?  */
-	  if (abb->code == code)
-	    break;
-	}
+	    /* Is this the code we are looking for?  */
+	    if (abb->code == code)
+	      break;
+	  }
 
       mutex_unlock (cu->abbrev_lock);
     }
