@@ -247,9 +247,9 @@ main(int argc, char** argv)
 				    &cache_name);
   else if (strcmp(argv[remaining], "source") == 0)
     {
-      if (remaining+2 == argc || argv[remaining+2][0] != '/')
+      if (remaining+2 >= argc || argv[remaining+2][0] == '\0')
         {
-          fprintf(stderr, "If FILETYPE is \"source\" then absolute /FILENAME must be given\n");
+          fprintf(stderr, "If FILETYPE is \"source\" then FILENAME must be given\n");
           return 1;
         }
       rc = debuginfod_find_source(client,
