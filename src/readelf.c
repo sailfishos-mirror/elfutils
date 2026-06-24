@@ -12332,7 +12332,10 @@ print_cu_index_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
   /* Size slots for each section follow the offsets (used rows).  */
   const unsigned char *lengths = (offsets +
 				  unit_count * section_count * off_bytes);
-  const unsigned char *lengths_end = lengths + section_count * 4;
+  /* The size table has one row of section_count 4-byte slots per unit,
+     just like the offset table, so it spans unit_count rows (not one).  */
+  const unsigned char *lengths_end = (lengths +
+				      unit_count * section_count * 4);
 
   /* Sanity check the above against dataend.  */
   if ((slot_count > UINT32_MAX / 8)
@@ -12340,6 +12343,8 @@ print_cu_index_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
       || (unit_count > SIZE_MAX / off_bytes)
       || ((unit_count != 0) && (section_count > SIZE_MAX / unit_count))
       || ((section_count != 0) && (unit_count > SIZE_MAX / section_count))
+      || ((unit_count != 0)
+	  && (section_count > SIZE_MAX / (4 * (size_t) unit_count)))
       || (indices > dataend)
       || (sections > dataend)
       || (offsets > dataend)
