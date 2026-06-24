@@ -1923,7 +1923,7 @@ debuginfod_query_server_by_buildid (debuginfod_client *c,
     {
       if (vfd >= 0)
 	dprintf (vfd, "checking filename\n");
-      if (filename[0] != '/') // must start with /
+      if (filename[0] == '\0') // must not be empty
 	{
 	  rc = -EINVAL;
 	  goto out;
@@ -2182,7 +2182,9 @@ debuginfod_query_server_by_buildid (debuginfod_client *c,
   size_t escaped_strlen = 0;
   if (filename)
     {
-      escaped_string = curl_easy_escape(&target_handle, filename+1, 0);
+      escaped_string = curl_easy_escape(&target_handle,
+                                        filename[0] == '/' ? filename+1 : filename,
+                                        0);
       if (!escaped_string)
         {
           rc = -ENOMEM;
