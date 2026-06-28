@@ -199,6 +199,7 @@ elf_getarsym (Elf *elf, size_t *ptr)
 	{
 	  void *file_data; /* unit32_t[n] or uint64_t[n] */
 	  char *str_data;
+	  char *str_end;
 	  size_t sz = n * w;
 
 	  if (elf->map_address == NULL)
@@ -238,6 +239,7 @@ elf_getarsym (Elf *elf, size_t *ptr)
 		}
 
 	      str_data = (char *) new_str;
+	      str_end = new_str + (index_size - sz);
 	    }
 	  else
 	    {
@@ -254,6 +256,7 @@ elf_getarsym (Elf *elf, size_t *ptr)
 		  file_data = memcpy (temp_data, elf->map_address + off, sz);
 		}
 	      str_data = (char *) (elf->map_address + off + sz);
+	      str_end = (char *) (elf->map_address + off + index_size - w);
 	    }
 
 	  /* Now we can build the data structure.  */
@@ -291,16 +294,25 @@ elf_getarsym (Elf *elf, size_t *ptr)
 	      else
 		arsym[cnt].as_off = (*u32)[cnt];
 
+	      /* The symbol name must be NUL terminated within the string
+		 table.  Otherwise the archive symbol table is corrupt and
+		 hashing or scanning the name would read out of bounds.  */
+	      char *endp = (str_data < str_end
+			    ? memchr (str_data, '\0', str_end - str_data)
+			    : NULL);
+	      if (unlikely (endp == NULL))
+		{
+		  if (elf->map_address == NULL)
+		    {
+		      free (elf->state.ar.ar_sym);
+		      elf->state.ar.ar_sym = NULL;
+		    }
+		  __libelf_seterrno (ELF_E_INVALID_ARCHIVE);
+		  goto out;
+		}
+
 	      arsym[cnt].as_hash = _dl_elf_hash (str_data);
-#if HAVE_DECL_RAWMEMCHR
-	      str_data = rawmemchr (str_data, '\0') + 1;
-#else
-	      char c;
-	      do {
-		c = *str_data;
-		str_data++;
-	      } while (c);
-#endif
+	      str_data = endp + 1;
 	    }
 
 	  /* At the end a special entry.  */
