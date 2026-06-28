@@ -512,7 +512,7 @@ AM_CONDITIONAL(USE_ZSTD_COMPRESS, test "x$with_zstd_compress" = "xyes")
 AS_IF([test "x$with_zstd_compress" = "xyes"],
       [AC_DEFINE([USE_ZSTD_COMPRESS], [1], [zstd compression support])])
 
-AC_CHECK_DECLS([memrchr, rawmemchr],[],[],
+AC_CHECK_DECLS([memrchr],[],[],
                [#define _GNU_SOURCE
                 #include <string.h>])
 AC_CHECK_DECLS([powerof2],[],[],[#include <sys/param.h>])
