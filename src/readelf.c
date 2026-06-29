@@ -12290,6 +12290,7 @@ print_cu_index_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
       readp++;
     }
 
+  /* Both offsets and sizes are either 32 or 64 bits (4 or 8 bytes).  */
   const unsigned char off_bytes = offset_size_flag == 0 ? 4 : 8;
 
   if (unlikely (readp > dataend - 4))
@@ -12325,17 +12326,17 @@ print_cu_index_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
      the hash table (ids of 8 bytes).  */
   const unsigned char *indices = hash_table + slot_count * 8;
   /* Sections used starts after the indices, indices and hash table
-     have the same number of slots, indeces are 4 bytes each, */
+     have the same number of slots, indices are 4 bytes each, */
   const unsigned char *sections = indices + slot_count * 4;
   /* Offset slots for each section follow the one row of sections.  */
   const unsigned char *offsets = sections + section_count * 4;
   /* Size slots for each section follow the offsets (used rows).  */
   const unsigned char *lengths = (offsets +
 				  unit_count * section_count * off_bytes);
-  /* The size table has one row of section_count 4-byte slots per unit,
+  /* The size table has one row of section_count slots per unit,
      just like the offset table, so it spans unit_count rows (not one).  */
   const unsigned char *lengths_end = (lengths +
-				      unit_count * section_count * 4);
+				      unit_count * section_count * off_bytes);
 
   /* Sanity check the above against dataend.  */
   if ((slot_count > UINT32_MAX / 8)
@@ -12395,7 +12396,7 @@ print_cu_index_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	  else
 	    for (size_t j = 0; j < section_count; j++)
 	      {
-		uint64_t off = read_4ubyte_unaligned (dbg, prow + j * 8);
+		uint64_t off = read_8ubyte_unaligned (dbg, prow + j * 8);
 		fprintf (out, " %6" PRIu64, off);
 	      }
 	  fprintf (out, "\n");
@@ -12433,12 +12434,20 @@ print_cu_index_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	      continue;
 	    }
 	  /* Note row is one based, not zero based.  */
-	  const unsigned char *prow = lengths + (row - 1) * section_count * 4;
-	  for (size_t j = 0; j < section_count; j++)
-	    {
-	      uint32_t off = read_4ubyte_unaligned (dbg, prow + j * 4);
-	      fprintf (out, " %6" PRIu32, off);
-	    }
+	  const unsigned char *prow = (lengths
+				       + (row - 1) * section_count * off_bytes);
+	  if (off_bytes == 4)
+	    for (size_t j = 0; j < section_count; j++)
+	      {
+		uint32_t sz = read_4ubyte_unaligned (dbg, prow + j * 4);
+		fprintf (out, " %6" PRIu32, sz);
+	      }
+	  else
+	    for (size_t j = 0; j < section_count; j++)
+	      {
+		uint64_t sz = read_8ubyte_unaligned (dbg, prow + j * 8);
+		fprintf (out, " %6" PRIu64, sz);
+	      }
 	  fprintf (out, "\n");
 	}
     }
