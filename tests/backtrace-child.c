@@ -100,6 +100,7 @@ main (int argc __attribute__ ((unused)), char **argv)
 #else /* __linux__ */
 #include <sys/ptrace.h>
 #include <signal.h>
+#include <semaphore.h>
 
 #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 5)
 #define NOINLINE_NOCLONE __attribute__ ((noinline, noclone))
@@ -112,6 +113,11 @@ main (int argc __attribute__ ((unused)), char **argv)
 #define USED __attribute__ ((used))
 
 static int ptraceme, gencore;
+
+/* For --gencore, the worker must not abort until the main thread has entered
+   pthread_join.  Otherwise the core may capture main still in pthread_create
+   with no useful backtrace (seen intermittently on armhf).  */
+static sem_t gencore_go;
 
 /* Execution will arrive here from jmp by an artificial ptrace-spawn signal.  */
 
@@ -202,6 +208,11 @@ dummy4 (void)
 static void *
 start (void *arg UNUSED)
 {
+  if (gencore)
+    {
+      int err = sem_wait (&gencore_go);
+      assert (err == 0);
+    }
   backtracegen ();
   /* Not reached.  */
   abort ();
@@ -226,7 +237,10 @@ main (int argc UNUSED, char **argv)
   dummy3 ();
   dummy4 ();
   if (gencore)
-    printf ("%ld\n", (long) getpid ());
+    {
+      int err = sem_init (&gencore_go, 0, 0);
+      assert (err == 0);
+    }
   pthread_t thread;
   int i = pthread_create (&thread, NULL, start, NULL);
   // pthread_* functions do not set errno.
@@ -238,7 +252,13 @@ main (int argc UNUSED, char **argv)
       assert (l == 0);
     }
   if (gencore)
-    pthread_join (thread, NULL);
+    {
+      printf ("%ld\n", (long) getpid ());
+      int err = sem_post (&gencore_go);
+      assert (err == 0);
+      pthread_join (thread, NULL);
+      sem_destroy (&gencore_go);
+    }
   else
     raise (SIGUSR2);
   return 0;
