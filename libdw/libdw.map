@@ -411,3 +411,10 @@ ELFUTILS_0.194_EXPERIMENTAL {
   global:
     dwflst_sample_getframes;
 } ELFUTILS_0.193_EXPERIMENTAL;
+
+ELFUTILS_0.196 {
+  global:
+    dwarf_begin_elf_type;
+    dwarf_begin_type;
+    dwarf_get_type;
+} ELFUTILS_0.194_EXPERIMENTAL;

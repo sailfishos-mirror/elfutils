@@ -58,6 +58,7 @@ check_PROGRAMS = arextract arsymtest newfile saridx scnnames sectiondump \
 		  elfgetzdata elfputzdata zstrptr emptyfile vendorelf \
 		  fillfile dwarf_default_lower_bound \
 		  dwarf_language_lower_bound dwarf-die-addr-die \
+		  dwarf-type \
 		  get-units-invalid get-units-split attr-integrate-skel \
 		  all-dwarf-ranges unit-info next_cfi \
 		  elfcopy addsections xlate_notes elfrdwrnop \
@@ -211,6 +212,7 @@ TESTS = run-arextract.sh run-arsymtest.sh run-ar.sh newfile test-nlist \
 	emptyfile vendorelf fillfile dwarf_default_lower_bound \
 	dwarf_language_lower_bound \
 	run-dwarf-die-addr-die.sh \
+	run-dwarf-type.sh \
 	run-get-units-invalid.sh run-get-units-split.sh \
 	run-attr-integrate-skel.sh \
 	run-all-dwarf-ranges.sh run-unit-info.sh \
@@ -584,6 +586,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     testfile-bpf-reloc.expect.bz2 testfile-bpf-reloc.o.bz2 \
 	     testfile-m68k-core.bz2 testfile-m68k.bz2 testfile-m68k-s.bz2 \
 	     run-dwarf-die-addr-die.sh \
+	     run-dwarf-type.sh \
 	     run-get-units-invalid.sh run-get-units-split.sh \
 	     testfile-hello4.dwo.bz2 testfile-hello5.dwo.bz2 \
 	     testfile-splitdwarf-4.bz2 testfile-splitdwarf-5.bz2 \
@@ -893,6 +896,7 @@ fillfile_LDADD = $(libelf)
 dwarf_default_lower_bound_LDADD = $(libdw)
 dwarf_language_lower_bound_LDADD = $(libdw)
 dwarf_die_addr_die_LDADD = $(libdw)
+dwarf_type_LDADD = $(libdw)
 get_units_invalid_LDADD = $(libdw)
 get_units_split_LDADD = $(libdw)
 attr_integrate_skel_LDADD = $(libdw)

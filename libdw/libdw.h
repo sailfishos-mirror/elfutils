@@ -1,5 +1,6 @@
 /* Interfaces for libdw.
    Copyright (C) 2002-2010, 2013, 2014, 2016, 2018 Red Hat, Inc.
+   Copyright (C) 2026 Mark J. Wielaard <mark@klomp.org>
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -42,6 +43,19 @@ typedef enum
     DWARF_C_WRITE,		/* Write .. */
   }
 Dwarf_Cmd;
+
+/* DWARF type. Either plain DWARF, split DWARF DWOs or GNU LTO.  When
+   used with dwarf_begin_type or dwarf_begin_elf_type DWARF_T_AUTO
+   tries to get PLAIN, DWO, GNU_LTO in that order.  Enum values have a
+   numeric value indicating their priority in auto mode.  */
+typedef enum
+  {
+    DWARF_T_AUTO    = 0,  /* Automatic selection (PLAIN > DWO > GNU_LTO).  */
+    DWARF_T_GNU_LTO = 16, /* GNU LTO (.gnu.debuglto_.debug_*).  */
+    DWARF_T_DWO     = 32, /* Split DWARF (.debug_*.dwo).  */
+    DWARF_T_PLAIN   = 64, /* Standard DWARF (.debug_*).  */
+  }
+Dwarf_Type;
 
 
 /* Callback results.  */
@@ -234,11 +248,31 @@ typedef void (*__noreturn_attribute__ Dwarf_OOM) (void);
 extern "C" {
 #endif
 
-/* Create a handle for a new debug session.  */
+/* Create a handle for a new debug session.
+   Calls dwarf_begin_type (fildes, cmd, DWARF_T_AUTO).  */
 extern Dwarf *dwarf_begin (int fildes, Dwarf_Cmd cmd);
 
-/* Create a handle for a new debug session for an ELF file.  */
+/* Create a handle for a new debug session given a specific type.
+   When type is DWARF_T_AUTO will try to get PLAIN, DWO, GNU_LTO in
+   that order. Will return NULL if the requested type is not available
+   in the file. */
+extern Dwarf *dwarf_begin_type (int fildes, Dwarf_Cmd cmd, Dwarf_Type type);
+
+/* Create a handle for a new debug session for an ELF file.
+   Calls dwarf_begin_type (elf, cmd, DWARF_T_AUTO, scngrp).  */
 extern Dwarf *dwarf_begin_elf (Elf *elf, Dwarf_Cmd cmd, Elf_Scn *scngrp);
+
+/* Create a handle for a new debug session given a specific type.
+   When type is DWARF_T_AUTO will try to get PLAIN, DWO, GNU_LTO in
+   that order. Will return NULL if the requested type is not available
+   in the file. If scngrp isn't NULL it must be a SHT_GROUP section
+   and only sections in this group will be used.  */
+extern Dwarf *dwarf_begin_elf_type (Elf *elf, Dwarf_Cmd cmd, Dwarf_Type type,
+				     Elf_Scn *scngrp);
+
+/* Returns the DWARF type of the givn Dwarf descriptor.  Return
+   DWARF_T_AUTO (zero) if the descriptor is NULL.  */
+extern Dwarf_Type dwarf_get_type (Dwarf *dwarf);
 
 /* Retrieve ELF descriptor used for DWARF access.  */
 extern Elf *dwarf_getelf (Dwarf *dwarf);

@@ -1,6 +1,6 @@
 /* Create descriptor from ELF descriptor for processing file.
    Copyright (C) 2002-2011, 2014, 2015, 2017, 2018 Red Hat, Inc.
-   Copyright (C) 2023, Mark J. Wielaard <mark@klomp.org>
+   Copyright (C) 2023, 2026 Mark J. Wielaard <mark@klomp.org>
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -99,37 +99,37 @@ static const enum string_section_index scn_to_string_section_idx[IDX_last] =
   [IDX_gnu_debugaltlink] = STR_SCN_IDX_last
 };
 
-static enum dwarf_type
+static Dwarf_Type
 scn_dwarf_type (Dwarf *result, size_t shstrndx, Elf_Scn *scn)
 {
   GElf_Shdr shdr_mem;
   GElf_Shdr *shdr = gelf_getshdr (scn, &shdr_mem);
   if (shdr == NULL)
-    return TYPE_UNKNOWN;
+    return DWARF_T_AUTO;
 
   const char *scnname = elf_strptr (result->elf, shstrndx,
 				    shdr->sh_name);
   if (scnname != NULL)
     {
       if (startswith (scnname, ".gnu.debuglto_.debug"))
-	return TYPE_GNU_LTO;
+	return DWARF_T_GNU_LTO;
       else if (strcmp (scnname, ".debug_cu_index") == 0
 	       || strcmp (scnname, ".debug_tu_index") == 0
 	       || strcmp (scnname, ".debug_dwp") == 0
 	       || strcmp (scnname, ".zdebug_cu_index") == 0
 	       || strcmp (scnname, ".zdebug_tu_index") == 0
 	       || strcmp (scnname, ".zdebug_dwp") == 0)
-	return TYPE_DWO;
+	return DWARF_T_DWO;
       else if (startswith (scnname, ".debug_") || startswith (scnname, ".zdebug_"))
 	{
 	  size_t len = strlen (scnname);
 	  if (strcmp (scnname + len - 4, ".dwo") == 0)
-	    return TYPE_DWO;
+	    return DWARF_T_DWO;
 	  else
-	    return TYPE_PLAIN;
+	    return DWARF_T_PLAIN;
 	}
     }
-  return TYPE_UNKNOWN;
+  return DWARF_T_AUTO;
 }
 static Dwarf *
 check_section (Dwarf *result, size_t shstrndx, Elf_Scn *scn, bool inscngrp)
@@ -186,11 +186,11 @@ check_section (Dwarf *result, size_t shstrndx, Elf_Scn *scn, bool inscngrp)
     {
       /* .debug_cu_index and .debug_tu_index don't have a .dwo suffix,
 	 but they are for DWO.  */
-      if (result->type != TYPE_DWO
+      if (result->type != DWARF_T_DWO
 	  && (cnt == IDX_debug_cu_index || cnt == IDX_debug_tu_index))
 	continue;
       bool need_dot_dwo =
-	(result->type == TYPE_DWO
+	(result->type == DWARF_T_DWO
 	 && cnt != IDX_debug_cu_index
 	 && cnt != IDX_debug_tu_index);
       size_t dbglen = strlen (dwarf_scnnames[cnt]);
@@ -217,7 +217,7 @@ check_section (Dwarf *result, size_t shstrndx, Elf_Scn *scn, bool inscngrp)
 	       && startswith (scnname, ".gnu.debuglto_")
 	       && strcmp (&scnname[14], dwarf_scnnames[cnt]) == 0)
 	{
-	  if (result->type == TYPE_GNU_LTO)
+	  if (result->type == DWARF_T_GNU_LTO)
 	    break;
 	}
     }
@@ -482,17 +482,44 @@ valid_p (Dwarf *result)
 
 
 static Dwarf *
-global_read (Dwarf *result, Elf *elf, size_t shstrndx)
+global_read (Dwarf *result, Elf *elf, size_t shstrndx,
+	     Dwarf_Type requested_type)
 {
   Elf_Scn *scn = NULL;
 
-  /* First check the type (PLAIN, DWO, LTO) we are looking for.  We
-     prefer PLAIN if available over DWO, over LTO.  */
-  while ((scn = elf_nextscn (elf, scn)) != NULL && result->type != TYPE_PLAIN)
+  if (requested_type == DWARF_T_AUTO)
     {
-      enum dwarf_type type = scn_dwarf_type (result, shstrndx, scn);
-      if (type > result->type)
-	result->type = type;
+      /* First check the type (PLAIN, DWO, LTO) we are looking for.  We
+	 prefer PLAIN if available over DWO, over LTO.  */
+      while ((scn = elf_nextscn (elf, scn)) != NULL
+	     && result->type != DWARF_T_PLAIN)
+	{
+	  Dwarf_Type type = scn_dwarf_type (result, shstrndx, scn);
+	  if (type > result->type)
+	    result->type = type;
+	}
+    }
+  else
+    {
+      /* Check there is at least one section of the requested type.  */
+      bool found = false;
+      while ((scn = elf_nextscn (elf, scn)) != NULL && !found)
+	{
+	  Dwarf_Type type = scn_dwarf_type (result, shstrndx, scn);
+	  if (type == requested_type)
+	    found = true;
+	}
+
+      if (!found)
+	{
+	  /* Requested type not available.  */
+	  Dwarf_Sig8_Hash_free (&result->sig8_hash);
+	  __libdw_seterrno (DWARF_E_NO_DWARF);
+	  free (result);
+	  return NULL;
+	}
+
+      result->type = requested_type;
     }
 
   scn = NULL;
@@ -504,7 +531,8 @@ global_read (Dwarf *result, Elf *elf, size_t shstrndx)
 
 
 static Dwarf *
-scngrp_read (Dwarf *result, Elf *elf, size_t shstrndx, Elf_Scn *scngrp)
+scngrp_read (Dwarf *result, Elf *elf, size_t shstrndx,
+	     Dwarf_Type requested_type, Elf_Scn *scngrp)
 {
   GElf_Shdr shdr_mem;
   GElf_Shdr *shdr = gelf_getshdr (scngrp, &shdr_mem);
@@ -541,24 +569,58 @@ scngrp_read (Dwarf *result, Elf *elf, size_t shstrndx, Elf_Scn *scngrp)
   Elf32_Word *scnidx = (Elf32_Word *) data->d_buf;
   size_t cnt;
 
-  /* First check the type (PLAIN, DWO, LTO) we are looking for.  We
-     prefer PLAIN if available over DWO, over LTO.  */
-  for (cnt = 1; cnt * sizeof (Elf32_Word) <= data->d_size; ++cnt)
+  if (requested_type == DWARF_T_AUTO)
     {
-      Elf_Scn *scn = elf_getscn (elf, scnidx[cnt]);
-      if (scn == NULL)
+      /* First check the type (PLAIN, DWO, LTO) we are looking for.  We
+	 prefer PLAIN if available over DWO, over LTO.  */
+      for (cnt = 1; cnt * sizeof (Elf32_Word) <= data->d_size; ++cnt)
 	{
-	  /* A section group refers to a non-existing section.  Should
-	     never happen.  */
+	  Elf_Scn *scn = elf_getscn (elf, scnidx[cnt]);
+	  if (scn == NULL)
+	    {
+	      /* A section group refers to a non-existing section.  Should
+		 never happen.  */
+	      Dwarf_Sig8_Hash_free (&result->sig8_hash);
+	      __libdw_seterrno (DWARF_E_INVALID_ELF);
+	      free (result);
+	      return NULL;
+	    }
+
+	  Dwarf_Type type = scn_dwarf_type (result, shstrndx, scn);
+	  if (type > result->type)
+	    result->type = type;
+	}
+    }
+  else
+    {
+      /* Check there is at least one section of the requested type.  */
+      bool found = false;
+      for (cnt = 1; cnt * sizeof (Elf32_Word) <= data->d_size && !found; ++cnt)
+	{
+	  Elf_Scn *scn = elf_getscn (elf, scnidx[cnt]);
+	  if (scn == NULL)
+	    {
+	      Dwarf_Sig8_Hash_free (&result->sig8_hash);
+	      __libdw_seterrno (DWARF_E_INVALID_ELF);
+	      free (result);
+	      return NULL;
+	    }
+
+	  Dwarf_Type type = scn_dwarf_type (result, shstrndx, scn);
+	  if (type == requested_type)
+	    found = true;
+	}
+
+      if (!found)
+	{
+	  /* Requested type not available.  */
 	  Dwarf_Sig8_Hash_free (&result->sig8_hash);
-	  __libdw_seterrno (DWARF_E_INVALID_ELF);
+	  __libdw_seterrno (DWARF_E_NO_DWARF);
 	  free (result);
 	  return NULL;
 	}
 
-      enum dwarf_type type = scn_dwarf_type (result, shstrndx, scn);
-      if (type > result->type)
-	result->type = type;
+      result->type = requested_type;
     }
 
   for (cnt = 1; cnt * sizeof (Elf32_Word) <= data->d_size && result != NULL; ++cnt)
@@ -575,7 +637,8 @@ scngrp_read (Dwarf *result, Elf *elf, size_t shstrndx, Elf_Scn *scngrp)
 
 
 Dwarf *
-dwarf_begin_elf (Elf *elf, Dwarf_Cmd cmd, Elf_Scn *scngrp)
+dwarf_begin_elf_type (Elf *elf, Dwarf_Cmd cmd, Dwarf_Type type,
+		      Elf_Scn *scngrp)
 {
   GElf_Ehdr *ehdr;
   GElf_Ehdr ehdr_mem;
@@ -644,9 +707,9 @@ dwarf_begin_elf (Elf *elf, Dwarf_Cmd cmd, Elf_Scn *scngrp)
 	 sections with the name are ignored.  The DWARF specification
 	 does not really say this is allowed.  */
       if (scngrp == NULL)
-	return global_read (result, elf, shstrndx);
+	return global_read (result, elf, shstrndx, type);
       else
-	return scngrp_read (result, elf, shstrndx, scngrp);
+	return scngrp_read (result, elf, shstrndx, type, scngrp);
     }
   else if (cmd == DWARF_C_WRITE)
     {
@@ -661,4 +724,22 @@ dwarf_begin_elf (Elf *elf, Dwarf_Cmd cmd, Elf_Scn *scngrp)
   free (result);
   return NULL;
 }
+INTDEF(dwarf_begin_elf_type)
+
+Dwarf *
+dwarf_begin_elf (Elf *elf, Dwarf_Cmd cmd, Elf_Scn *scngrp)
+{
+  return dwarf_begin_elf_type (elf, cmd, DWARF_T_AUTO, scngrp);
+}
 INTDEF(dwarf_begin_elf)
+
+Dwarf_Type
+dwarf_get_type (Dwarf *dwarf)
+{
+  if (dwarf == NULL)
+    return DWARF_T_AUTO;
+
+  return dwarf->type;
+}
+INTDEF(dwarf_get_type)
+

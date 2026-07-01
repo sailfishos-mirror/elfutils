@@ -154,15 +154,6 @@ enum
 
 #include "dwarf_sig8_hash.h"
 
-/* The type of Dwarf object, sorted by preference
-   (if there is a higher order type, we pick that one over the others).  */
-enum dwarf_type
-  {
-    TYPE_UNKNOWN = 0,
-    TYPE_GNU_LTO = 16,
-    TYPE_DWO = 32,
-    TYPE_PLAIN = 64,
-  };
 
 /* This is the structure representing the debugging state.  */
 struct Dwarf
@@ -257,7 +248,7 @@ struct Dwarf
   /* Similar for addrx/constx, which will come from .debug_addr section.  */
   struct Dwarf_CU *fake_addr_cu;
 
-  enum dwarf_type type;
+  Dwarf_Type type;
 
   /* Supporting lock for internal memory handling.  Ensures threads that have
      an entry in the mem_tails array are not disturbed by new threads doing
@@ -486,6 +477,8 @@ INTDECL (dwarf_attr)
 INTDECL (dwarf_attr_integrate)
 INTDECL (dwarf_begin)
 INTDECL (dwarf_begin_elf)
+INTDECL (dwarf_begin_elf_type)
+INTDECL (dwarf_begin_type)
 INTDECL (dwarf_child)
 INTDECL (dwarf_cu_dwp_section_info)
 INTDECL (dwarf_default_lower_bound)
@@ -508,6 +501,7 @@ INTDECL (dwarf_getaranges)
 INTDECL (dwarf_getlocation_die)
 INTDECL (dwarf_getsrcfiles)
 INTDECL (dwarf_getsrclines)
+INTDECL (dwarf_get_type)
 INTDECL (dwarf_get_units)
 INTDECL (dwarf_hasattr)
 INTDECL (dwarf_haschildren)
