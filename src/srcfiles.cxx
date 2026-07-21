@@ -96,7 +96,7 @@ static const struct argp_option options[] =
     "Cannot be used with the null option"), 0 },
     #ifdef ENABLE_LIBDEBUGINFOD
     { "no-backup", 'b', NULL, 0, N_("Disables local source file search when "
-      "debuginfod fails to fetch files. This option is only applicable"
+      "debuginfod fails to fetch files. This option is only applicable "
       "when fetching and zipping files."), 0 },
     #endif
   #endif
@@ -227,22 +227,27 @@ collect_sourcefiles (Dwfl_Module *dwflmod,
 
   dbg = dwfl_module_getdwarf (dwflmod, &bias);
 
-  Dwarf_Off offset = 0;
-  Dwarf_Off old_offset;
-  size_t hsize;
+  Dwarf_CU *cu = NULL;
+  Dwarf_Die cudie_mem;
+  Dwarf_Die subdie_mem;
   /* Traverse all CUs of this module.  */
-  while (dwarf_nextcu (dbg, old_offset = offset, &offset, &hsize, NULL, NULL, NULL) == 0)
+  while (dwarf_get_units (dbg, cu, &cu, NULL, NULL,
+			  &cudie_mem, &subdie_mem) == 0)
     {
-      Dwarf_Die cudie_mem;
-      Dwarf_Die *cudie = dwarf_offdie (dbg, old_offset + hsize, &cudie_mem);
+      Dwarf_Die *cudie = &cudie_mem;
+      Dwarf_Die *subdie = (dwarf_tag (&subdie_mem) != DW_TAG_invalid
+			   ? &subdie_mem : NULL);
 
-      if (cudie == NULL)
-        continue;
-
-      const char *cuname = dwarf_diename (cudie) ?: "<unknown>";
+      /* For split dwarf (dwo) the name might not be in the skeleton
+	 CU DIE, try the split compile unit DIE, if there is one.  */
+      const char *cuname = (dwarf_diename (cudie)
+			    ?: (dwarf_diename (subdie) ?: "<unknown>"));
       Dwarf_Files *files;
       size_t nfiles;
-      if (dwarf_getsrcfiles (cudie, &files, &nfiles) != 0)
+      /* The stmt list is usually in the skeleton_unit, but might also
+	 be found in a split type unit.  */
+      if (dwarf_getsrcfiles (cudie, &files, &nfiles) != 0
+          && dwarf_getsrcfiles (subdie, &files, &nfiles) != 0)
         continue;
 
       /* extract DW_AT_comp_dir to resolve relative file names.  */
