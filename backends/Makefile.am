@@ -117,7 +117,7 @@ libebl_backends_a_SOURCES = $(i386_SRCS) $(sh_SRCS) $(x86_64_SRCS) \
 			    $(hexagon_SRCS)
 
 libebl_backends_pic_a_SOURCES =
-am_libebl_backends_pic_a_OBJECTS = $(libebl_backends_a_SOURCES:.c=.os)
+am_libebl_backends_pic_a_OBJECTS = $(libebl_backends_a_SOURCES:.c=_.os)
 
 noinst_HEADERS = libebl_CPU.h libebl_PERF_FLAGS.h common-reloc.c \
 	    linux-core-note.c x86_corenote.c \

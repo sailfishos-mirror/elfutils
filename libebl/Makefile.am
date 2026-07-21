@@ -57,7 +57,7 @@ libebl_a_SOURCES = eblopenbackend.c eblclosebackend.c eblreloctypename.c \
 		   ebl_data_marker_symbol.c
 
 libebl_pic_a_SOURCES =
-am_libebl_pic_a_OBJECTS = $(libebl_a_SOURCES:.c=.os)
+am_libebl_pic_a_OBJECTS = $(libebl_a_SOURCES:.c=_.os)
 
 noinst_HEADERS = libebl.h libeblP.h ebl-hooks.h
 

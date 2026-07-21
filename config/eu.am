@@ -159,7 +159,7 @@ DEFS.os += -DSYMBOL_VERSIONING
 else
 endif
 
-%.os: %.c %.o
+%_.os: %.c %.o
 if AMDEP
 	$(AM_V_CC)if $(COMPILE.os) -c -o $@ $(fpic_CFLAGS) $(DEFS.os) -MT $@ -MD -MP \
 	  -MF "$(DEPDIR)/$*.Tpo" `test -f '$<' || echo '$(srcdir)/'`$<; \

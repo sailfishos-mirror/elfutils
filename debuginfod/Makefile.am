@@ -82,7 +82,7 @@ endif
 
 libdebuginfod_a_SOURCES = debuginfod-client.c
 libdebuginfod_pic_a_SOURCES = debuginfod-client.c
-am_libdebuginfod_pic_a_OBJECTS = $(libdebuginfod_a_SOURCES:.c=.os)
+am_libdebuginfod_pic_a_OBJECTS = $(libdebuginfod_a_SOURCES:.c=_.os)
 
 if DUMMY_LIBDEBUGINFOD
 AM_CPPFLAGS += -Wno-unused-parameter

@@ -54,7 +54,7 @@ libebl = ../libebl/libebl.a
 libeu = ../lib/libeu.a
 
 libdwfl_stacktrace_pic_a_SOURCES =
-am_libdwfl_stacktrace_pic_a_OBJECTS = $(libdwfl_stacktrace_a_SOURCES:.c=.os)
+am_libdwfl_stacktrace_pic_a_OBJECTS = $(libdwfl_stacktrace_a_SOURCES:.c=_.os)
 
 noinst_HEADERS = libdwfl_stacktraceP.h \
 		 dwflst_tracker_elftab.h dwflst_tracker_dwfltab.h

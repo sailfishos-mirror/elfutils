@@ -45,7 +45,7 @@ noinst_HEADERS = i386_dis.h i386_mne.h x86_64_dis.h
 libcpu_a_SOURCES = i386_disasm.c x86_64_disasm.c bpf_disasm.c riscv_disasm.c
 
 libcpu_pic_a_SOURCES =
-am_libcpu_pic_a_OBJECTS = $(libcpu_a_SOURCES:.c=.os)
+am_libcpu_pic_a_OBJECTS = $(libcpu_a_SOURCES:.c=_.os)
 
 i386_gendis_SOURCES = i386_gendis.c i386_lex.l i386_parse.y
 

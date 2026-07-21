@@ -91,7 +91,7 @@ libebl = ../libebl/libebl.a
 libeu = ../lib/libeu.a
 
 libdwfl_pic_a_SOURCES =
-am_libdwfl_pic_a_OBJECTS = $(libdwfl_a_SOURCES:.c=.os)
+am_libdwfl_pic_a_OBJECTS = $(libdwfl_a_SOURCES:.c=_.os)
 
 noinst_HEADERS = libdwflP.h
 

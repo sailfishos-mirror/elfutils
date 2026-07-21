@@ -52,7 +52,7 @@ libebl = ../libebl/libebl.a
 libeu = ../lib/libeu.a
 
 libdwelf_pic_a_SOURCES =
-am_libdwelf_pic_a_OBJECTS = $(libdwelf_a_SOURCES:.c=.os)
+am_libdwelf_pic_a_OBJECTS = $(libdwelf_a_SOURCES:.c=_.os)
 
 EXTRA_libdwelf_a_DEPENDENCIES = libdwelf.manifest
 

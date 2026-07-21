@@ -103,7 +103,7 @@ $(srcdir)/known-dwarf.h: $(top_srcdir)/config/known-dwarf.awk $(srcdir)/dwarf.h
 endif
 
 libdw_pic_a_SOURCES =
-am_libdw_pic_a_OBJECTS = $(libdw_a_SOURCES:.c=.os)
+am_libdw_pic_a_OBJECTS = $(libdw_a_SOURCES:.c=_.os)
 
 libdw_so_LIBS = ../libebl/libebl_pic.a ../backends/libebl_backends_pic.a \
 		../libcpu/libcpu_pic.a libdw_pic.a ../libdwelf/libdwelf_pic.a \
