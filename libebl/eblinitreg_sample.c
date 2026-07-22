@@ -61,10 +61,18 @@ ebl_set_initial_registers_sample (Ebl *ebl,
 						regs_mapping, n_regs_mapping,
 						setfunc, arg);
 
-  /* If set_initial_registers_sample is unspecified, then it is safe
-     to use the following generic code to populate a contiguous array
-     of dwarf_regs:  */
+  /* If perf_frame_regs_mask is zero, then the sample_regs
+     functionality is unsupported by this Ebl:  */
+  if (ebl->perf_frame_regs_mask == 0)
+    return false;
+
+  /* If set_initial_registers_sample is unspecified, and
+     perf_frame_regs_mask is nonzero, then it is safe to use the
+     following generic code to populate a contiguous small array of
+     dwarf_regs:  */
   Dwarf_Word dwarf_regs[64];
+  /* An Ebl that fails this assert is missing a custom
+     set_initial_registers_sample implementation:  */
   assert (ebl->frame_nregs < 64);
   size_t i;
   for (i = 0; i < ebl->frame_nregs; i++)
