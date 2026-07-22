@@ -824,16 +824,11 @@ __libdw_dieabbrev (Dwarf_Die *die, const unsigned char **readp)
 
   if (unlikely (die->cu == NULL))
     {
-      /* __atomic_* compiler builtin functions are used instead of <stdatomic.h>
-	 because the builtins can operate on non-_Atomic types.
-	 Dwarf_Die.abbrev cannot be made _Atomic without possibly breaking ABI
-	 compatibility.  */
-      __atomic_compare_exchange_n (&die->abbrev, &expected, end_abbrev, false,
-				   __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
+      atomic_compare_exchange (&die->abbrev, &expected, end_abbrev);
       return end_abbrev;
     }
 
-  Dwarf_Abbrev *abbrev = __atomic_load_n (&die->abbrev, __ATOMIC_ACQUIRE);
+  Dwarf_Abbrev *abbrev = atomic_load_acquire (&die->abbrev);
   if (abbrev == NULL || readp != NULL)
     {
       /* We need to get the abbreviation or need to read after the code.  */
@@ -841,9 +836,7 @@ __libdw_dieabbrev (Dwarf_Die *die, const unsigned char **readp)
       const unsigned char *addr = die->addr;
       if (addr >= (const unsigned char *) die->cu->endp)
 	{
-	  __atomic_compare_exchange_n (&die->abbrev, &expected,
-				       end_abbrev, false,
-				       __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
+	  atomic_compare_exchange (&die->abbrev, &expected, end_abbrev);
 	  return end_abbrev;
 	}
 
@@ -856,8 +849,7 @@ __libdw_dieabbrev (Dwarf_Die *die, const unsigned char **readp)
       if (abbrev == NULL)
 	{
 	  abbrev = __libdw_findabbrev (die->cu, code);
-	  __atomic_compare_exchange_n (&die->abbrev, &expected, abbrev, false,
-				       __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
+	  atomic_compare_exchange (&die->abbrev, &expected, abbrev);
 	}
     }
 

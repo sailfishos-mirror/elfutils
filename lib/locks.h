@@ -29,6 +29,8 @@
 #ifndef LOCKS_H
 #define LOCKS_H     1
 
+#include <stdbool.h>
+
 #if USE_VG_ANNOTATIONS == 1
 # include <valgrind/helgrind.h>
 #else
@@ -64,6 +66,27 @@
 # define mutex_fini(lock)		MUTEX_CALL (destroy (&lock))
 # define once(once_control, init_routine)  \
   ONCE_CALL (once (&once_control, init_routine))
+/* __atomic_* compiler builtin functions are used instead of <stdatomic.h>
+   because the builtins can operate on non-_Atomic types.
+   Dwarf_Die.abbrev cannot be made _Atomic without possibly breaking ABI
+   compatibility.  Include valgrind annotations since helgrind does not
+   track ordering from atomics.  Values set with atomic_store_release but
+   loaded without a lock should also be annotated with
+   VALGRIND_HG_DISABLE_CHECKING.  */
+# define atomic_load_acquire(ptr) \
+  ({ __typeof__ (*(ptr)) _val = __atomic_load_n ((ptr), __ATOMIC_ACQUIRE);  \
+     ANNOTATE_HAPPENS_AFTER (ptr);					    \
+     _val; })
+# define atomic_store_release(ptr, val)  \
+  ({ ANNOTATE_HAPPENS_BEFORE (ptr);	 \
+     __atomic_store_n ((ptr), (val), __ATOMIC_RELEASE); })
+# define atomic_compare_exchange(ptr, expected, val) \
+  ({ ANNOTATE_HAPPENS_BEFORE (ptr);					   \
+     bool _match = __atomic_compare_exchange_n ((ptr), (expected), (val),  \
+						false, __ATOMIC_RELEASE,   \
+						__ATOMIC_ACQUIRE);	   \
+     ANNOTATE_HAPPENS_AFTER (ptr);					   \
+     _match; })
 #else
 /* Eventually we will allow multi-threaded applications to use the
    libraries.  Therefore we will add the necessary locking although
@@ -81,6 +104,15 @@
 # define mutex_fini(lock) ((void) (lock))
 # define once_define(class,name)
 # define once(once_control, init_routine)       init_routine()
+# define atomic_load_acquire(ptr) (*(ptr))
+# define atomic_store_release(ptr, val) ((void) (*(ptr) = (val)))
+# define atomic_compare_exchange(ptr, expected, val) \
+  ({ bool _match = *(ptr) == *(expected);  \
+     if (_match)			   \
+       *(ptr) = (val);			   \
+     else				   \
+       *(expected) = *(ptr);		   \
+     _match; })
 #endif  /* USE_LOCKS */
 
 #endif  /* locks.h */
