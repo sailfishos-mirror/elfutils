@@ -396,6 +396,8 @@ ELFUTILS_0.196 {
   global:
     dwelf_dwarf_debug_sup;
     dwelf_dwarf_debug_dwp;
+    dwarf_begin_type;
+    dwarf_get_type;
 } ELFUTILS_0.193;
 
 /* XXX Experimental libdwfl_stacktrace API. */
