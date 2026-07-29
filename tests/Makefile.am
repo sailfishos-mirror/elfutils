@@ -383,6 +383,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     run-addrscopes.sh run-strings-test.sh run-funcscopes.sh \
 	     run-nm-syms.sh testfilesyms32.bz2 testfilesyms64.bz2 \
 	     run-nm-self.sh run-readelf-self.sh run-readelf-info-plus.sh \
+	     testfile-main-split.bz2 testfile-dwp-main-split.bz2 \
 	     run-srcfiles-self.sh \
 		 run-readelf-compressed.sh \
 	     run-readelf-compressed-zstd.sh \

@@ -32,6 +32,7 @@
 
 #include "libdwP.h"
 #include "libelfP.h"
+#include "libdwelfP.h"
 #include "eu-search.h"
 
 #include <limits.h>
@@ -91,7 +92,27 @@ try_dwp_file (Dwarf_CU *cu)
 {
   if (cu->dbg->dwp_dwarf == NULL)
     {
-      if (cu->dbg->elfpath != NULL)
+      uint8_t is_dwp;
+      const char *filename;
+      const uint8_t *dwp_id;
+      int dwp_fd = -1;
+
+      ssize_t idlen = INTUSE(dwelf_dwarf_debug_dwp) (cu->dbg, NULL, &is_dwp,
+						     &filename, &dwp_id);
+      if (idlen >= 0 && filename != NULL && is_dwp == 0 && *filename != '\0')
+	{
+	  /* XXX we need to set standards where/how to find id based
+	     dwp files, including debuginfod support. For now only use
+	     the file path.  */
+	  char *path = __libdw_filepath (cu->dbg->debugdir, NULL, filename);
+	  if (path != NULL)
+	    {
+	      dwp_fd = TEMP_FAILURE_RETRY (open (path, O_RDONLY));
+	      free (path);
+	    }
+	}
+
+      if (dwp_fd == -1 && cu->dbg->elfpath != NULL)
 	{
 	  /* The DWARF 5 standard says "the package file is typically placed in
 	     the same directory as the application, and is given the same name
@@ -105,23 +126,25 @@ try_dwp_file (Dwarf_CU *cu)
 	    }
 	  memcpy (dwp_path, cu->dbg->elfpath, elfpath_len);
 	  strcpy (dwp_path + elfpath_len, ".dwp");
-	  int dwp_fd = open (dwp_path, O_RDONLY);
+	  dwp_fd = TEMP_FAILURE_RETRY (open (dwp_path, O_RDONLY));
 	  free (dwp_path);
-	  if (dwp_fd != -1)
+	}
+
+      if (dwp_fd != -1)
+	{
+	  Dwarf *dwp_dwarf = INTUSE(dwarf_begin_type) (dwp_fd, DWARF_C_READ,
+						       DWARF_T_DWO);
+	  /* There's no way to know whether we got the correct file until
+	     we look up the unit, but it should at least be a dwp file.  */
+	  if (dwp_dwarf != NULL
+	      && (dwp_dwarf->sectiondata[IDX_debug_cu_index] != NULL
+		  || dwp_dwarf->sectiondata[IDX_debug_tu_index] != NULL))
 	    {
-	      Dwarf *dwp_dwarf = dwarf_begin (dwp_fd, DWARF_C_READ);
-	      /* There's no way to know whether we got the correct file until
-		 we look up the unit, but it should at least be a dwp file.  */
-	      if (dwp_dwarf != NULL
-		  && (dwp_dwarf->sectiondata[IDX_debug_cu_index] != NULL
-		      || dwp_dwarf->sectiondata[IDX_debug_tu_index] != NULL))
-		{
-		  cu->dbg->dwp_dwarf = dwp_dwarf;
-		  cu->dbg->dwp_fd = dwp_fd;
-		}
-	      else
-		close (dwp_fd);
+	      cu->dbg->dwp_dwarf = dwp_dwarf;
+	      cu->dbg->dwp_fd = dwp_fd;
 	    }
+	  else
+	    close (dwp_fd);
 	}
       if (cu->dbg->dwp_dwarf == NULL)
 	cu->dbg->dwp_dwarf = (Dwarf *) -1;
