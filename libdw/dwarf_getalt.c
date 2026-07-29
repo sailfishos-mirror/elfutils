@@ -103,10 +103,17 @@ find_debug_altlink (Dwarf *dbg)
   ssize_t build_id_len = INTUSE(dwelf_dwarf_gnu_debugaltlink) (dbg,
 							       &altname,
 							       &build_id);
-
-  /* Couldn't even get the debugaltlink.  It probably doesn't exist.  */
   if (build_id_len <= 0)
-    return;
+    {
+      uint8_t is_sup;
+      build_id_len = INTUSE(dwelf_dwarf_debug_sup) (dbg, NULL, &is_sup,
+						    &altname,
+						    ((const uint8_t **)
+						     &build_id));
+      /* Does the .debug_sup exist and is this a plain DWARF?  */
+      if (build_id_len < 0 || altname == NULL || is_sup != 0)
+	return;
+    }
 
   const uint8_t *id = (const uint8_t *) build_id;
   size_t id_len = build_id_len;

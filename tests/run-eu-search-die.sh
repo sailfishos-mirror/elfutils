@@ -25,7 +25,8 @@ die_test_files=("testfile-debug-types"
                 "testfilebazdbgppc64.debug"
                 "testfile-dwarf-4" "testfile-dwarf-5"
                 "testfile-splitdwarf-4" "testfile-hello4.dwo" "testfile-world4.dwo"
-                "testfile-splitdwarf-5" "testfile-hello5.dwo" "testfile-world5.dwo")
+                "testfile-splitdwarf-5" "testfile-hello5.dwo" "testfile-world5.dwo"
+                "testfile-dwarf5-ref-sup" "testfile-dwarf5.sup")
 
 testfiles "${die_test_files[@]}"
 

@@ -8022,6 +8022,7 @@ attr_callback (Dwarf_Attribute *attrp, void *arg)
 
     case DW_FORM_indirect:
     case DW_FORM_strp:
+    case DW_FORM_strp_sup:
     case DW_FORM_line_strp:
     case DW_FORM_strx:
     case DW_FORM_strx1:

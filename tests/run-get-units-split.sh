@@ -27,6 +27,11 @@ testfiles testfile_multi_main testfile_multi.dwz
 
 testrun ${abs_builddir}/get-units-split testfile_multi_main
 
+# see run-dwelf-dwarf-debug-sup.sh
+testfiles testfile-dwarf5-ref-sup testfile-dwarf5.sup
+
+testrun ${abs_builddir}/get-units-split testfile-dwarf5-ref-sup
+
 # see tests/run-dwflsyms.sh
 testfiles testfilebazdbgppc64.debug
 

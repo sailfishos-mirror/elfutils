@@ -60,6 +60,8 @@ dwarf_formref_die (Dwarf_Attribute *attr, Dwarf_Die *result)
 	ref_size = cu->offset_size;
 
       Dwarf *dbg_ret = (attr->form == DW_FORM_GNU_ref_alt
+			|| attr->form == DW_FORM_ref_sup4
+			|| attr->form == DW_FORM_ref_sup8
 			? INTUSE(dwarf_getalt) (cu->dbg) : cu->dbg);
 
       if (dbg_ret == NULL)
