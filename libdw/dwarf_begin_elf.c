@@ -69,6 +69,8 @@ static const char dwarf_scnnames[IDX_last][19] =
   [IDX_debug_rnglists] = ".debug_rnglists",
   [IDX_debug_cu_index] = ".debug_cu_index",
   [IDX_debug_tu_index] = ".debug_tu_index",
+  [IDX_debug_sup] = ".debug_sup",
+  [IDX_debug_dwp] = ".debug_dwp",
   [IDX_gnu_debugaltlink] = ".gnu_debugaltlink"
 };
 #define ndwarf_scnnames (sizeof (dwarf_scnnames) / sizeof (dwarf_scnnames[0]))
@@ -96,6 +98,8 @@ static const enum string_section_index scn_to_string_section_idx[IDX_last] =
   [IDX_debug_rnglists] = STR_SCN_IDX_last,
   [IDX_debug_cu_index] = STR_SCN_IDX_last,
   [IDX_debug_tu_index] = STR_SCN_IDX_last,
+  [IDX_debug_sup] = STR_SCN_IDX_last,
+  [IDX_debug_dwp] = STR_SCN_IDX_last,
   [IDX_gnu_debugaltlink] = STR_SCN_IDX_last
 };
 

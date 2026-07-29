@@ -43,6 +43,7 @@
 /dwarf-ranges
 /dwarf_default_lower_bound
 /dwarfcfi
+/dwelf-dwarf-debug-sup
 /dwelf_elf_e_machine_string
 /dwarf_language_lower_bound
 /dwelfgnucompressed

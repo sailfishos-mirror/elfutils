@@ -71,6 +71,7 @@ check_PROGRAMS = arextract arsymtest newfile saridx scnnames sectiondump \
 		  eu_search_lines eu_search_die \
 		  ar-extract-ar elf-from-memory ar-getarsym-mem \
 		  core-ioperm-huge \
+		  dwelf-dwarf-debug-sup \
 		  $(asm_TESTS)
 
 asm_TESTS = asm-tst1 asm-tst2 asm-tst3 asm-tst4 asm-tst5 \
@@ -243,6 +244,7 @@ TESTS = run-arextract.sh run-arsymtest.sh run-ar.sh newfile test-nlist \
 	run-test-manyfuncs.sh \
 	run-eu-search-cfi.sh run-eu-search-macros.sh \
 	run-eu-search-lines.sh run-eu-search-die.sh \
+	run-dwelf-dwarf-debug-sup.sh \
 	elf-from-memory ar-getarsym-mem
 
 if !BIARCH
@@ -739,7 +741,9 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     run-stackprof-system.sh run-stackprof-system-gprof.sh \
 	     stackprof-subr.sh \
 	     run-eu-search-cfi.sh run-eu-search-macros.sh \
-	     run-eu-search-lines.sh run-eu-search-die.sh
+	     run-eu-search-lines.sh run-eu-search-die.sh \
+	     run-dwelf-dwarf-debug-sup.sh \
+	     testfile-dwarf5-ref-sup.bz2 testfile-dwarf5.sup.bz2
 
 
 if USE_HELGRIND
@@ -925,6 +929,7 @@ debuginfod_build_id_find_LDADD = $(libelf) $(libdw)
 xlate_notes_LDADD = $(libelf)
 elfrdwrnop_LDADD = $(libelf)
 dwelf_elf_e_machine_string_LDADD = $(libelf) $(libdw)
+dwelf_dwarf_debug_sup_LDADD = $(libelf) $(libdw)
 getphdrnum_LDADD = $(libelf) $(libdw)
 leb128_LDADD = $(libelf) $(libdw)
 read_unaligned_LDADD = $(libelf) $(libdw)
