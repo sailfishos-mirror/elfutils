@@ -609,6 +609,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     run-attr-integrate-skel.sh \
 	     run-all-dwarf-ranges.sh testfilesplitranges4.debug.bz2 \
 	     testfile-ranges-hello.dwo.bz2 testfile-ranges-world.dwo.bz2 \
+	     testfile-frob-single.bz2 \
 	     run-unit-info.sh run-next-cfi.sh run-next-cfi-self.sh \
 	     testfile-riscv64.bz2 testfile-riscv64-s.bz2 \
 	     testfile-riscv64-core.bz2 \

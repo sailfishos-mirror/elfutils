@@ -79,6 +79,23 @@ Iterate no info, compare recorded info with dwarf_cu_info.
 
 EOF
 
+# Single file split-dwarf. dwo sections in the plain debug file.
+#
+# echo "int frob (void) { return 42; }" \
+# | clang -g -gsplit-dwarf=single -xc - -c -o testfile-frob-single
+testfiles testfile-frob-single
+testrun_compare ${abs_builddir}/unit-info testfile-frob-single <<\EOF
+file: testfile-frob-single
+Iterate getting all info, compare with dwarf_cu_info.
+0 cu dietag: 4a, subtag: 11, version 5, unit_type 4
+0 subdietag: 11, subtag: 0, version 5, unit_type 5
+rechecking: testfile-frob-single
+Iterate no info, compare recorded info with dwarf_cu_info.
+0 re dietag: 4a, subtag: 11, version 5, unit_type 4
+0 subdietag: 11, subtag: 0, version 5, unit_type 5
+
+EOF
+
 # Self test (not on obj files, since those need relocation first).
 testrun_on_self_exe ${abs_builddir}/unit-info
 testrun_on_self_lib ${abs_builddir}/unit-info

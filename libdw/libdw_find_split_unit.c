@@ -47,7 +47,8 @@ try_split_file (Dwarf_CU *cu, const char *dwo_path)
   int split_fd = open (dwo_path, O_RDONLY);
   if (split_fd != -1)
     {
-      Dwarf *split_dwarf = dwarf_begin (split_fd, DWARF_C_READ);
+      Dwarf *split_dwarf = INTUSE(dwarf_begin_type) (split_fd, DWARF_C_READ,
+						     DWARF_T_DWO);
       if (split_dwarf != NULL)
 	{
 	  Dwarf_CU *split = NULL;
@@ -76,7 +77,7 @@ try_split_file (Dwarf_CU *cu, const char *dwo_path)
 		}
 	    }
 	  if (cu->split == (Dwarf_CU *) -1)
-	    dwarf_end (split_dwarf);
+	    INTUSE (dwarf_end) (split_dwarf);
 	}
       /* Always close, because we don't want to run out of file
 	 descriptors.  See also the elf_fcntl ELF_C_FDDONE call
