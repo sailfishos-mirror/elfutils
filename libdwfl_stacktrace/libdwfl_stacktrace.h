@@ -154,6 +154,38 @@ int dwflst_perf_sample_getframes (Dwfl *dwfl, Elf *elf, pid_t pid, pid_t tid,
    opened later.  */
 uint64_t dwflst_perf_sample_preferred_regs_mask (GElf_Half machine);
 
+/* Returns the correct ELF machine identifier for the arch identifier
+   string UMACHINE from struct utsname, if libdwflst handles stack
+   samples for MACHINE.  Returns EM_NONE if stack sample handling is
+   not supported.  */
+GElf_Half dwflst_arch_from_uname (const char *umachine);
+
+/* Returns the minimum required number of registers for unwinding
+   for MACHINE, which should be at most the number of bits set in
+   dwflst_perf_sample_preferred_regs_mask(MACHINE).  Returns 0
+   if libdwfl does not handle stack samples for MACHINE.  */
+uint32_t dwflst_arch_expected_frame_nregs (GElf_Half machine);
+
+/* Returns the index of the stack pointer register within the
+   dwarf_regs ordering for MACHINE.  If FORCE_ABI32 is true, returns
+   the index within the dwarf_regs ordering for the 32-bit variant of
+   MACHINE.  Returns -1 if libdwfl does not handle stack samples for
+   MACHINE.  */
+int dwflst_arch_sp_dwarf_reg (GElf_Half machine, bool force_abi32);
+
+/* Returns the index of the stack pointer register within the
+   perf_regs ordering for MACHINE, assuming only the registers within
+   PERF_REGS_MASK are included.  (If PERF_REGS_MASK is 0, assumes all
+   registers are included.)  If IS_ABI32 is true, returns the index
+   within the perf_regs ordering for the 32-bit variant of MACHINE,
+   to allow handling of mixed-architecture perf_events data; if
+   IS_ABI32 is false, returns the index for the 64-bit variant in
+   accordance to perf_events conventions.  Returns -1 if libdwfl does
+   not handle stack samples for MACHINE, -2 if sp is not present in
+   PERF_REGS_MASK.  */
+int dwflst_arch_sp_perf_reg (GElf_Half machine,
+			     uint64_t perf_regs_mask, bool is_abi32);
+
 #ifdef __cplusplus
 }
 #endif

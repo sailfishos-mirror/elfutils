@@ -411,3 +411,11 @@ ELFUTILS_0.194_EXPERIMENTAL {
   global:
     dwflst_sample_getframes;
 } ELFUTILS_0.193_EXPERIMENTAL;
+
+ELFUTILS_0.196_EXPERIMENTAL {
+  global:
+    dwflst_arch_from_uname;
+    dwflst_arch_expected_frame_nregs;
+    dwflst_arch_sp_dwarf_reg;
+    dwflst_arch_sp_perf_reg;
+} ELFUTILS_0.194_EXPERIMENTAL;
