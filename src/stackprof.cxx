@@ -308,8 +308,6 @@ class PerfConsumerUnwinder: public PerfConsumer
   Dwfl *find_dwfl(pid_t pid, const uint64_t *regs, uint32_t nregs,
 		  Elf **elf, bool *cached);
 
-  int get_sp_reg(bool is_abi32);
-
 public:
   PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust);
   PerfConsumerUnwinder(UnwindSampleConsumer* usc, UnwindStatsTable *ust, PerfReader *reader);
@@ -759,17 +757,13 @@ PerfReader::PerfReader(perf_event_attr* attr, PerfConsumer* consumer, int pid)
 
   struct utsname u;
   uname(&u);
-  int em = EM_NONE;
-  std::string_view machine = u.machine;
-  if (machine == "x86_64") em = EM_X86_64;
-  else if (machine == "i686" || machine == "i386") em = EM_386;
-  else if (machine == "aarch64") em = EM_AARCH64;
-  else if (machine == "armv7l") em = EM_ARM;
-  else {
+  /* XXX Possibly could be a libdwfl api, but can't be libebl since it
+     must be accessible by external tools.  */
+  int em = dwflst_arch_from_uname(u.machine);
+  if (em == EM_NONE) {
     cerr << format("ERROR: Unsupported architecture: {}\n", u.machine);
     exit(1);
   }
-  // TODO: replace above with libdwflst api
   this->default_ebl = ebl_openbackend_machine(em);
   this->sample_regs_user = ebl_perf_frame_regs_mask (this->default_ebl);
   this->sample_regs_count = bitset<64>(this->sample_regs_user).count();
@@ -1311,26 +1305,11 @@ Dwfl *pcu_init_dwfl_cb (Dwflst_Process_Tracker *cb_tracker __attribute__ ((unuse
   return pcu->init_dwfl(pid);
 }
 
-uint32_t expected_frame_nregs (Ebl *ebl)
-{
-  int m = ebl_get_elfmachine(ebl);
-  /* TODO: Generalize the API via libdwflst to allow any architecture.  */
-  /* For aarch64, we actually use fewer than ebl->frame_nregs to unwind.  */
-  if (m == EM_AARCH64)
-    return 14;
-  if (m == EM_ARM)
-    return 16;
-  /* On x86, expect everything except FLAGS:  */
-  if (m == EM_X86_64 || m == EM_386)
-    return ebl_frame_nregs(ebl);
-  /* In general, it's better to be on the permissive side.  */
-  return 1;
-}
-
 Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t nregs,
 				      Elf **out_elf, bool *cached)
 {
-  if (nregs < expected_frame_nregs(this->reader->ebl()))
+  int machine = ebl_get_elfmachine(this->reader->ebl());
+  if (nregs < dwflst_arch_expected_frame_nregs(machine))
     {
       if (verbose)
 	cerr << format(N_("WARNING: find_dwfl: nregs={}, expected at least {}\n"), nregs, ebl_frame_nregs(this->reader->ebl()));
@@ -1355,25 +1334,16 @@ Dwfl *PerfConsumerUnwinder::find_dwfl(pid_t pid, const uint64_t *regs, uint32_t 
     }
 
  reuse:
-  /* TODO: bounds check? */
-  this->last_us.sp = regs[this->get_sp_reg(this->last_us.elfclass == ELFCLASS32)];
+  bool is_abi32 = this->last_us.elfclass == ELFCLASS32;
+  int user_regs_sp = dwflst_arch_sp_perf_reg(machine, this->reader->regs_mask(), is_abi32);
+  /* Bounds check, unlikely to fail:  */
+  this->last_us.sp = user_regs_sp >= 0 ? regs[user_regs_sp] : 0;
   this->last_us.base = this->last_us.sp;
 
   if (!*cached)
     this->stats->pid_store_dwfl(pid, dwfl);
   *out_elf = elf;
   return dwfl;
-}
-
-/* TODO move above */
-/* Index of stack pointer within dwarf_regs order:  */
-int PerfConsumerUnwinder::get_sp_reg(bool is_abi32)
-{
-  /* TODO: Generalize the API via libdwflst to allow any architecture.  */
-  int machine = ebl_get_elfmachine(this->reader->ebl());
-  if (machine == EM_X86_64 || machine == EM_386) return is_abi32 ? 4 : 7;
-  else if (machine == EM_ARM || machine == EM_AARCH64) return is_abi32 ? 13 : 31;
-  else { assert(0); return 7; }
 }
 
 int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
@@ -1391,11 +1361,15 @@ int PerfConsumerUnwinder::unwind_frame_cb(Dwfl_Frame *state)
   Dwarf_Addr sp;
 
   int is_abi32 = (this->last_us.elfclass == ELFCLASS32);
-  int user_regs_sp = this->get_sp_reg(is_abi32);
-  int rc = dwfl_frame_reg(state, user_regs_sp, &sp);
+  int m = ebl_get_elfmachine(this->reader->ebl());
+  int user_regs_sp = dwflst_arch_sp_dwarf_reg(m, is_abi32);
+  /* Bounds check, unlikely to fail:  */
+  int rc = user_regs_sp >= 0 ? dwfl_frame_reg(state, user_regs_sp, &sp) : -1;
   if (rc < 0)
     {
-      if (verbose)
+      if (verbose && user_regs_sp < 0)
+	cerr << "WARNING: dwflst_arch_sp_dwarf_reg: arch unsupported\n";
+      else if (verbose)
 	cerr << format("WARNING: dwfl_frame_reg: {}\n", dwfl_errmsg(-1));
       return DWARF_CB_ABORT;
     }
