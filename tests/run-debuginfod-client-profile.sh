@@ -18,10 +18,12 @@
 . $srcdir/test-subr.sh
 
 # Make sure the profile.sh or profile.d/debuginfod.sh works even with
-# set -e (any command error is an error) and set -o pipefail (any error
-# in a pipe fails the whole pipe command).
+# set -e (any command error is an error), set -u (fail if a variable
+# is unset) and set -o pipefail (any error in a pipe fails the whole
+# pipe command).
 
 set -e
+set -u
 set -o pipefail
 
 source ${abs_top_builddir}/config/profile.sh
