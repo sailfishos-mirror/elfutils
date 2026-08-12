@@ -41,7 +41,8 @@ check_PROGRAMS = arextract arsymtest newfile saridx scnnames sectiondump \
 		  find-prologues funcretval allregs rdwrmmap \
 		  dwfl-bug-addr-overflow arls dwfl-bug-fd-leak \
 		  dwfl-addr-sect dwfl-bug-report early-offscn \
-		  dwfl-bug-getmodules dwarf-getmacros dwarf-ranges addrcfi \
+		  dwfl-bug-getmodules dwfl-kernel-module-section-address \
+		  dwarf-getmacros dwarf-ranges addrcfi \
 		  dwfl-core-noncontig dwarfcfi \
 		  test-flag-nobits dwarf-getstring rerequest_tag \
 		  alldts typeiter typeiter2 low_high_pc \
@@ -165,6 +166,7 @@ TESTS = run-arextract.sh run-arsymtest.sh run-ar.sh newfile test-nlist \
 	run-debuglink.sh run-debugaltlink.sh run-buildid.sh \
 	dwfl-bug-addr-overflow run-addrname-test.sh \
 	dwfl-bug-fd-leak dwfl-bug-report dwfl-report-segment-contiguous \
+	dwfl-kernel-module-section-address \
 	run-dwfl-bug-offline-rel.sh run-dwfl-addr-sect.sh \
 	run-disasm-x86.sh run-disasm-x86-64.sh \
 	run-early-offscn.sh run-dwarf-getmacros.sh run-dwarf-ranges.sh \
@@ -852,6 +854,8 @@ dwfl_bug_fd_leak_LDADD = $(libeu) $(libdw) $(libebl) $(libelf)
 dwfl_bug_report_LDADD = $(libdw) $(libebl) $(libelf)
 dwfl_bug_getmodules_LDADD = $(libeu) $(libdw) $(libebl) $(libelf)
 dwfl_addr_sect_LDADD = $(libeu) $(libdw) $(libebl) $(libelf) $(argp_LDADD)
+dwfl_kernel_module_section_address_LDADD = \
+	$(libdw) $(libelf)
 dwfl_core_noncontig_LDADD = $(libdw) $(libelf)
 dwarf_getmacros_LDADD = $(libdw)
 dwarf_ranges_LDADD = $(libdw)

@@ -900,7 +900,7 @@ dwfl_linux_kernel_module_section_address
  void **userdata __attribute__ ((unused)),
  const char *modname, Dwarf_Addr base __attribute__ ((unused)),
  const char *secname, Elf32_Word shndx __attribute__ ((unused)),
- const GElf_Shdr *shdr __attribute__ ((unused)),
+ const GElf_Shdr *shdr,
  Dwarf_Addr *addr)
 {
   char *sysfile;
@@ -914,16 +914,22 @@ dwfl_linux_kernel_module_section_address
     {
       if (errno == ENOENT)
 	{
-	  /* The .modinfo and .data.percpu sections are never kept
-	     loaded in the kernel.  If the kernel was compiled without
-	     CONFIG_MODULE_UNLOAD, the .exit.* sections are not
-	     actually loaded at all.
+	  /* The .modinfo and module version sections are not kept loaded
+	     in the kernel.  The kernel also does not expose zero-sized
+	     sections.  If the kernel was compiled without
+	     CONFIG_MODULE_UNLOAD, the .exit.* sections are not loaded
+	     either.  The per-CPU section is allocated separately.
 
 	     Setting *ADDR to -1 tells the caller this section is
 	     actually absent from memory.  */
 
-	  if (!strcmp (secname, ".modinfo")
+	  if ((shdr != NULL && shdr->sh_size == 0)
+	      || !strcmp (secname, ".modinfo")
+	      || !strcmp (secname, "__versions")
+	      || !strcmp (secname, "__version_ext_crcs")
+	      || !strcmp (secname, "__version_ext_names")
 	      || !strcmp (secname, ".data.percpu")
+	      || !strcmp (secname, ".data..percpu")
 	      || startswith (secname, ".exit"))
 	    {
 	      *addr = (Dwarf_Addr) -1l;
