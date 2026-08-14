@@ -13,7 +13,7 @@
 /size
 /srcfiles
 /stack
-/stacktrace
+/stackprof
 /strings
 /strip
 /unstrip

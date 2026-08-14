@@ -52,6 +52,7 @@
 /dwfl-bug-fd-leak
 /dwfl-bug-getmodules
 /dwfl-bug-report
+/dwfl-kernel-module-section-address
 /dwfl-proc-attach
 /dwfl-report-elf-align
 /dwfl-report-offline-memory
@@ -70,6 +71,7 @@
 /elfshphehdr
 /elfstrmerge
 /elfstrtab
+/elf-from-memory
 /elf-print-reloc-syms
 /emptyfile
 /eu_search_cfi
