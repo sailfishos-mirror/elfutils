@@ -95,8 +95,9 @@ dwflst_arch_expected_frame_nregs (GElf_Half machine)
     return machine == EM_X86_64 ? 17 : 9;
     /* return ebl_frame_nregs(ebl); */
   /* XXX Other architectures are not supported yet.
-     In general, it's fine to be on the permissive side here.  */
-  return 1;
+     In general, it's fine to be on the permissive side here
+     for a minimum expected number of registers.  */
+  return 0;
 }
 
 int
