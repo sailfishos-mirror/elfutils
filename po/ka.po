@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: elfutils 0.194\n"
 "Report-Msgid-Bugs-To: https://sourceware.org/bugzilla/\n"
-"POT-Creation-Date: 2025-12-17 16:40+0100\n"
+"POT-Creation-Date: 2026-08-14 07:07-0400\n"
 "PO-Revision-Date: 2026-01-06 12:35+0100\n"
 "Last-Translator: Ekaterine Papava <papava.e@gtu.ge>\n"
 "Language-Team: Georgian <(nothing)>\n"
@@ -52,7 +52,7 @@ msgstr ""
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 
 #: lib/xasprintf.c:47 lib/xmalloc.c:47 lib/xmalloc.c:60 lib/xmalloc.c:72
-#: src/readelf.c:12627 src/unstrip.c:311
+#: src/readelf.c:12930 src/unstrip.c:311
 #, c-format
 msgid "memory exhausted"
 msgstr "მეხსიერება გადავსებულია"
@@ -536,7 +536,7 @@ msgstr "უკანბოლოს გარეშე"
 #: libebl/eblcorenotetypename.c:106 libebl/eblobjnotetypename.c:79
 #: libebl/eblobjnotetypename.c:116 libebl/eblobjnotetypename.c:137
 #: libebl/eblosabiname.c:73 libebl/eblsectionname.c:83
-#: libebl/eblsectiontypename.c:116 libebl/eblsegmenttypename.c:81
+#: libebl/eblsectiontypename.c:132 libebl/eblsegmenttypename.c:81
 msgid "<unknown>"
 msgstr "<უცნობი>"
 
@@ -630,7 +630,7 @@ msgstr "საწყისი ოპერანდის არასწორ�
 msgid "invalid size of destination operand"
 msgstr "სამიზნე ოპერანდის არასწორი ზომა"
 
-#: libelf/elf_error.c:86 src/readelf.c:7055
+#: libelf/elf_error.c:86 src/readelf.c:7106
 #, c-format
 msgid "invalid encoding"
 msgstr "არასწორი კოდირება"
@@ -715,8 +715,8 @@ msgstr "მონაცემები/scn არ ემთხვევა"
 msgid "invalid section header"
 msgstr "სექციის არასწორი თავსართი"
 
-#: libelf/elf_error.c:190 src/readelf.c:10970 src/readelf.c:11577
-#: src/readelf.c:11679 src/readelf.c:11868
+#: libelf/elf_error.c:190 src/readelf.c:11032 src/readelf.c:11645
+#: src/readelf.c:11747 src/readelf.c:11936 src/readelf.c:12257
 #, c-format
 msgid "invalid data"
 msgstr "არასწორი მონაცემები"
@@ -1235,44 +1235,44 @@ msgstr "წევრის სტრიქონის სახელის ს
 msgid "getting ar header"
 msgstr "ar თავსართის მიღება"
 
-#: src/elfclassify.c:874
+#: src/elfclassify.c:875
 msgid "constructing ar member string name"
 msgstr "ar-ის წევრის სტრიქონის სახელის აგება"
 
-#: src/elfclassify.c:890
+#: src/elfclassify.c:891
 msgid "closing ar member"
 msgstr "ar წევრის დახურვა"
 
-#: src/elfclassify.c:944
+#: src/elfclassify.c:945
 msgid "writing to standard output"
 msgstr "სტანდარტულ გამოტანაში ჩაწერა"
 
-#: src/elfclassify.c:971
+#: src/elfclassify.c:972
 msgid "reading from standard input"
 msgstr "სტანდარტული შეყვანიდან წაკითხვა"
 
-#: src/elfclassify.c:992
+#: src/elfclassify.c:993
 msgid "Classification options"
 msgstr "კლასიფიკაციის პარამეტრები"
 
-#: src/elfclassify.c:994
+#: src/elfclassify.c:995
 msgid "File looks like an ELF object or archive/static library (default)"
 msgstr ""
 "ფაილი ELF ობიექტს, ან არქივს/სტატიკურ ბიბლიოთეკას წააგავს (ნაგულისხმევი)"
 
-#: src/elfclassify.c:997
+#: src/elfclassify.c:998
 msgid "File is an regular ELF object (not an archive/static library)"
 msgstr "ფაილი ჩვეულებრივი ELF ობიექტია (არა არქივი/სტატიკური ბიბლიოთეკა)"
 
-#: src/elfclassify.c:1000
+#: src/elfclassify.c:1001
 msgid "File is an ELF archive or static library"
 msgstr "ფაილი ELF არქივი ან სტატიკური ბიბლიოთეკაა"
 
-#: src/elfclassify.c:1003
+#: src/elfclassify.c:1004
 msgid "File is an ELF core dump file"
 msgstr "ფაილი ELF Core დამპის ფაილია"
 
-#: src/elfclassify.c:1006
+#: src/elfclassify.c:1007
 msgid ""
 "File is an ELF file with symbol table or .debug_* sections and can be "
 "stripped further"
@@ -1280,65 +1280,65 @@ msgstr ""
 "ფაილი ELF ფაილია სიმბოლოების ცხრილით, ან .debug_* სექციებით და შეიძლება, "
 "უფრო მეტად გაშიშვლდეს"
 
-#: src/elfclassify.c:1009
+#: src/elfclassify.c:1010
 msgid "File is an ELF file with .debug_* sections"
 msgstr "ფაილი ELF ფაილია .debug_* სექციებით"
 
-#: src/elfclassify.c:1011
+#: src/elfclassify.c:1012
 msgid "File is (primarily) an ELF program executable (not primarily a DSO)"
 msgstr "ფაილი (ძირითადად) ELF პროგრამის გამშვებია (არა ძირითადად DSO)"
 
-#: src/elfclassify.c:1014
+#: src/elfclassify.c:1015
 msgid "File is an ELF program executable (might also be a DSO)"
 msgstr "ფაილი ELF პროგრამის შესრულებადი ფაილია (ასევე შეიძლება იყოს DSO)"
 
-#: src/elfclassify.c:1017
+#: src/elfclassify.c:1018
 msgid ""
 "File is (primarily) an ELF shared object (DSO) (not primarily an executable)"
 msgstr ""
 "ფაილი ძირითადად ELF გაზიარებული ობიექტია (DSO) (არა ძირითადად შესრულებადი "
 "ფაილი)"
 
-#: src/elfclassify.c:1020
+#: src/elfclassify.c:1021
 msgid "File is an ELF shared object (DSO) (might also be an executable)"
 msgstr "ფაილი ELF გაზიარებული ობიექტია (DSO) (ასევე შეიძლება, გაშვებადი იყოს)"
 
-#: src/elfclassify.c:1024
+#: src/elfclassify.c:1025
 msgid "File is a linux kernel module"
 msgstr "ფაილი ლინუქსის ბირთვის მოდულია"
 
-#: src/elfclassify.c:1026
+#: src/elfclassify.c:1027
 msgid "File is a debug only ELF file (separate .debug, .dwo or dwz multi-file)"
 msgstr ""
 "ფაილი მხოლოდ გამართვისთვის განკუთვნილი ELF ფაილია (ცალკე .debug, .dwo ან dwz "
 "ერთზე მეტი ფაილი)"
 
-#: src/elfclassify.c:1029
+#: src/elfclassify.c:1030
 msgid "File is a loadable ELF object (program or shared object)"
 msgstr "ფაილი ჩატვირთვადი ELF ობიექტია (პროგრამა ან გაზიარებული ობიექტი)"
 
-#: src/elfclassify.c:1060
+#: src/elfclassify.c:1061
 msgid "Input flags"
 msgstr "შეყვანის ალმები"
 
-#: src/elfclassify.c:1062
+#: src/elfclassify.c:1063
 msgid "Only classify regular (not symlink nor special device) files"
 msgstr ""
 "მხოლოდ ჩვეულებრივი (არა სიმბმულების და არც სპეციალური მოწყობილობების) "
 "ფაილების კლასიფიკაცია"
 
-#: src/elfclassify.c:1064
+#: src/elfclassify.c:1065
 msgid "Input is an ar file, classification options apply to ar member"
 msgstr "შეყვანა ar ფაილია. კლასიფიკაციის პარამეტრები ar-ის წევრზე ვრცელდება"
 
-#: src/elfclassify.c:1066
+#: src/elfclassify.c:1067
 msgid ""
 "Also read file names to process from standard input, separated by newlines"
 msgstr ""
 "ფაილის სახელების წაკითხვა, ასევე, სტანდარტული შეყვანიდან მოხდება. "
 "განცალკევებული ხაზის გადატანით"
 
-#: src/elfclassify.c:1069
+#: src/elfclassify.c:1070
 msgid ""
 "Also read file names to process from standard input, separated by ASCII NUL "
 "bytes"
@@ -1346,62 +1346,62 @@ msgstr ""
 "ფაილის სახელების წაკითხვა, ასევე, სტანდარტული შეყვანიდან მოხდება. "
 "განცალკევებული ASCII NUL ბაიტებით"
 
-#: src/elfclassify.c:1072
+#: src/elfclassify.c:1073
 msgid "Do not read files from standard input (default)"
 msgstr "ფაილების არწაკითხვა სტანდარტული შეყვანიდან (ნაგულისხმევი)"
 
-#: src/elfclassify.c:1074
+#: src/elfclassify.c:1075
 msgid "Try to open compressed files or embedded (kernel) ELF images"
 msgstr ""
 "შეკუმშული ფაილების ან ჩაშენებული (ბირთვის) ELF გამოსახულებების გახსნის ცდა"
 
-#: src/elfclassify.c:1077
+#: src/elfclassify.c:1078
 msgid "Output flags"
 msgstr "გამოტანის ალმები"
 
-#: src/elfclassify.c:1079
+#: src/elfclassify.c:1080
 msgid "Output names of files, separated by newline"
 msgstr "ფაილის სახელების გამოტანა. გამოყოფილი ახალი ხაზით"
 
-#: src/elfclassify.c:1081
+#: src/elfclassify.c:1082
 msgid "Output names of files, separated by ASCII NUL"
 msgstr "ფაილის სახელების გამოტანა. გამოყოფილი სიმბოლოთი ASCII NUL"
 
-#: src/elfclassify.c:1083
+#: src/elfclassify.c:1084
 msgid "Do not output file names"
 msgstr "ფაილის სახელები გამოტანილი არ იქნება"
 
-#: src/elfclassify.c:1085
+#: src/elfclassify.c:1086
 msgid "If printing file names, print matching files (default)"
 msgstr ""
 "თუ გამომაქვს ფაილის სახელები, შესაბამისი ფაილების გამოტანა (ნაგულისხმევი)"
 
-#: src/elfclassify.c:1087
+#: src/elfclassify.c:1088
 msgid "If printing file names, print files that do not match"
 msgstr ""
 "თუ გამომაქვს ფაილის სახელები, გამოტანილი იქნება ფაილები, რომლებიც არ ემთხვევა"
 
-#: src/elfclassify.c:1089
+#: src/elfclassify.c:1090
 msgid "Additional flags"
 msgstr "დამატებითი ალმები"
 
-#: src/elfclassify.c:1091
+#: src/elfclassify.c:1092
 msgid "Output additional information (can be specified multiple times)"
 msgstr ""
 "დამატებითი ინფორმაციის გამოტანა (შეიძლება, მითითებული იყოს ერთზე მეტჯერ)"
 
-#: src/elfclassify.c:1093
+#: src/elfclassify.c:1094
 msgid "Suppress some error output (counterpart to --verbose)"
 msgstr ""
 "ზოგიერთი შეცდომის გამოტანის გაჩუმება (პარამეტრის --verbose საპირისპირო)"
 
 #. Strings for arguments in help texts.
-#: src/elfclassify.c:1101 src/elfcompress.c:1436 src/elflint.c:77
-#: src/readelf.c:177
+#: src/elfclassify.c:1102 src/elfcompress.c:1540 src/elflint.c:77
+#: src/readelf.c:178
 msgid "FILE..."
 msgstr "ფაილი..."
 
-#: src/elfclassify.c:1102
+#: src/elfclassify.c:1103
 msgid ""
 "Determine the type of an ELF file.\n"
 "\n"
@@ -1717,42 +1717,42 @@ msgstr "სექცია %zu-ის შემცველობის მი�
 msgid "cannot get relocation: %s"
 msgstr "გადაადგილების მიღება შეუძლებელია: %s"
 
-#: src/elfcompress.c:128 src/strip.c:306 src/unstrip.c:116
+#: src/elfcompress.c:132 src/strip.c:306 src/unstrip.c:116
 #, c-format
 msgid "-o option specified twice"
 msgstr "-o პარამეტრი ორჯერაა მითითებული"
 
-#: src/elfcompress.c:135
+#: src/elfcompress.c:139
 #, c-format
 msgid "-t option specified twice"
 msgstr "-t პარამეტრი ორჯერაა მითითებული"
 
-#: src/elfcompress.c:147
+#: src/elfcompress.c:151
 #, c-format
 msgid "ZSTD support is not enabled"
 msgstr "ZSTD-ის მხარდაჭერა ჩართული არაა"
 
-#: src/elfcompress.c:150
+#: src/elfcompress.c:154
 #, c-format
 msgid "unknown compression type '%s'"
 msgstr "უცნობი შეკუმშვის ტიპი '%s'"
 
 #. We need at least one input file.
-#: src/elfcompress.c:162 src/elfcompress.c:1447
+#: src/elfcompress.c:166 src/elfcompress.c:1551
 #, c-format
 msgid "No input file given"
 msgstr "შეყვანის ფაილი მითითებული არაა"
 
-#: src/elfcompress.c:168 src/elfcompress.c:1451
+#: src/elfcompress.c:172 src/elfcompress.c:1555
 #, c-format
 msgid "Only one input file allowed together with '-o'"
 msgstr "'-o'-სთან ერთად, მხოლოდ, ერთი ფაილი შეგიძლიათ, მიუთითოთ"
 
-#: src/elfcompress.c:1408
+#: src/elfcompress.c:1512
 msgid "Place (de)compressed output into FILE"
 msgstr "შეკუმშული(გაშლილი) გამოტანის მოთავსება ფაილში"
 
-#: src/elfcompress.c:1411
+#: src/elfcompress.c:1515
 msgid ""
 "What type of compression to apply. TYPE can be 'none' (decompress), 'zlib' "
 "(ELF ZLIB compression, the default, 'zlib-gabi' is an alias), 'zlib-gnu' "
@@ -1764,7 +1764,7 @@ msgstr ""
 "ფსევდონიმია), 'zlib-gnu' (.zdebug GNU სტილის შეკუმშვა. 'gnu' მისი "
 "ფსევდონიმია). ან 'zstd' (ELF ZSTD შეკუმშვა)"
 
-#: src/elfcompress.c:1415
+#: src/elfcompress.c:1519
 msgid ""
 "SECTION name to (de)compress, SECTION is an extended wildcard pattern "
 "(defaults to '.?(z)debug*')"
@@ -1772,11 +1772,11 @@ msgstr ""
 "SECTION-ის სახელი შესაკუმშად(გასაშლელად). SECTION გაფართოებული ვაილდკარდი "
 "ნიმუშია (ნაგულისხმევი მნიშვნელობაა '.?(z)debug*')"
 
-#: src/elfcompress.c:1418
+#: src/elfcompress.c:1522
 msgid "Print a message for each section being (de)compressed"
 msgstr "შეტყობინების გამოტანა თითოეული სექციის შეკუმშვისას (გაშლისას)"
 
-#: src/elfcompress.c:1421
+#: src/elfcompress.c:1525
 msgid ""
 "Force compression of section even if it would become larger or update/"
 "rewrite the file even if no section would be (de)compressed"
@@ -1785,15 +1785,15 @@ msgstr ""
 "განახლება/თავიდან ჩაწერა მაშინაც კი, თუ შესაკუმში (გასაშლელი) სექცია არ "
 "არსებობს"
 
-#: src/elfcompress.c:1424 src/strip.c:92
+#: src/elfcompress.c:1528 src/strip.c:92
 msgid "Relax a few rules to handle slightly broken ELF files"
 msgstr "ოდნავ გაფუშებული ELF ფაილების დამუშავების ზოგიერთი წესის შემსუბუქება"
 
-#: src/elfcompress.c:1427
+#: src/elfcompress.c:1531
 msgid "Be silent when a section cannot be compressed"
 msgstr "ჩუმად ყოფნა, როცა სექციის შეკუმსვა შეუძლებელია"
 
-#: src/elfcompress.c:1437
+#: src/elfcompress.c:1541
 msgid "Compress or decompress sections in an ELF file."
 msgstr "სექციების შეკუმშვა ან გაშლა ELF ფაილში."
 
@@ -1823,7 +1823,7 @@ msgid "Pedantic checking of ELF files compliance with gABI/psABI spec."
 msgstr ""
 "ELF ფაილების gABI/psABI სპეციფიკაციებთან თავსებადობის პედანტური შემოწმება."
 
-#: src/elflint.c:154 src/readelf.c:596
+#: src/elflint.c:154 src/readelf.c:599
 #, c-format
 msgid "cannot open input file '%s'"
 msgstr "შესატანი ფაილის (\"%s\") გახსნის შეცდომა"
@@ -1842,7 +1842,7 @@ msgstr "შეცდომა ELF დესკრიპტორის დახ
 msgid "No errors"
 msgstr "შეცდომების გარეშე"
 
-#: src/elflint.c:219 src/readelf.c:821
+#: src/elflint.c:219 src/readelf.c:826
 msgid "Missing file name.\n"
 msgstr "ფაილის სახელი აკლია.\n"
 
@@ -2001,7 +2001,7 @@ msgstr ""
 
 #: src/elflint.c:615 src/elflint.c:1513 src/elflint.c:1564 src/elflint.c:1614
 #: src/elflint.c:1696 src/elflint.c:2033 src/elflint.c:2360 src/elflint.c:2986
-#: src/elflint.c:3149 src/elflint.c:3297 src/elflint.c:3499 src/elflint.c:4526
+#: src/elflint.c:3149 src/elflint.c:3297 src/elflint.c:3499 src/elflint.c:4539
 #, c-format
 msgid "section [%2d] '%s': cannot get section data\n"
 msgstr "სექცია [%2d] '%s': სექციის მონაცემების მიღების შეცდომა\n"
@@ -3239,47 +3239,47 @@ msgstr ""
 "სექცია [%2d] '%s': წანაცვლება %zu: ზედმეტი ბაიტები ბოლო ატრიბუტის სექციის "
 "შემდეგ\n"
 
-#: src/elflint.c:3763
+#: src/elflint.c:3772
 #, c-format
 msgid "cannot get section header of zeroth section\n"
 msgstr "მენულე სექციის თავსართის მიღება შეუძლებელია\n"
 
-#: src/elflint.c:3767
+#: src/elflint.c:3776
 #, c-format
 msgid "zeroth section has nonzero name\n"
 msgstr "მენულე სექციას არანულოვანი სახელი გააჩნია\n"
 
-#: src/elflint.c:3769
+#: src/elflint.c:3778
 #, c-format
 msgid "zeroth section has nonzero type\n"
 msgstr "მენულე სექციას არანულოვანი ტიპი გააჩნია\n"
 
-#: src/elflint.c:3771
+#: src/elflint.c:3780
 #, c-format
 msgid "zeroth section has nonzero flags\n"
 msgstr "მენულე სექციას არანულოვანი ალმები გააჩნია\n"
 
-#: src/elflint.c:3773
+#: src/elflint.c:3782
 #, c-format
 msgid "zeroth section has nonzero address\n"
 msgstr "მენულე სექციას არანულოვანი მისამართი გააჩნია\n"
 
-#: src/elflint.c:3775
+#: src/elflint.c:3784
 #, c-format
 msgid "zeroth section has nonzero offset\n"
 msgstr "მენულე სექციას არანულოვანი წანაცვლება გააჩნია\n"
 
-#: src/elflint.c:3777
+#: src/elflint.c:3786
 #, c-format
 msgid "zeroth section has nonzero align value\n"
 msgstr "მენულე სექციას არანულოვანი სწორების მნიშვნელობა გააჩნია\n"
 
-#: src/elflint.c:3779
+#: src/elflint.c:3788
 #, c-format
 msgid "zeroth section has nonzero entry size value\n"
 msgstr "მენულე სექციას არანულოვანი ჩანაწერის ზომის მნიშვნელობა გააჩნია\n"
 
-#: src/elflint.c:3782
+#: src/elflint.c:3791
 #, c-format
 msgid ""
 "zeroth section has nonzero size value while ELF header has nonzero shnum "
@@ -3288,7 +3288,7 @@ msgstr ""
 "მენულე სექციას არანულოვანი ზომის მნიშვნელობა აქვს, როცა ELF თავსართს "
 "არანულოვანი shnum მნიშვნელობა გააჩნია\n"
 
-#: src/elflint.c:3786
+#: src/elflint.c:3795
 #, c-format
 msgid ""
 "zeroth section has nonzero link value while ELF header does not signal "
@@ -3297,7 +3297,7 @@ msgstr ""
 "მენულე სექციას არანულოვანი ბმულის მნიშნველობა აქვს, როცა ELF თავსართი არ "
 "იტყობინება სიგნალის გადავსების შესახებ shstrndx-ში\n"
 
-#: src/elflint.c:3790
+#: src/elflint.c:3799
 #, c-format
 msgid ""
 "zeroth section has nonzero link value while ELF header does not signal "
@@ -3306,27 +3306,27 @@ msgstr ""
 "მენულე სექციას არანულოვანი ბმულის მნიშნველობა აქვს, როცა ELF თავსართი არ "
 "იტყობინება სიგნალის გადავსების შესახებ phnum-ში\n"
 
-#: src/elflint.c:3808
+#: src/elflint.c:3817
 #, c-format
 msgid "cannot get section header for section [%2zu] '%s': %s\n"
 msgstr "სექციის თავსართის მიღება შეუძლებელია სექციისთვის [%2zu] '%s': %s\n"
 
-#: src/elflint.c:3817
+#: src/elflint.c:3826
 #, c-format
 msgid "section [%2zu]: invalid name\n"
 msgstr "სექცია [%2zu]: არასწორი სახელი\n"
 
-#: src/elflint.c:3844
+#: src/elflint.c:3853
 #, c-format
 msgid "section [%2d] '%s' has wrong type: expected %s, is %s\n"
 msgstr "სექცია [%2d] '%s'-ის ტიპი არასწორია: მოველოდი: %s. არის: %s\n"
 
-#: src/elflint.c:3861
+#: src/elflint.c:3874
 #, c-format
 msgid "section [%2zu] '%s' has wrong flags: expected %s, is %s\n"
 msgstr "სექცია [%2zu] '%s'-ის ალმები არასწორია: მოველოდი: %s: არის %s\n"
 
-#: src/elflint.c:3879
+#: src/elflint.c:3892
 #, c-format
 msgid ""
 "section [%2zu] '%s' has wrong flags: expected %s and possibly %s, is %s\n"
@@ -3334,12 +3334,12 @@ msgstr ""
 "სექცია [%2zu] '%s'-ის ალმები არასწორია: მოველოდი: %s და შესაძლოა %s. არის "
 "%s\n"
 
-#: src/elflint.c:3896
+#: src/elflint.c:3909
 #, c-format
 msgid "section [%2zu] '%s' present in object file\n"
 msgstr "სექცია [%2zu] '%s' არსებობს ობიექტის ფაილში\n"
 
-#: src/elflint.c:3902 src/elflint.c:3934
+#: src/elflint.c:3915 src/elflint.c:3947
 #, c-format
 msgid ""
 "section [%2zu] '%s' has SHF_ALLOC flag set but there is no loadable segment\n"
@@ -3347,7 +3347,7 @@ msgstr ""
 "სექციას [%2zu] '%s' აქვს დაყენებული ალამი SHF_ALLOC მაგრამ ჩატვირთვადი "
 "სეგმენტი აღმოჩენილი არაა\n"
 
-#: src/elflint.c:3907 src/elflint.c:3939
+#: src/elflint.c:3920 src/elflint.c:3952
 #, c-format
 msgid ""
 "section [%2zu] '%s' has SHF_ALLOC flag not set but there are loadable "
@@ -3356,7 +3356,7 @@ msgstr ""
 "სექცია [%2zu] '%s'-ს აქვს SHF_ALLOC ალამი დაყენებული არ აქვს, მაგრამ "
 "არსებობს ჩატვირთვადი სეგმენტები\n"
 
-#: src/elflint.c:3915
+#: src/elflint.c:3928
 #, c-format
 msgid ""
 "section [%2zu] '%s' is extension section index table in non-object file\n"
@@ -3364,94 +3364,94 @@ msgstr ""
 "სექცია [%2zu] '%s' არის გაფართოების სექციის ინდექსის ცხრილი არა-ობიექტის "
 "ფაილში\n"
 
-#: src/elflint.c:3958
+#: src/elflint.c:3971
 #, c-format
 msgid "section [%2zu] '%s': size not multiple of entry size\n"
 msgstr "სექცია [%2zu] '%s': ზომა ჩანაწერის ზომის ნამრავლი არაა\n"
 
-#: src/elflint.c:3963
+#: src/elflint.c:3976
 #, c-format
 msgid "cannot get section header\n"
 msgstr "სექციის თავსართის მიღების შეცდომა\n"
 
-#: src/elflint.c:3973
+#: src/elflint.c:3986
 #, c-format
 msgid "section [%2zu] '%s' has unsupported type %d\n"
 msgstr "სექცია [%2zu] '%s' აქვს მხარდაუჭერელი ტიპი %d\n"
 
-#: src/elflint.c:3993
+#: src/elflint.c:4006
 #, c-format
 msgid ""
 "section [%2zu] '%s' contains invalid processor-specific flag(s) %#<PRIx64>\n"
 msgstr ""
 "სექცია [%2zu] '%s' შეიცავს არასწორ პროცესორის სპეციფიკურ ალმებს %#<PRIx64>\n"
 
-#: src/elflint.c:4003
+#: src/elflint.c:4016
 #, c-format
 msgid "section [%2zu] '%s' contains unknown flag(s) %#<PRIx64>\n"
 msgstr "სექცია [%2zu] '%s' შეიცავს უცნობ ალმებს %#<PRIx64>\n"
 
-#: src/elflint.c:4011
+#: src/elflint.c:4024
 #, c-format
 msgid "section [%2zu] '%s': thread-local data sections address not zero\n"
 msgstr ""
 "სექცია [%2zu] '%s': ნაკადისთვის ლოკალური მონაცემთა სექციების მისამართი "
 "ნულოვანი არაა\n"
 
-#: src/elflint.c:4021
+#: src/elflint.c:4034
 #, c-format
 msgid "section [%2zu] '%s': allocated section cannot be compressed\n"
 msgstr "სექცია [%2zu] '%s': გამოყოფილი სექციის შეკუმშვა შეუძლებელია\n"
 
-#: src/elflint.c:4026
+#: src/elflint.c:4039
 #, c-format
 msgid "section [%2zu] '%s': nobits section cannot be compressed\n"
 msgstr "სექცია [%2zu] '%s': სექციის nobits შეკუმშვა შეუძლებელია\n"
 
-#: src/elflint.c:4032
+#: src/elflint.c:4045
 #, c-format
 msgid ""
 "section [%2zu] '%s': compressed section with no compression header: %s\n"
 msgstr "სექცია [%2zu] '%s': შეკუმშული სექცია შეკუმშვის თავსართის გარეშე: %s\n"
 
-#: src/elflint.c:4038
+#: src/elflint.c:4051
 #, c-format
 msgid "section [%2zu] '%s': invalid section reference in link value\n"
 msgstr "სექცია [%2zu] '%s': არასწორი სექციის მიმართვა ბმულის მნიშვნელობაში\n"
 
-#: src/elflint.c:4043
+#: src/elflint.c:4056
 #, c-format
 msgid "section [%2zu] '%s': invalid section reference in info value\n"
 msgstr ""
 "სექცია [%2zu] '%s': არასწორი სექციის მიმართვა ინფორმაციის მნიშვნელობაში\n"
 
-#: src/elflint.c:4050
+#: src/elflint.c:4063
 #, c-format
 msgid "section [%2zu] '%s': strings flag set without merge flag\n"
 msgstr "სექცია [%2zu] '%s': სექციის ალამი დაყენებულია შერწყმის ალმის გარეშე\n"
 
-#: src/elflint.c:4055
+#: src/elflint.c:4068
 #, c-format
 msgid "section [%2zu] '%s': merge flag set but entry size is zero\n"
 msgstr ""
 "სექცია [%2zu] '%s': შერწყმის ალამი დაყენებულია, მაგრამ ჩანაწერის ზომა ნულია\n"
 
-#: src/elflint.c:4074
+#: src/elflint.c:4087
 #, c-format
 msgid "section [%2zu] '%s' has unexpected type %d for an executable section\n"
 msgstr "სექცია [%2zu] '%s' აქვს მოულოდნელი ტიპი %d შესრულებადი სექციისთვის\n"
 
-#: src/elflint.c:4083
+#: src/elflint.c:4096
 #, c-format
 msgid "section [%2zu] '%s' must be of type NOBITS in debuginfo files\n"
 msgstr "სექცია [%2zu] '%s'-ის ტიპი უნდა იყოს NOBITS debuginfo-ის ფაილებში\n"
 
-#: src/elflint.c:4090
+#: src/elflint.c:4103
 #, c-format
 msgid "section [%2zu] '%s' is both executable and writable\n"
 msgstr "სექცია [%2zu] '%s' ორივე, ჩაწერადი და შესრულებადია\n"
 
-#: src/elflint.c:4121
+#: src/elflint.c:4134
 #, c-format
 msgid ""
 "section [%2zu] '%s' not fully contained in segment of program header entry "
@@ -3460,7 +3460,7 @@ msgstr ""
 "სექცია [%2zu] '%s' სრულად არ ეტევა სეგმენტში პროგრამის თავსართის ჩანაწერიდან "
 "%d\n"
 
-#: src/elflint.c:4131
+#: src/elflint.c:4144
 #, c-format
 msgid ""
 "section [%2zu] '%s' has type NOBITS but is read from the file in segment of "
@@ -3469,7 +3469,7 @@ msgstr ""
 "სექცია [%2zu] '%s' აქვს ტიპი NOBITS მაგრამ წაკითხულია ფაილიდან სეგმენტში "
 "პროგრამის თავსართის ჩანაწერიდან %d\n"
 
-#: src/elflint.c:4157
+#: src/elflint.c:4170
 #, c-format
 msgid ""
 "section [%2zu] '%s' has type NOBITS but is read from the file in segment of "
@@ -3478,7 +3478,7 @@ msgstr ""
 "სექცია [%2zu] '%s' აქვს ტიპი NOBITS მაგრამ წაკითხულია ფაილიდან სეგმენტში "
 "პროგრამის თავსართის ჩანაწერიდან %d და ფაილის შემცველობა არანულოვანია\n"
 
-#: src/elflint.c:4168
+#: src/elflint.c:4181
 #, c-format
 msgid ""
 "section [%2zu] '%s' has not type NOBITS but is not read from the file in "
@@ -3487,17 +3487,17 @@ msgstr ""
 "სექცია [%2zu] '%s' არ აქვს ტიპი NOBITS მაგრამ ის არაა წაკითხული ფაილიდან "
 "სეგმენტში პროგრამის თავსართის ჩანაწერიდან %d\n"
 
-#: src/elflint.c:4179
+#: src/elflint.c:4192
 #, c-format
 msgid "section [%2zu] '%s' is executable in nonexecutable segment %d\n"
 msgstr "სექცია [%2zu] '%s' შესრულებადია არაშესრულებად სეგმენტში %d\n"
 
-#: src/elflint.c:4189
+#: src/elflint.c:4202
 #, c-format
 msgid "section [%2zu] '%s' is writable in unwritable segment %d\n"
 msgstr "სექცია [%2zu] '%s' ჩაწერადია არაჩაწერად სეგმენტში %d\n"
 
-#: src/elflint.c:4199
+#: src/elflint.c:4212
 #, c-format
 msgid ""
 "section [%2zu] '%s': alloc flag set but section not in any loaded segment\n"
@@ -3505,7 +3505,7 @@ msgstr ""
 "სექცია [%2zu] '%s': გამოყოფის ალამი დაყენებულია, მაგრამ სექცია ჩატვირთულ "
 "სეგმენტებში არაა\n"
 
-#: src/elflint.c:4205
+#: src/elflint.c:4218
 #, c-format
 msgid ""
 "section [%2zu] '%s': ELF header says this is the section header string table "
@@ -3514,7 +3514,7 @@ msgstr ""
 "სექცია [%2zu] '%s': ELF თავსართი ამბობს, რომ ეს სექციის თავსართის "
 "სტრიქონების ცხრილია, მაგრამ ტიპი არაა SHT_TYPE\n"
 
-#: src/elflint.c:4213
+#: src/elflint.c:4226
 #, c-format
 msgid ""
 "section [%2zu] '%s': relocatable files cannot have dynamic symbol tables\n"
@@ -3522,18 +3522,18 @@ msgstr ""
 "სექცია [%2zu] '%s': გადატანად ფაილებს დინამიკური სიმბოლოს ცხრილები ვერ "
 "ექნებათ\n"
 
-#: src/elflint.c:4268
+#: src/elflint.c:4281
 #, c-format
 msgid "more than one version symbol table present\n"
 msgstr "წარმოდგენილია სიმბოლოების ცხრილის ერთზე მეტი ვერსია\n"
 
-#: src/elflint.c:4291
+#: src/elflint.c:4304
 #, c-format
 msgid "INTERP program header entry but no .interp section\n"
 msgstr ""
 "INTERP პროგრამის თავსართის ჩანაწერი არსებობს, .interp სექცია კი - არა\n"
 
-#: src/elflint.c:4302
+#: src/elflint.c:4315
 #, c-format
 msgid ""
 "loadable segment [%u] is executable but contains no executable sections\n"
@@ -3541,13 +3541,13 @@ msgstr ""
 "ჩატვირთვადი სეგმენტი [%u] შესრულებადია, მაგრამ შესრულებად სექციებს არ "
 "შეიცავს\n"
 
-#: src/elflint.c:4308
+#: src/elflint.c:4321
 #, c-format
 msgid "loadable segment [%u] is writable but contains no writable sections\n"
 msgstr ""
 "ჩატვირთვადი სეგმენტი [%u] ჩაწერადია, მაგრამ ჩაწერად სექციებს არ შეიცავს\n"
 
-#: src/elflint.c:4319
+#: src/elflint.c:4332
 #, c-format
 msgid ""
 "no .gnu.versym section present but .gnu.versym_d or .gnu.versym_r section "
@@ -3556,22 +3556,20 @@ msgstr ""
 "სექცია .gnu.versym არ არსებობს, მაგრამ სექციები .gnu.versym_d "
 "ან .gnu.versym_r არსებობენ\n"
 
-#: src/elflint.c:4332
+#: src/elflint.c:4345
 #, c-format
 msgid "duplicate version index %d\n"
 msgstr "დუბლირებული ვერსიის ინდექსი %d\n"
 
-#: src/elflint.c:4346
+#: src/elflint.c:4359
 #, c-format
 msgid ".gnu.versym section present without .gnu.versym_d or .gnu.versym_r\n"
 msgstr ""
 ".gnu.versym სექცია .gnu.versym_d, ან .gnu.versym_r სექციების გარეშე "
 "არსებობენ\n"
 
-#: src/elflint.c:4381
+#: src/elflint.c:4394
 #, c-format
-#| msgid ""
-#| "phdr[%d]: unknown core file note type %<PRIu32> at offset %<PRIu64>\n"
 msgid ""
 "phdr[%d]: name missing null terminator for core file note with type "
 "%<PRIu32> at offset %<PRIu64>\n"
@@ -3579,10 +3577,8 @@ msgstr ""
 "phdr[%d]: სახელს აკლია ნულოვანი შემწყვეტი ბირთვის ფაილის შენიშვნისთვის ტიპით "
 "%<PRIu32> წანაცვლებასთან %<PRIu64>\n"
 
-#: src/elflint.c:4386
+#: src/elflint.c:4399
 #, c-format
-#| msgid ""
-#| "phdr[%d]: unknown core file note type %<PRIu32> at offset %<PRIu64>\n"
 msgid ""
 "section [%2d] '%s': name missing null terminator for core file note with "
 "type %<PRIu32> at offset %zu\n"
@@ -3590,10 +3586,8 @@ msgstr ""
 "სექცია [%2d] '%s': სახელს აკლია ნულოვანი შემწყვეტი ბირთვის ფაილის "
 "შენიშვნისთვის ტიპით %<PRIu32> წანაცვლებასთან %zu\n"
 
-#: src/elflint.c:4395
+#: src/elflint.c:4408
 #, c-format
-#| msgid ""
-#| "phdr[%d]: unknown core file note type %<PRIu32> at offset %<PRIu64>\n"
 msgid ""
 "phdr[%d]: name missing null terminator for object file note with type "
 "%<PRIu32> at offset %zu\n"
@@ -3601,10 +3595,8 @@ msgstr ""
 "phdr[%d]: სახელს აკლია ნულოვანი შემწყვეტი ობიექტის ფაილის შენიშვნისთვის "
 "ტიპით %<PRIu32> წანაცვლებასთან %zu\n"
 
-#: src/elflint.c:4400
+#: src/elflint.c:4413
 #, c-format
-#| msgid ""
-#| "phdr[%d]: unknown core file note type %<PRIu32> at offset %<PRIu64>\n"
 msgid ""
 "section [%2d] '%s': name missing null terminator for object file note with "
 "type %<PRIu32> at offset %zu\n"
@@ -3612,11 +3604,8 @@ msgstr ""
 "სექცია [%2d] '%s': სახელს აკლია ნულოვანი შემწყვეტი ობიექტის ფაილის "
 "შენიშვნისთვის ტიპით %<PRIu32> წანაცვლებასთან %zu\n"
 
-#: src/elflint.c:4465
+#: src/elflint.c:4478
 #, c-format
-#| msgid ""
-#| "phdr[%d]: unknown object file note type %<PRIu32> with owner name '%s' at "
-#| "offset %zu\n"
 msgid ""
 "phdr[%d]: malformed object file note type %<PRIu32> with owner name '%s' at "
 "offset %zu\n"
@@ -3624,11 +3613,8 @@ msgstr ""
 "phdr[%d]: არასწორად ჩამოყალიბებული ობიექტის ფაილის შენიშვნის ტიპი %<PRIu32> "
 "მფლობელის სახელით '%s' წანაცვლებასთან %zu\n"
 
-#: src/elflint.c:4471
+#: src/elflint.c:4484
 #, c-format
-#| msgid ""
-#| "phdr[%d]: unknown object file note type %<PRIu32> with owner name '%s' at "
-#| "offset %zu\n"
 msgid ""
 "section [%2d] '%s': malformed object file note type %<PRIu32> with owner "
 "name '%s' at offset %zu\n"
@@ -3636,38 +3622,38 @@ msgstr ""
 "სექცია [%2d] '%s': არასწორად ჩამოყალიბებული ობიექტის ფაილის შენიშვნის ტიპი "
 "%<PRIu32> მფლობელის სახელით '%s' წანაცვლებასთან %zu\n"
 
-#: src/elflint.c:4489
+#: src/elflint.c:4502
 #, c-format
 msgid "phdr[%d]: no note entries defined for the type of file\n"
 msgstr "phdr[%d]: ამ ტიპის ფაილისთვის შენიშვნის ჩანაწერები აღწერილი არაა\n"
 
-#: src/elflint.c:4509
+#: src/elflint.c:4522
 #, c-format
 msgid "phdr[%d]: cannot get content of note section: %s\n"
 msgstr "phdr[%d]: შენიშვნის სექციის შემცველობის მიღება შეუძლებელია: %s\n"
 
-#: src/elflint.c:4512
+#: src/elflint.c:4525
 #, c-format
 msgid "phdr[%d]: extra %<PRIu64> bytes after last note\n"
 msgstr "phdr[%d]: დამატებითი %<PRIu64> ბაიტი ბოლო შენიშვნის შემდეგ\n"
 
-#: src/elflint.c:4533
+#: src/elflint.c:4546
 #, c-format
 msgid "section [%2d] '%s': no note entries defined for the type of file\n"
 msgstr ""
 "სექცია [%2d] '%s': ფაილის ტიპისთვის შენიშვნის ჩანაწერები აღწერილი არაა\n"
 
-#: src/elflint.c:4540
+#: src/elflint.c:4553
 #, c-format
 msgid "section [%2d] '%s': cannot get content of note section\n"
 msgstr "სექცია [%2d] '%s': შენიშვნის სექციის შემცველობის მიღება შეუძლებელია\n"
 
-#: src/elflint.c:4543
+#: src/elflint.c:4556
 #, c-format
 msgid "section [%2d] '%s': extra %<PRIu64> bytes after last note\n"
 msgstr "სექცია [%2d] '%s': დამატებითი %<PRIu64> ბაიტი ბოლო შენიშვნის შემდეგ\n"
 
-#: src/elflint.c:4561
+#: src/elflint.c:4574
 #, c-format
 msgid ""
 "only executables, shared objects, and core files can have program headers\n"
@@ -3675,62 +3661,72 @@ msgstr ""
 "პროგრამის თავსართები, მხოლოდ, გამშვებ ფაილებს, გაზიარებულ ობიექტებს და "
 "ბირთვის ფაილებს შეიძლება, ჰქონდეთ\n"
 
-#: src/elflint.c:4576
+#: src/elflint.c:4592
 #, c-format
 msgid "cannot get program header entry %d: %s\n"
 msgstr "პროგრამის თავსართის ჩანაწერის მიღების შეცდომა %d: %s\n"
 
-#: src/elflint.c:4586
+#: src/elflint.c:4602
 #, c-format
 msgid "program header entry %d: unknown program header entry type %#<PRIx64>\n"
 msgstr ""
 "პროგრამის თავსართის შესასვლელი %d: უცნობი პროგრამის თავსართის შესასვლელის "
 "ტიპი %#<PRIx64>\n"
 
-#: src/elflint.c:4597
+#: src/elflint.c:4611
+#, c-format
+msgid "LOAD segments not sorted by vaddr\n"
+msgstr ""
+
+#: src/elflint.c:4623
 #, c-format
 msgid "more than one INTERP entry in program header\n"
 msgstr "პროგრამის თავსართში ერთზე მეტი INTERP ჩანაწერია\n"
 
-#: src/elflint.c:4605
+#: src/elflint.c:4627
+#, c-format
+msgid "INTERP entry is preceded by a loadable segment in program header\n"
+msgstr ""
+
+#: src/elflint.c:4634
 #, c-format
 msgid "more than one TLS entry in program header\n"
 msgstr "პროგრამის თავსართში ერთზე მეტი TLS ჩანაწერია\n"
 
-#: src/elflint.c:4612
+#: src/elflint.c:4641
 #, c-format
 msgid "static executable cannot have dynamic sections\n"
 msgstr "სტატიკურ გამშვებ ფაილებს დინამიკური სექციები ვერ ექნებათ\n"
 
-#: src/elflint.c:4626
+#: src/elflint.c:4655
 #, c-format
 msgid "dynamic section reference in program header has wrong offset\n"
 msgstr ""
 "პროგრამის თავსართში დინამიკური სექციის მიმართვის წანაცვლება არასწორია\n"
 
-#: src/elflint.c:4629
+#: src/elflint.c:4658
 #, c-format
 msgid "dynamic section size mismatch in program and section header\n"
 msgstr ""
 "დინამიკური სექციის ზომა პროგრამაში და სექციის თავსართში ერთმანეთს არ "
 "ემთხვევა\n"
 
-#: src/elflint.c:4639
+#: src/elflint.c:4668
 #, c-format
 msgid "more than one GNU_RELRO entry in program header\n"
 msgstr "პროგრამის თავსართში ერთზე მეტი GNU_RELRO ჩანაწერია\n"
 
-#: src/elflint.c:4660
+#: src/elflint.c:4689
 #, c-format
 msgid "loadable segment GNU_RELRO applies to is not writable\n"
 msgstr "ჩატვირთვადი სეგმენტი, რომელზეც GNU_RELRO ვრცელდება, ჩაწერადი არაა\n"
 
-#: src/elflint.c:4671
+#: src/elflint.c:4700
 #, c-format
 msgid "loadable segment [%u] flags do not match GNU_RELRO [%u] flags\n"
 msgstr "ჩატვირთვადი სეგმენტის [%u] ალმები არ ემთხვევა GNU_RELRO [%u] ალმებს\n"
 
-#: src/elflint.c:4678
+#: src/elflint.c:4707
 #, c-format
 msgid ""
 "GNU_RELRO [%u] flags are not a subset of the loadable segment [%u] flags\n"
@@ -3738,79 +3734,85 @@ msgstr ""
 "GNU_RELRO [%u] ალმები ჩატვირთვადი სეგმენტის [%u] ალმების ქვენაკრებს არ "
 "წარმოადგენენ\n"
 
-#: src/elflint.c:4687 src/elflint.c:4710
+#: src/elflint.c:4716 src/elflint.c:4745
 #, c-format
 msgid "%s segment not contained in a loaded segment\n"
 msgstr "%s სეგმენტი ჩატვირთულ სეგმენტს არ შეიცავს\n"
 
-#: src/elflint.c:4716
+#: src/elflint.c:4725
+#, fuzzy, c-format
+#| msgid "more than one TLS entry in program header\n"
+msgid "more than one PHDR entry in program header\n"
+msgstr "პროგრამის თავსართში ერთზე მეტი TLS ჩანაწერია\n"
+
+#: src/elflint.c:4751
 #, c-format
 msgid "program header offset in ELF header and PHDR entry do not match"
 msgstr ""
 "პროგრამის თავსართის წანაცვლება ELF თავსართში და PHDR ჩანაწერში ერთმანეთს არ "
 "ემთხვევა"
 
-#: src/elflint.c:4743
+#: src/elflint.c:4778
 #, c-format
 msgid "call frame search table reference in program header has wrong offset\n"
 msgstr ""
 "გამოძახების კადრის ძებნის ცხრილის მიმართვა პროგრამის თავსართში არასწორი "
 "წანაცვლებითაა\n"
 
-#: src/elflint.c:4746
+#: src/elflint.c:4781
 #, c-format
 msgid "call frame search table size mismatch in program and section header\n"
 msgstr ""
 "გამოძახების კადრის ძებნის ცხრილის ზომა პროგრამაში და სექციის თავსართში "
 "ერთმანეთს არ ემთხვევა\n"
 
-#: src/elflint.c:4759
+#: src/elflint.c:4794
 #, c-format
 msgid "PT_GNU_EH_FRAME present but no .eh_frame_hdr section\n"
 msgstr "PT_GNU_EH_FRAME არსებობს, .eh_frame_hdr სექცია კი - არა\n"
 
-#: src/elflint.c:4767
+#: src/elflint.c:4802
 #, c-format
 msgid "call frame search table must be allocated\n"
 msgstr "გამოძახების კადრის ძებნის ცხრილის გამოყოფა აუცილებელია\n"
 
-#: src/elflint.c:4770
+#: src/elflint.c:4805
 #, c-format
 msgid "section [%2zu] '%s' must be allocated\n"
 msgstr "სექცია [%2zu] '%s' გამოყოფილი უნდა იყოს\n"
 
-#: src/elflint.c:4774
+#: src/elflint.c:4809
 #, c-format
 msgid "call frame search table must not be writable\n"
 msgstr "გამოძახების კადრის ძებნის ცხრილი ჩაწერადი არ უნდა იყოს\n"
 
-#: src/elflint.c:4777
+#: src/elflint.c:4812
 #, c-format
 msgid "section [%2zu] '%s' must not be writable\n"
 msgstr "სექცია [%2zu] '%s' ჩაწერადი არ უნდა იყოს\n"
 
-#: src/elflint.c:4782
+#: src/elflint.c:4817
 #, c-format
 msgid "call frame search table must not be executable\n"
 msgstr "გამოძახების კადრის ძებნის ცხრილი შესრულებადი არ უნდა იყოს\n"
 
-#: src/elflint.c:4785
+#: src/elflint.c:4820
 #, c-format
 msgid "section [%2zu] '%s' must not be executable\n"
 msgstr "სექცია [%2zu] '%s' გაშვებადი არ უნდა იყოს\n"
 
-#: src/elflint.c:4799
+#: src/elflint.c:4834
 #, c-format
 msgid "program header entry %d: file size greater than memory size\n"
 msgstr ""
 "პროგრამის თავსართის ჩანაწერი %d: ფაილის ზომა მეხსიერების ზომაზე დიდია\n"
 
-#: src/elflint.c:4806
+#: src/elflint.c:4841
 #, c-format
 msgid "program header entry %d: alignment not a power of 2\n"
 msgstr "პროგრამის თავსართის ჩანაწერი %d: სწორება ორის ხარისხი არაა\n"
 
-#: src/elflint.c:4809
+#: src/elflint.c:4844
 #, c-format
 msgid ""
 "program header entry %d: file offset and virtual address not module of "
@@ -3819,7 +3821,7 @@ msgstr ""
 "პროგრამის თავსართის ჩანაწერი %d: ფაილის წანაცვლება და ვირტუალური მისამართი "
 "სწორების მოდული არაა\n"
 
-#: src/elflint.c:4822
+#: src/elflint.c:4857
 #, c-format
 msgid ""
 "executable/DSO with .eh_frame_hdr section does not have a PT_GNU_EH_FRAME "
@@ -3828,17 +3830,17 @@ msgstr ""
 "გამშვებს/DSO .eh_frame_hdr სექციას არ აქვს a PT_GNU_EH_FRAME პროგრამის "
 "თავსართის ჩანაწერი"
 
-#: src/elflint.c:4856
+#: src/elflint.c:4891
 #, c-format
 msgid "cannot read ELF header: %s\n"
 msgstr "შეცდომა ELF თავსართის წაკითხვისას: %s\n"
 
-#: src/elflint.c:4868
+#: src/elflint.c:4903
 #, c-format
 msgid "cannot create backend for ELF file\n"
 msgstr "შეცდომა ELF ფაილისთვის უკანაბოლოს შექმნისას\n"
 
-#: src/elflint.c:4889
+#: src/elflint.c:4924
 #, c-format
 msgid "text relocation flag set but not needed\n"
 msgstr "ტექსტის გადაადგილების ალამი დაყენებულია, მაგრამ საჭირო არაა\n"
@@ -4019,7 +4021,8 @@ msgstr "სპეციალური სიმბოლოების და�
 msgid "Print size of defined symbols"
 msgstr "აღწერილი სიმბოლოების ზომის გამოტანა"
 
-#: src/nm.c:90 src/size.c:67 src/strip.c:74 src/unstrip.c:68
+#: src/nm.c:90 src/size.c:67 src/stackprof.cxx:398 src/strip.c:74
+#: src/unstrip.c:68
 msgid "Output options:"
 msgstr "გამოტანის პარამეტრები:"
 
@@ -4054,7 +4057,7 @@ msgid "%s: INTERNAL ERROR %d (%s): %s"
 msgstr "%s: შიდა შეცდომა %d (%s): %s"
 
 #: src/nm.c:380 src/nm.c:392 src/size.c:287 src/size.c:296 src/size.c:307
-#: src/strip.c:2780
+#: src/strip.c:2791
 #, c-format
 msgid "while closing '%s'"
 msgstr "'%s'-ის დახურვისას"
@@ -4097,12 +4100,12 @@ msgstr "%s%s%s: ფაილის ფორმატი უცნობია"
 msgid "cannot create search tree"
 msgstr "ძებნის ხის შექმნის შეცდომა"
 
-#: src/nm.c:742 src/nm.c:1234 src/objdump.c:779 src/readelf.c:881
-#: src/readelf.c:1713 src/readelf.c:1862 src/readelf.c:2089 src/readelf.c:2331
-#: src/readelf.c:2527 src/readelf.c:2703 src/readelf.c:2825 src/readelf.c:3087
-#: src/readelf.c:3403 src/readelf.c:3478 src/readelf.c:3564 src/readelf.c:4161
-#: src/readelf.c:4209 src/readelf.c:4278 src/readelf.c:12436
-#: src/readelf.c:13637 src/readelf.c:13847 src/readelf.c:13915 src/size.c:396
+#: src/nm.c:742 src/nm.c:1234 src/objdump.c:779 src/readelf.c:886
+#: src/readelf.c:1718 src/readelf.c:1867 src/readelf.c:2094 src/readelf.c:2336
+#: src/readelf.c:2532 src/readelf.c:2708 src/readelf.c:2830 src/readelf.c:3093
+#: src/readelf.c:3409 src/readelf.c:3484 src/readelf.c:3570 src/readelf.c:4167
+#: src/readelf.c:4215 src/readelf.c:4284 src/readelf.c:12739
+#: src/readelf.c:13946 src/readelf.c:14156 src/readelf.c:14224 src/size.c:396
 #: src/size.c:467 src/strip.c:1101
 #, c-format
 msgid "cannot get section header string table index"
@@ -4211,7 +4214,7 @@ msgstr "მხოლოდ მითითებული სახელის 
 msgid "Show information from FILEs (a.out by default)."
 msgstr "ინფორმაციის ჩვენება მითითებული ფაილებიდან (ნაგულისხმევად .a.out)."
 
-#: src/objdump.c:217 src/readelf.c:826
+#: src/objdump.c:217 src/readelf.c:831
 msgid "No operation specified.\n"
 msgstr "ოპერაცია მითითებული არაა.\n"
 
@@ -4220,11 +4223,11 @@ msgstr "ოპერაცია მითითებული არაა.\n"
 msgid "while close `%s'"
 msgstr "'%s'-ის დახურვისას"
 
-#: src/objdump.c:363 src/readelf.c:2426 src/readelf.c:2624
+#: src/objdump.c:363 src/readelf.c:2431 src/readelf.c:2629
 msgid "INVALID SYMBOL"
 msgstr "არასწორი სიმბოლო"
 
-#: src/objdump.c:378 src/readelf.c:2466 src/readelf.c:2666
+#: src/objdump.c:378 src/readelf.c:2471 src/readelf.c:2671
 msgid "INVALID SECTION"
 msgstr "არასწორი სექცია"
 
@@ -4366,52 +4369,57 @@ msgid "Additional output selection:"
 msgstr "დამატებითი გამოტანის არჩევანი:"
 
 #: src/readelf.c:143
+#, fuzzy
+#| msgid ""
+#| "Display DWARF section content.  SECTION can be one of abbrev, addr, "
+#| "aranges, decodedaranges, frame, gdb_index, info, info+, loc, line, "
+#| "decodedline, ranges, pubnames, str, macinfo, macro or exception"
 msgid ""
 "Display DWARF section content.  SECTION can be one of abbrev, addr, aranges, "
-"decodedaranges, frame, gdb_index, info, info+, loc, line, decodedline, "
-"ranges, pubnames, str, macinfo, macro or exception"
+"cu_index, decodedaranges, frame, gdb_index, info, info+, loc, line, "
+"decodedline, ranges, pubnames, str, macinfo, macro or exception"
 msgstr ""
 "DWARF სექციის შემცველობის გამოტანა.  SECTION შეიძლება იყოს abbrev, addr, "
 "aranges, decodedaranges, frame, gdb_index, info, info+, loc, line, "
 "decodedline, ranges, pubnames, str, macinfo, macro, ან exception"
 
-#: src/readelf.c:147
+#: src/readelf.c:148
 msgid "Dump the uninterpreted contents of SECTION, by number or name"
 msgstr "სექციის არაინტერპრეტირებული შემცველობის დამპი ნომრით, ან სახელით"
 
-#: src/readelf.c:149
+#: src/readelf.c:150
 msgid "Print string contents of sections"
 msgstr "სექციებში შემცველობაში არსებული სტრიქონების გამოტანა"
 
-#: src/readelf.c:152
+#: src/readelf.c:153
 msgid "Display the symbol index of an archive"
 msgstr "არქივის სიმბოლოების ინდექსის ჩვენება"
 
-#: src/readelf.c:154
+#: src/readelf.c:155
 msgid "Use the dynamic segment when possible for displaying info"
 msgstr ""
 "ინფორმაციის გამოსატანად დინამიკური სეგმენტის გამოყენება, როცა ეს შესაძლებელია"
 
-#: src/readelf.c:156
+#: src/readelf.c:157
 msgid "Output control:"
 msgstr "გამოტანის კონტროლი:"
 
-#: src/readelf.c:158
+#: src/readelf.c:159
 msgid "Do not find symbol names for addresses in DWARF data"
 msgstr "სიმბოლოს სახელები მისამართებისთვის DWARF-ის მონაცემებში არ მოიძებნება"
 
-#: src/readelf.c:160
+#: src/readelf.c:161
 msgid ""
 "Display just offsets instead of resolving values to addresses in DWARF data"
 msgstr ""
 "წანაცვლებების ჩვენება მისამართებში მნიშვნელობების ამოხსნის მაგიერ DWARF-ის "
 "მონაცემებში"
 
-#: src/readelf.c:162
+#: src/readelf.c:163
 msgid "Ignored for compatibility (lines always wide)"
 msgstr "გამოტოვებულია თავსებადობისთვის (ხაზები ყოველთვის ფართოა)"
 
-#: src/readelf.c:164
+#: src/readelf.c:165
 msgid ""
 "Show compression information for compressed sections (when used with -S); "
 "decompress section before dumping data (when used with -p or -x)"
@@ -4420,267 +4428,267 @@ msgstr ""
 "პარამეტრით -S). სექციის გაშლა მონაცემების დამპამდე (როცა გამოყენებულია "
 "პარამეტრით -p, ან -x)"
 
-#: src/readelf.c:167
+#: src/readelf.c:168
 msgid "Set maximum number of threads. Defaults to the number of CPUs."
 msgstr ""
 "ნაკადების მაქსიმალური რაოდენობის დაყენება. ნაგულისხმევად უდრის CPU-ების "
 "რაოდენობას."
 
 #. Short description of program.
-#: src/readelf.c:173
+#: src/readelf.c:174
 msgid "Print information from ELF file in human-readable form."
 msgstr "ELF ფაილიდან ინფორმაციის ადამიანისთვის გასაგებ ფორმატში გამოტანა."
 
-#: src/readelf.c:453
+#: src/readelf.c:456
 msgid "yes"
 msgstr "დიახ"
 
-#: src/readelf.c:454
+#: src/readelf.c:457
 msgid "no"
 msgstr "არა"
 
-#: src/readelf.c:455
+#: src/readelf.c:458
 msgid "empty block"
 msgstr "ცარიელი ბლოკი"
 
-#: src/readelf.c:456
+#: src/readelf.c:459
 msgid "byte block"
 msgstr "ბაიტი ბლოკი"
 
-#: src/readelf.c:457
+#: src/readelf.c:460
 msgid "offset"
 msgstr "წანაცვლება"
 
-#: src/readelf.c:458
+#: src/readelf.c:461
 msgid "children"
 msgstr "შვილები"
 
-#: src/readelf.c:459
+#: src/readelf.c:462
 msgid "tag"
 msgstr "ჭდე"
 
-#: src/readelf.c:460
+#: src/readelf.c:463
 msgid "Table at offset"
 msgstr "ცხრილი წანაცვლებასთან"
 
-#: src/readelf.c:461
+#: src/readelf.c:464
 msgid "Table at Offset"
 msgstr "ცხრილი წანაცვლებასთან"
 
-#: src/readelf.c:462
+#: src/readelf.c:465
 msgid "Length"
 msgstr "სიგრძე"
 
-#: src/readelf.c:463
+#: src/readelf.c:466
 msgid "DWARF version"
 msgstr "DWARF-ის ვერსია"
 
-#: src/readelf.c:464
+#: src/readelf.c:467
 msgid "CU offset"
 msgstr "CU წანაცვლება"
 
-#: src/readelf.c:465
+#: src/readelf.c:468
 msgid "Address size"
 msgstr "მისამართის ზომა"
 
-#: src/readelf.c:466
+#: src/readelf.c:469
 msgid "Segment size"
 msgstr "სეგმენტის ზომა"
 
-#: src/readelf.c:467
+#: src/readelf.c:470
 msgid "Offset entries"
 msgstr "წანაცვლების ჩანაწერები"
 
-#: src/readelf.c:468
+#: src/readelf.c:471
 msgid "CU"
 msgstr "CU"
 
-#: src/readelf.c:469
+#: src/readelf.c:472
 msgid "base"
 msgstr "ბაზა"
 
-#: src/readelf.c:470
+#: src/readelf.c:473
 msgid "Type unit at offset"
 msgstr "ტიპის ერთეული წანაცვლებასთან"
 
-#: src/readelf.c:471
+#: src/readelf.c:474
 msgid "Version"
 msgstr "ვერსია"
 
-#: src/readelf.c:472
+#: src/readelf.c:475
 msgid "Abbreviation section offset"
 msgstr "აბრევიატურის სექციის წანაცვლება"
 
-#: src/readelf.c:473
+#: src/readelf.c:476
 msgid "Offset size"
 msgstr "წანაცვლების ზომა"
 
-#: src/readelf.c:474
+#: src/readelf.c:477
 msgid "Type signature"
 msgstr "ტიპის ხელმოწერა"
 
-#: src/readelf.c:475
+#: src/readelf.c:478
 msgid "Type offset"
 msgstr "ტიპის წანაცვლება"
 
-#: src/readelf.c:476
+#: src/readelf.c:479
 msgid "Compilation unit at offset"
 msgstr "კომპილაციის ერთეული წანაცვლებასთან"
 
-#: src/readelf.c:477
+#: src/readelf.c:480
 msgid "Unit type"
 msgstr "ერთეულის ტიპი"
 
-#: src/readelf.c:478
+#: src/readelf.c:481
 msgid "Unit id"
 msgstr "ერთეულის ID"
 
-#: src/readelf.c:479
+#: src/readelf.c:482
 msgid "Unit DIE off"
 msgstr "DIE-ის ერთეული"
 
-#: src/readelf.c:480
+#: src/readelf.c:483
 msgid "Prologue length"
 msgstr "პროლოგის სიგრძე"
 
-#: src/readelf.c:481
+#: src/readelf.c:484
 msgid "Segment selector size"
 msgstr "სეგმენტის ამრჩევის ზომა"
 
-#: src/readelf.c:482
+#: src/readelf.c:485
 msgid "Min instruction length"
 msgstr "მინ. ინსტრუქციის სიგრძე"
 
-#: src/readelf.c:483
+#: src/readelf.c:486
 msgid "Max operations per instruction"
 msgstr "მაქს. ოპერაციები თითოეული ინსტრუქციისთვის"
 
-#: src/readelf.c:484
+#: src/readelf.c:487
 msgid "Initial value if"
 msgstr "საწყისი მნიშვნელობა, თუ"
 
-#: src/readelf.c:485
+#: src/readelf.c:488
 msgid "Line base"
 msgstr "ხაზის ბაზა"
 
-#: src/readelf.c:486
+#: src/readelf.c:489
 msgid "Line range"
 msgstr "ხაზის შუალედი"
 
-#: src/readelf.c:487
+#: src/readelf.c:490
 msgid "Opcode base"
 msgstr "ოპკოდის ბაზა"
 
-#: src/readelf.c:488
+#: src/readelf.c:491
 msgid "Opcodes"
 msgstr "ოპკოდები"
 
-#: src/readelf.c:489
+#: src/readelf.c:492
 msgid "special opcode"
 msgstr "სპეციალური ოპკოდი"
 
-#: src/readelf.c:490
+#: src/readelf.c:493
 msgid "address"
 msgstr "მისამართი"
 
-#: src/readelf.c:491
+#: src/readelf.c:494
 msgid "line"
 msgstr "ხაზი"
 
-#: src/readelf.c:492
+#: src/readelf.c:495
 msgid "extended opcode"
 msgstr "გაფართოებული ოპკოდი"
 
-#: src/readelf.c:493
+#: src/readelf.c:496
 msgid "set discriminator to"
 msgstr "დისკრიმინატორის დაყენება მნიშვნელობაზე"
 
-#: src/readelf.c:494
+#: src/readelf.c:497
 msgid "advance address by"
 msgstr "მისამართის გაზრდა მნიშვნელობით"
 
-#: src/readelf.c:495
+#: src/readelf.c:498
 msgid "to"
 msgstr "რაზე"
 
-#: src/readelf.c:496
+#: src/readelf.c:499
 msgid "set file to"
 msgstr "ფაილის დაყენება მნიშვნელობაზე"
 
-#: src/readelf.c:497
+#: src/readelf.c:500
 msgid "set column to"
 msgstr "სვეტის დაყენება მნიშვნელობაზე"
 
-#: src/readelf.c:498
+#: src/readelf.c:501
 msgid "set"
 msgstr "დაყენება"
 
-#: src/readelf.c:499
+#: src/readelf.c:502
 msgid "advance address by constant"
 msgstr "მისამართის გაზრდა კონსტანტით"
 
-#: src/readelf.c:500
+#: src/readelf.c:503
 msgid "advance line by constant"
 msgstr "ხაზის გაზრდა კონსტანტით"
 
-#: src/readelf.c:501
+#: src/readelf.c:504
 msgid "Unknown CU base"
 msgstr "უცნობი CU-ის ბაზა"
 
-#: src/readelf.c:502
+#: src/readelf.c:505
 msgid "Directory table"
 msgstr "საქაღალდის ცხრილი"
 
-#: src/readelf.c:503
+#: src/readelf.c:506
 msgid "File name table"
 msgstr "ფაილის სახელების ცხრილი"
 
-#: src/readelf.c:504
+#: src/readelf.c:507
 msgid "No line number statements"
 msgstr "ხაზის ნომრის ინსტრუქციების გარეშე"
 
-#: src/readelf.c:505
+#: src/readelf.c:508
 msgid "Line number statements"
 msgstr "ხაზის ნომრის ინსტრუქციები"
 
-#: src/readelf.c:506
+#: src/readelf.c:509
 msgid "end of sequence"
 msgstr "მიმდევრობის დასასრული"
 
-#: src/readelf.c:507
+#: src/readelf.c:510
 msgid "set address to"
 msgstr "მისამართის დაყენება მნიშვნელობაზე"
 
-#: src/readelf.c:508
+#: src/readelf.c:511
 msgid "copy"
 msgstr "კოპირება"
 
-#: src/readelf.c:719
+#: src/readelf.c:722
 #, c-format
 msgid "-C NUM minimum 1"
 msgstr "-C NUM მინიმუმ 1"
 
-#: src/readelf.c:794
+#: src/readelf.c:799
 #, c-format
 msgid "Unknown DWARF debug section `%s'.\n"
 msgstr "უცნობი DWARF გამართვის სექცია `%s'.\n"
 
-#: src/readelf.c:865 src/readelf.c:976
+#: src/readelf.c:870 src/readelf.c:981
 #, c-format
 msgid "cannot generate Elf descriptor: %s"
 msgstr "ELF დესკრიპტორის გენერაცია შეუძლებელია: %s"
 
-#: src/readelf.c:872 src/readelf.c:1199 src/strip.c:1203
+#: src/readelf.c:877 src/readelf.c:1204 src/strip.c:1203
 #, c-format
 msgid "cannot determine number of sections: %s"
 msgstr "სექციების რაოდენობის დადგენა შეუძლებელია: %s"
 
-#: src/readelf.c:890 src/readelf.c:1519 src/readelf.c:1737
+#: src/readelf.c:895 src/readelf.c:1524 src/readelf.c:1742
 #, c-format
 msgid "cannot get section: %s"
 msgstr "სექციის მიღების შეცდომა: %s"
 
-#: src/readelf.c:899 src/readelf.c:1526 src/readelf.c:1744 src/readelf.c:13867
+#: src/readelf.c:904 src/readelf.c:1531 src/readelf.c:1749 src/readelf.c:14176
 #: src/unstrip.c:396 src/unstrip.c:427 src/unstrip.c:490 src/unstrip.c:622
 #: src/unstrip.c:640 src/unstrip.c:680 src/unstrip.c:897 src/unstrip.c:1263
 #: src/unstrip.c:1390 src/unstrip.c:1414 src/unstrip.c:1470 src/unstrip.c:1511
@@ -4689,118 +4697,118 @@ msgstr "სექციის მიღების შეცდომა: %s"
 msgid "cannot get section header: %s"
 msgstr "სექციის თავსართის მიღების შეცდომა: %s"
 
-#: src/readelf.c:907
+#: src/readelf.c:912
 #, c-format
 msgid "cannot get section name"
 msgstr "სექციის სახელის მიღების შეცდომა"
 
-#: src/readelf.c:916 src/readelf.c:7482 src/readelf.c:11565 src/readelf.c:11668
-#: src/readelf.c:11853
+#: src/readelf.c:921 src/readelf.c:7533 src/readelf.c:11633 src/readelf.c:11736
+#: src/readelf.c:11921 src/readelf.c:12245
 #, c-format
 msgid "cannot get %s content: %s"
 msgstr "%s-ის შემცველობის მიღება შეუძლებელია: %s"
 
-#: src/readelf.c:932
+#: src/readelf.c:937
 #, c-format
 msgid "cannot create temp file '%s'"
 msgstr "ვერ შევქმენი დროებითი ფაილი '%s'"
 
-#: src/readelf.c:941
+#: src/readelf.c:946
 #, c-format
 msgid "cannot write section data"
 msgstr "სექციის მონაცემების ჩაწერის შეცდომა"
 
-#: src/readelf.c:947 src/readelf.c:964 src/readelf.c:993
+#: src/readelf.c:952 src/readelf.c:969 src/readelf.c:998
 #, c-format
 msgid "error while closing Elf descriptor: %s"
 msgstr "შეცდომა ELF დესკრიპტორის დახურვისას: %s"
 
-#: src/readelf.c:954
+#: src/readelf.c:959
 #, c-format
 msgid "error while rewinding file descriptor"
 msgstr "ფაილის დესკრიპტორის გადახვევის შეცდომა"
 
-#: src/readelf.c:988
+#: src/readelf.c:993
 #, c-format
 msgid "'%s' is not an archive, cannot print archive index"
 msgstr "'%s' არქივი არაა. არქივის ინდექსის გამოტანა შეუძლებელია"
 
-#: src/readelf.c:1092
+#: src/readelf.c:1097
 #, c-format
 msgid "cannot stat input file"
 msgstr "შეყვანილი ფაილის აღმოჩენა შეუძლებელია"
 
-#: src/readelf.c:1094
+#: src/readelf.c:1099
 #, c-format
 msgid "input file is empty"
 msgstr "შეყვანილი ფაილი ცარიელია"
 
-#: src/readelf.c:1096
+#: src/readelf.c:1101
 #, c-format
 msgid "failed reading '%s': %s"
 msgstr "'%s'-ის წაკითხვა ჩავარდა: %s"
 
-#: src/readelf.c:1126
+#: src/readelf.c:1131
 #, c-format
 msgid "No such section '%s' in '%s'"
 msgstr "'%2$s'-ში სექცია '%1$s' არ არსებობს"
 
-#: src/readelf.c:1185
+#: src/readelf.c:1190
 #, c-format
 msgid "cannot read ELF header: %s"
 msgstr "შეცდომა ELF თავსართის წაკითხვისას: %s"
 
-#: src/readelf.c:1193
+#: src/readelf.c:1198
 #, c-format
 msgid "cannot create EBL handle"
 msgstr "EBL დესკრიპტორის შექმნა შეუძლებელია"
 
-#: src/readelf.c:1204
+#: src/readelf.c:1209
 #, c-format
 msgid "cannot determine number of program headers: %s"
 msgstr "პროგრამის თავსართების რაოდენობის დადგენა შეუძლებელია: %s"
 
-#: src/readelf.c:1236
+#: src/readelf.c:1241
 #, c-format
 msgid "cannot read ELF: %s"
 msgstr "შეცდომა ELF-ის წაკითხვისას: %s"
 
-#: src/readelf.c:1269
+#: src/readelf.c:1274
 msgid "cannot find section"
 msgstr "სექცია ვერ ვიპოვე"
 
-#: src/readelf.c:1306
+#: src/readelf.c:1311
 msgid "NONE (None)"
 msgstr "NONE (არაფერი)"
 
-#: src/readelf.c:1307
+#: src/readelf.c:1312
 msgid "REL (Relocatable file)"
 msgstr "REL (გადაადგილებადი ფაილი)"
 
-#: src/readelf.c:1308
+#: src/readelf.c:1313
 msgid "EXEC (Executable file)"
 msgstr "EXEC (შესრულებადი ფაილი)"
 
-#: src/readelf.c:1309
+#: src/readelf.c:1314
 msgid "DYN (Shared object file)"
 msgstr "DYN (გაზიარებული ობიეტქის ფაილი)"
 
-#: src/readelf.c:1310
+#: src/readelf.c:1315
 msgid "CORE (Core file)"
 msgstr "CORE (ბირთვის ფაილი)"
 
-#: src/readelf.c:1315
+#: src/readelf.c:1320
 #, c-format
 msgid "OS Specific: (%x)\n"
 msgstr "ოს-ისთვის სპეციფიკური: (%x)\n"
 
 #. && e_type <= ET_HIPROC always true
-#: src/readelf.c:1317
+#: src/readelf.c:1322
 #, c-format
 msgid "Processor Specific: (%x)\n"
 msgstr "პროცესორისთვის სპეციფიკური: (%x)\n"
 
-#: src/readelf.c:1327
+#: src/readelf.c:1332
 msgid ""
 "ELF Header:\n"
 "  Magic:  "
@@ -4808,7 +4816,7 @@ msgstr ""
 "ELF თავსართი:\n"
 "  Magic:  "
 
-#: src/readelf.c:1331
+#: src/readelf.c:1336
 #, c-format
 msgid ""
 "\n"
@@ -4817,124 +4825,123 @@ msgstr ""
 "\n"
 "  კლასი:                             %s\n"
 
-#: src/readelf.c:1336
+#: src/readelf.c:1341
 #, c-format
 msgid "  Data:                              %s\n"
 msgstr "  მონაცემები:                              %s\n"
 
-#: src/readelf.c:1342
+#: src/readelf.c:1347
 #, c-format
 msgid "  Ident Version:                     %hhd %s\n"
 msgstr "  Ident-ის ვერსია:                     %hhd %s\n"
 
-#: src/readelf.c:1344 src/readelf.c:1366
+#: src/readelf.c:1349 src/readelf.c:1371
 msgid "(current)"
 msgstr "(მიმდინარე)"
 
-#: src/readelf.c:1348
+#: src/readelf.c:1353
 #, c-format
 msgid "  OS/ABI:                            %s\n"
 msgstr "  ოს-ი/ABI:                            %s\n"
 
-#: src/readelf.c:1351
+#: src/readelf.c:1356
 #, c-format
 msgid "  ABI Version:                       %hhd\n"
 msgstr "  ABI-ის ვერსია:                       %hhd\n"
 
-#: src/readelf.c:1354
+#: src/readelf.c:1359
 msgid "  Type:                              "
 msgstr "  ტიპი:                              "
 
-#: src/readelf.c:1359
+#: src/readelf.c:1364
 #, c-format
 msgid "  Machine:                           %s\n"
 msgstr "  მანქანა:                           %s\n"
 
-#: src/readelf.c:1361
+#: src/readelf.c:1366
 #, c-format
 msgid "  Machine:                           <unknown>: 0x%x\n"
 msgstr "  მანქანა:                           <უცნობი>: 0x%x\n"
 
-#: src/readelf.c:1364
+#: src/readelf.c:1369
 #, c-format
 msgid "  Version:                           %d %s\n"
 msgstr "  ვერსია:                           %d %s\n"
 
-#: src/readelf.c:1368
+#: src/readelf.c:1373
 #, c-format
 msgid "  Entry point address:               %#<PRIx64>\n"
 msgstr "  შესასვლელი წერტილის მისამართი:               %#<PRIx64>\n"
 
-#: src/readelf.c:1371
+#: src/readelf.c:1376
 #, c-format
 msgid "  Start of program headers:          %<PRId64> %s\n"
 msgstr "  პროგრამის თავსართების დასაწყისი:          %<PRId64> %s\n"
 
-#: src/readelf.c:1372 src/readelf.c:1375
+#: src/readelf.c:1377 src/readelf.c:1380
 msgid "(bytes into file)"
 msgstr "(ბაიტი ფაილში)"
 
-#: src/readelf.c:1374
+#: src/readelf.c:1379
 #, c-format
 msgid "  Start of section headers:          %<PRId64> %s\n"
 msgstr "  სექციის თავსართების დასაწყისი:          %<PRId64> %s\n"
 
-#: src/readelf.c:1377
+#: src/readelf.c:1382
 #, c-format
 msgid "  Flags:                             %s\n"
 msgstr "  ალმები:                             %s\n"
 
-#: src/readelf.c:1380
+#: src/readelf.c:1385
 #, c-format
-#| msgid "  Size of this header:               %<PRId16> %s\n"
 msgid "  Size of this header:               %<PRIu16> %s\n"
 msgstr "  ამ თავსართის ზომა:               %<PRIu16> %s\n"
 
-#: src/readelf.c:1381 src/readelf.c:1384 src/readelf.c:1401
+#: src/readelf.c:1386 src/readelf.c:1389 src/readelf.c:1406
 msgid "(bytes)"
 msgstr "(ბაიტი)"
 
-#: src/readelf.c:1383
+#: src/readelf.c:1388
 #, c-format
 msgid "  Size of program header entries:    %<PRIu16> %s\n"
 msgstr "  პროგრამის თავსართის ჩანაწერების ზომა:    %<PRIu16> %s\n"
 
-#: src/readelf.c:1386
+#: src/readelf.c:1391
 #, c-format
 msgid "  Number of program headers entries: %<PRIu16>"
 msgstr "  პროგრამის თავსართის ჩანაწერების რაოდენობა: %<PRIu16>"
 
-#: src/readelf.c:1393
+#: src/readelf.c:1398
 #, c-format
 msgid " (%<PRIu32> in [0].sh_info)"
 msgstr " (%<PRIu32> [0].sh_info-ში)"
 
-#: src/readelf.c:1396 src/readelf.c:1413 src/readelf.c:1427
+#: src/readelf.c:1401 src/readelf.c:1418 src/readelf.c:1432
 msgid " ([0] not available)"
 msgstr " ([0] ხელმისაწვდომი არაა)"
 
-#: src/readelf.c:1400
+#: src/readelf.c:1405
 #, c-format
 msgid "  Size of section header entries:    %<PRIu16> %s\n"
 msgstr "  სექციის თავსართის ჩანაწერების ზომა:    %<PRIu16> %s\n"
 
-#: src/readelf.c:1403
+#: src/readelf.c:1408
 #, c-format
 msgid "  Number of section headers entries: %<PRIu16>"
 msgstr "  სექციის თავსართის ჩანაწერების რაოდენობა: %<PRIu16>"
 
-#: src/readelf.c:1410
+#: src/readelf.c:1415
 #, c-format
 msgid " (%<PRIu32> in [0].sh_size)"
 msgstr " (%<PRIu32> [0].sh_size-ში)"
 
 #. We managed to get the zeroth section.
-#: src/readelf.c:1423
+#: src/readelf.c:1428
 #, c-format
 msgid " (%<PRIu32> in [0].sh_link)"
 msgstr " (%<PRIu32> [0].sh_link-ში)"
 
-#: src/readelf.c:1431
+#: src/readelf.c:1436
 #, c-format
 msgid ""
 "  Section header string table index: XINDEX%s\n"
@@ -4943,7 +4950,7 @@ msgstr ""
 "  სექციის თავსარტის სტრიქონის ცხრილის ინდექსი: XINDEX%s\n"
 "\n"
 
-#: src/readelf.c:1435
+#: src/readelf.c:1440
 #, c-format
 msgid ""
 "  Section header string table index: %<PRIu16>\n"
@@ -4952,12 +4959,12 @@ msgstr ""
 "  სექციის თავსარტის სტრიქონის ცხრილის ინდექსი: %<PRIu16>\n"
 "\n"
 
-#: src/readelf.c:1485 src/readelf.c:1703
+#: src/readelf.c:1490 src/readelf.c:1708
 #, c-format
 msgid "cannot get number of sections: %s"
 msgstr "სექციების რაოდენობის მიღება შეუძლებელია: %s"
 
-#: src/readelf.c:1488
+#: src/readelf.c:1493
 #, c-format
 msgid ""
 "There are %zd section headers, starting at offset %#<PRIx64>:\n"
@@ -4966,16 +4973,16 @@ msgstr ""
 "არსებობს %zd სექციის თავსართი. იწყება წანაცვლებასთან %#<PRIx64>:\n"
 "\n"
 
-#: src/readelf.c:1496
+#: src/readelf.c:1501
 #, c-format
 msgid "cannot get section header string table index: %s"
 msgstr "სექციის თავსართის სტრიქონის ცხრილის ინდექსის მიღება შეუძლებელია: %s"
 
-#: src/readelf.c:1499
+#: src/readelf.c:1504
 msgid "Section Headers:"
 msgstr "სექციის თავსართები:"
 
-#: src/readelf.c:1502
+#: src/readelf.c:1507
 msgid ""
 "[Nr] Name                 Type         Addr     Off    Size   ES Flags Lk "
 "Inf Al"
@@ -4983,7 +4990,7 @@ msgstr ""
 "[ნმრ] სახელი                 ტიპი         მსმრ     წნცვლ    ზომა   ES ალმები "
 "Lk Inf Al"
 
-#: src/readelf.c:1504
+#: src/readelf.c:1509
 msgid ""
 "[Nr] Name                 Type         Addr             Off      Size     ES "
 "Flags Lk Inf Al"
@@ -4991,35 +4998,35 @@ msgstr ""
 "[ნმრ] სახელი                 ტიპი         მსმრ             წნცვლ      "
 "ზომა     ES ალმები Lk Inf Al"
 
-#: src/readelf.c:1509
+#: src/readelf.c:1514
 msgid "     [Compression  Size   Al]"
 msgstr "     [შეკუმშვა  ზომა   Al]"
 
-#: src/readelf.c:1511
+#: src/readelf.c:1516
 msgid "     [Compression  Size     Al]"
 msgstr "     [შეკუმშვა  ზომა     Al]"
 
-#: src/readelf.c:1589
+#: src/readelf.c:1594
 #, c-format
 msgid "bad compression header for section %zd: %s"
 msgstr "არასწორი შეკუმშვის თავსართი სექციისთვის %zd: %s"
 
-#: src/readelf.c:1600
+#: src/readelf.c:1605
 #, c-format
 msgid "bad gnu compressed size for section %zd: %s"
 msgstr "არსწორი gnu-ით შეკუმშული ზომა სექციისთვის %zd: %s"
 
-#: src/readelf.c:1628
+#: src/readelf.c:1633
 msgid "Program Headers:"
 msgstr "პროგრამის თავსართები:"
 
-#: src/readelf.c:1630
+#: src/readelf.c:1635
 msgid ""
 "  Type           Offset   VirtAddr   PhysAddr   FileSiz  MemSiz   Flg Align"
 msgstr ""
 "  ტიპი           წნცვლ   ვირტმსმრ   ფიზმსმრ   ფაილზმ  მეხსზმ   Flg სწორება"
 
-#: src/readelf.c:1633
+#: src/readelf.c:1638
 msgid ""
 "  Type           Offset   VirtAddr           PhysAddr           FileSiz  "
 "MemSiz   Flg Align"
@@ -5027,12 +5034,12 @@ msgstr ""
 "  ტიპი           წნცვლ   ვირტმსმრ           ფიზმსმრ           ფაილზმ  "
 "მეხსზმ   Flg სწორება"
 
-#: src/readelf.c:1690
+#: src/readelf.c:1695
 #, c-format
 msgid "\t[Requesting program interpreter: %s]\n"
 msgstr "\t[პროგრამის ინტერპრეტატორის მოთხოვნა: %s]\n"
 
-#: src/readelf.c:1715
+#: src/readelf.c:1720
 msgid ""
 "\n"
 " Section to Segment mapping:\n"
@@ -5042,12 +5049,12 @@ msgstr ""
 " სექციის ასახვა სეგმენტზე:\n"
 "  სეგმენტის სექციები..."
 
-#: src/readelf.c:1726 src/unstrip.c:2172 src/unstrip.c:2214 src/unstrip.c:2221
+#: src/readelf.c:1731 src/unstrip.c:2172 src/unstrip.c:2214 src/unstrip.c:2221
 #, c-format
 msgid "cannot get program header: %s"
 msgstr "პროგრამის თავსართის მიღების შეცდომა: %s"
 
-#: src/readelf.c:1870
+#: src/readelf.c:1875
 #, c-format
 msgid ""
 "\n"
@@ -5062,7 +5069,7 @@ msgstr[1] ""
 "\n"
 "COMDAT სექციის ჯგუფი [%2zu] '%s' ხელმოწერით '%s' შეიცავს %zu ჩანაწერს:\n"
 
-#: src/readelf.c:1875
+#: src/readelf.c:1880
 #, c-format
 msgid ""
 "\n"
@@ -5077,32 +5084,32 @@ msgstr[1] ""
 "\n"
 "სექციების ჯგუფი [%2zu] '%s' ხელმოწერით '%s' შეიცავს %zu ჩანაწერს:\n"
 
-#: src/readelf.c:1883
+#: src/readelf.c:1888
 msgid "<INVALID SYMBOL>"
 msgstr "<არასწორი სიმბოლო>"
 
-#: src/readelf.c:1897
+#: src/readelf.c:1902
 msgid "<INVALID SECTION>"
 msgstr "<არასწორი სექცია>"
 
-#: src/readelf.c:1920 src/readelf.c:2835 src/readelf.c:4177 src/readelf.c:4477
-#: src/readelf.c:13739 src/readelf.c:13746 src/readelf.c:13790
-#: src/readelf.c:13797
+#: src/readelf.c:1925 src/readelf.c:2840 src/readelf.c:4183 src/readelf.c:4483
+#: src/readelf.c:14048 src/readelf.c:14055 src/readelf.c:14099
+#: src/readelf.c:14106
 msgid "Couldn't uncompress section"
 msgstr "სექციის გაშლა შეუძლებელია"
 
-#: src/readelf.c:1924 src/readelf.c:2840 src/readelf.c:4181
+#: src/readelf.c:1929 src/readelf.c:2845 src/readelf.c:4187
 #, c-format
 msgid "cannot get section [%zd] header: %s"
 msgstr "ვერ მივიღე სექციის [%zd] თავსართი: %s"
 
-#: src/readelf.c:2093 src/readelf.c:3093 src/readelf.c:3409 src/readelf.c:3484
-#: src/readelf.c:3787 src/readelf.c:3861 src/readelf.c:6256
+#: src/readelf.c:2098 src/readelf.c:3099 src/readelf.c:3415 src/readelf.c:3490
+#: src/readelf.c:3793 src/readelf.c:3867 src/readelf.c:6307
 #, c-format
 msgid "invalid sh_link value in section %zu"
 msgstr "არასწორი sh_link მნიშვნელობა სექციაში %zu"
 
-#: src/readelf.c:2096
+#: src/readelf.c:2101
 #, c-format
 msgid ""
 "\n"
@@ -5121,7 +5128,7 @@ msgstr[1] ""
 "დინამიკური სეგმენტი შეიცავს %lu ჩანაწერს:\n"
 " მსმრთ: %#0*<PRIx64>  წანაცვლება: %#08<PRIx64>  ბმული სექციამდე: [%2u] '%s'\n"
 
-#: src/readelf.c:2109
+#: src/readelf.c:2114
 #, c-format
 msgid ""
 "\n"
@@ -5140,41 +5147,41 @@ msgstr[1] ""
 "Dynamic segment contains %lu entries:\n"
 " Addr: %#0*<PRIx64>  Offset: %#08<PRIx64>\n"
 
-#: src/readelf.c:2119
+#: src/readelf.c:2124
 msgid "  Type              Value\n"
 msgstr "  ტიპი              მნიშვნელობა\n"
 
-#: src/readelf.c:2128
+#: src/readelf.c:2133
 msgid "cannot get string table by using dynamic segment"
 msgstr ""
 "სტრიქონების ცხრილის მიღება დინამიკური სეგმენტის გამოყენებით შეუძლებელია"
 
-#: src/readelf.c:2167
+#: src/readelf.c:2172
 #, c-format
 msgid "Shared library: [%s]\n"
 msgstr "გაზიარებული ბიბლიოთეკა: [%s]\n"
 
-#: src/readelf.c:2171
+#: src/readelf.c:2176
 #, c-format
 msgid "Library soname: [%s]\n"
 msgstr "ბიბლიოთეკის soname: [%s]\n"
 
-#: src/readelf.c:2175
+#: src/readelf.c:2180
 #, c-format
 msgid "Library rpath: [%s]\n"
 msgstr "ბიბლიოთეკის rpath: [%s]\n"
 
-#: src/readelf.c:2179
+#: src/readelf.c:2184
 #, c-format
 msgid "Library runpath: [%s]\n"
 msgstr "ბიბლიოთეკის runpath: [%s]\n"
 
-#: src/readelf.c:2200
+#: src/readelf.c:2205
 #, c-format
 msgid "%<PRId64> (bytes)\n"
 msgstr "%<PRId64> (bytes)\n"
 
-#: src/readelf.c:2316 src/readelf.c:2512
+#: src/readelf.c:2321 src/readelf.c:2517
 #, c-format
 msgid ""
 "\n"
@@ -5183,7 +5190,7 @@ msgstr ""
 "\n"
 "არასწორი სიმბოლოების ცხრილი წანაცვლებაზე %#0<PRIx64>\n"
 
-#: src/readelf.c:2334 src/readelf.c:2530
+#: src/readelf.c:2339 src/readelf.c:2535
 #, c-format
 msgid ""
 "\n"
@@ -5209,7 +5216,7 @@ msgstr[1] ""
 #. instead of section index zero.  Do not try to print a section
 #. name.
 #. A .relr.dyn section does not refer to a specific section.
-#: src/readelf.c:2349 src/readelf.c:2545 src/readelf.c:2706
+#: src/readelf.c:2354 src/readelf.c:2550 src/readelf.c:2711
 #, c-format
 msgid ""
 "\n"
@@ -5224,43 +5231,43 @@ msgstr[1] ""
 "\n"
 "გადატანის სექცია [%2u] '%s' წანაცვლებასთან %#0<PRIx64> შეიცავს %d ჩანაწერს:\n"
 
-#: src/readelf.c:2359
+#: src/readelf.c:2364
 msgid "  Offset      Type                 Value       Name\n"
 msgstr "  წანაცვლება      ტიპი                 მნიშვნელობა       სახელი\n"
 
-#: src/readelf.c:2361
+#: src/readelf.c:2366
 msgid "  Offset              Type                 Value               Name\n"
 msgstr ""
 "  წანაცვლება              ტიპი                 მნიშვნელობა               "
 "სახელი\n"
 
-#: src/readelf.c:2414 src/readelf.c:2425 src/readelf.c:2442 src/readelf.c:2465
-#: src/readelf.c:2477 src/readelf.c:2611 src/readelf.c:2623 src/readelf.c:2641
-#: src/readelf.c:2665 src/readelf.c:2678
+#: src/readelf.c:2419 src/readelf.c:2430 src/readelf.c:2447 src/readelf.c:2470
+#: src/readelf.c:2482 src/readelf.c:2616 src/readelf.c:2628 src/readelf.c:2646
+#: src/readelf.c:2670 src/readelf.c:2683
 msgid "<INVALID RELOC>"
 msgstr "<არასწორი გადაადგ>"
 
-#: src/readelf.c:2555
+#: src/readelf.c:2560
 msgid "  Offset      Type            Value       Addend Name\n"
 msgstr "  წანაცვლება      ტიპი            მნიშვნელობა       დამატ ახელი\n"
 
-#: src/readelf.c:2557
+#: src/readelf.c:2562
 msgid "  Offset              Type            Value               Addend Name\n"
 msgstr ""
 "  წანაცვლება              ტიპი            მნიშვნელობა               დამატ. "
 "სახელი\n"
 
-#: src/readelf.c:2889
+#: src/readelf.c:2895
 #, c-format
 msgid "%5u: %0*<PRIx64> %6<PRId64> %-7s %-6s %-9s %6s %s"
 msgstr "%5u: %0*<PRIx64> %6<PRId64> %-7s %-6s %-9s %6s %s"
 
-#: src/readelf.c:2983
+#: src/readelf.c:2989
 #, c-format
 msgid "bad dynamic symbol"
 msgstr "არასწორი დინამიკური სიმბოლო"
 
-#: src/readelf.c:3101
+#: src/readelf.c:3107
 #, c-format
 msgid ""
 "\n"
@@ -5275,53 +5282,53 @@ msgstr[1] ""
 "\n"
 "სიმბოლოების ცხრილი [%2u] '%s' შეიცავს %u ჩანაწერს:\n"
 
-#: src/readelf.c:3106
+#: src/readelf.c:3112
 #, c-format
 msgid " %lu local symbol  String table: [%2u] '%s'\n"
 msgid_plural " %lu local symbols  String table: [%2u] '%s'\n"
 msgstr[0] " %lu ლოკალური სიმბოლო  სტრიქონების ცხრილი: [%2u] '%s'\n"
 msgstr[1] " %lu ლოკალური სიმბოლო  სტრიქონების ცხრილი: [%2u] '%s'\n"
 
-#: src/readelf.c:3114
+#: src/readelf.c:3120
 msgid "  Num:    Value   Size Type    Bind   Vis          Ndx Name\n"
 msgstr "  ნომ:    მნიშვნელობა   ზომა ტიპი    მიბმა   ვიზ          Ndx სახელი\n"
 
-#: src/readelf.c:3116
+#: src/readelf.c:3122
 msgid "  Num:            Value   Size Type    Bind   Vis          Ndx Name\n"
 msgstr ""
 "  ნომ:            მნიშვნელობა   ზომა ტიპი    მიბმა   ვიზ          Ndx "
 "სახელი\n"
 
-#: src/readelf.c:3235
+#: src/readelf.c:3241
 msgid "Dynamic symbol information is not available for displaying symbols."
 msgstr ""
 "დინამიკური სიმბოლოს ინფორმაცია სიმბოლოების საჩვენებლად ხელმისაწვდომი არაა."
 
-#: src/readelf.c:3267
+#: src/readelf.c:3273
 msgid "malformed SHT_GNU_verneed data"
 msgstr "არასწორი SHT_GNU_verneed მონაცემები"
 
-#: src/readelf.c:3277
+#: src/readelf.c:3283
 msgid "invalid SHT_GNU_verneed data"
 msgstr "არასწორი SHT_GNU_verneed-ის მონაცემები"
 
-#: src/readelf.c:3300
+#: src/readelf.c:3306
 msgid "malformed SHT_GNU_verdef data"
 msgstr "არასწორი SHT_GNU_verdef მონაცემები"
 
-#: src/readelf.c:3310
+#: src/readelf.c:3316
 msgid "invalid SHT_GNU_verdef data"
 msgstr "არასწორი SHT_GNU_verdef-ის მონაცემები"
 
-#: src/readelf.c:3365
+#: src/readelf.c:3371
 msgid "none"
 msgstr "არაფერი"
 
-#: src/readelf.c:3382
+#: src/readelf.c:3388
 msgid "| <unknown>"
 msgstr "| <უცნობი>"
 
-#: src/readelf.c:3412
+#: src/readelf.c:3418
 #, c-format
 msgid ""
 "\n"
@@ -5342,17 +5349,17 @@ msgstr[1] ""
 " მსმრთ: %#0*<PRIx64>  წანაცვლება: %#08<PRIx64>  ბმული სექციასთან: [%2u] "
 "'%s'\n"
 
-#: src/readelf.c:3433
+#: src/readelf.c:3439
 #, c-format
 msgid "  %#06x: Version: %hu  File: %s  Cnt: %hu\n"
 msgstr "  %#06x: ვერსია: %hu  ფაილი: %s  რაოდ: %hu\n"
 
-#: src/readelf.c:3446
+#: src/readelf.c:3452
 #, c-format
 msgid "  %#06x: Name: %s  Flags: %s  Version: %hu\n"
 msgstr "  %#06x: სახელი: %s  ალმები: %s  ვერსია: %hu\n"
 
-#: src/readelf.c:3488
+#: src/readelf.c:3494
 #, c-format
 msgid ""
 "\n"
@@ -5373,19 +5380,19 @@ msgstr[1] ""
 " მსმრთ: %#0*<PRIx64>  წანაცვლება: %#08<PRIx64>  ბმული სექციასთან: [%2u] "
 "'%s'\n"
 
-#: src/readelf.c:3516
+#: src/readelf.c:3522
 #, c-format
 msgid "  %#06x: Version: %hd  Flags: %s  Index: %hd  Cnt: %hd  Name: %s\n"
 msgstr ""
 "  %#06x: ვერსია: %hd  ალმები: %s  ინდექსი: %hd  რაოდ: %hd  სახელი: %s\n"
 
-#: src/readelf.c:3531
+#: src/readelf.c:3537
 #, c-format
 msgid "  %#06x: Parent %d: %s\n"
 msgstr "  %#06x: მშობელი %d: %s\n"
 
 #. Print the header.
-#: src/readelf.c:3791
+#: src/readelf.c:3797
 #, c-format
 msgid ""
 "\n"
@@ -5404,15 +5411,15 @@ msgstr[1] ""
 "Version symbols section [%2u] '%s' contains %d entries:\n"
 " Addr: %#0*<PRIx64>  Offset: %#08<PRIx64>  Link to section: [%2u] '%s'"
 
-#: src/readelf.c:3819
+#: src/readelf.c:3825
 msgid "   0 *local*                     "
 msgstr "   0 *ლოკალური*                     "
 
-#: src/readelf.c:3824
+#: src/readelf.c:3830
 msgid "   1 *global*                    "
 msgstr "   1 *გლობალური*                    "
 
-#: src/readelf.c:3867
+#: src/readelf.c:3873
 #, c-format
 msgid ""
 "\n"
@@ -5435,22 +5442,22 @@ msgstr[1] ""
 " მსმრთ: %#0*<PRIx64>  წანაცვლება: %#08<PRIx64>  ბმული სექციასთან: [%2u] "
 "'%s'\n"
 
-#: src/readelf.c:3889
+#: src/readelf.c:3895
 #, no-c-format
 msgid " Length  Number  % of total  Coverage\n"
 msgstr " სიგრძე  რაოდენობა  სრული   დაფარვის %\n"
 
-#: src/readelf.c:3891
+#: src/readelf.c:3897
 #, c-format
 msgid "      0  %6<PRIu32>      %5.1f%%\n"
 msgstr "      0  %6<PRIu32>      %5.1f%%\n"
 
-#: src/readelf.c:3898
+#: src/readelf.c:3904
 #, c-format
 msgid "%7d  %6<PRIu32>      %5.1f%%    %5.1f%%\n"
 msgstr "%7d  %6<PRIu32>      %5.1f%%    %5.1f%%\n"
 
-#: src/readelf.c:3912
+#: src/readelf.c:3918
 #, c-format
 msgid ""
 " Average number of tests:   successful lookup: %f\n"
@@ -5459,37 +5466,37 @@ msgstr ""
 " შემოწმებების საშუალო რაოდენობა:   წარმატებული ძებნა: %f\n"
 "\t\t\t  წარუმატებელი ძებნა: %f\n"
 
-#: src/readelf.c:3930 src/readelf.c:3994 src/readelf.c:4060
+#: src/readelf.c:3936 src/readelf.c:4000 src/readelf.c:4066
 #, c-format
 msgid "cannot get data for section %d: %s"
 msgstr "მონაცემების მიღება შეუძლებელია სექციისთვის %d: %s"
 
-#: src/readelf.c:3938
+#: src/readelf.c:3944
 #, c-format
 msgid "invalid data in sysv.hash section %d"
 msgstr "invalid data in sysv.hash section %d"
 
-#: src/readelf.c:3967
+#: src/readelf.c:3973
 #, c-format
 msgid "invalid chain in sysv.hash section %d"
 msgstr "არასწორი ჯაჭვი sysv.hash-ის სექციაში %d"
 
-#: src/readelf.c:4002
+#: src/readelf.c:4008
 #, c-format
 msgid "invalid data in sysv.hash64 section %d"
 msgstr "არასწორი მონაცემები sysv.hash64-ის სექციაში %d"
 
-#: src/readelf.c:4033
+#: src/readelf.c:4039
 #, c-format
 msgid "invalid chain in sysv.hash64 section %d"
 msgstr "არასწორი ჯაჭვი sysv.hash64-ის სექციაში %d"
 
-#: src/readelf.c:4069
+#: src/readelf.c:4075
 #, c-format
 msgid "invalid data in gnu.hash section %d"
 msgstr "არასწორი მონაცემები gnu.hash-ის სექციაში %d"
 
-#: src/readelf.c:4135
+#: src/readelf.c:4141
 #, c-format
 msgid ""
 " Symbol Bias: %u\n"
@@ -5499,7 +5506,7 @@ msgstr ""
 " ბიტური ნიღბის ზომა: %zu ბაიტი  %<PRIuFAST32>%% ბიტი დაყენებულია  მეორე "
 "ჰეშის გადატანა: %u\n"
 
-#: src/readelf.c:4220
+#: src/readelf.c:4226
 #, c-format
 msgid ""
 "\n"
@@ -5516,7 +5523,7 @@ msgstr[1] ""
 "ბიბლიოთეკის სიის სექცია [%2zu] '%s' წანაცვლებასთან %#0<PRIx64> შეიცავს %d "
 "ჩანაწერს:\n"
 
-#: src/readelf.c:4234
+#: src/readelf.c:4240
 msgid ""
 "       Library                       Time Stamp          Checksum Version "
 "Flags"
@@ -5524,7 +5531,7 @@ msgstr ""
 "       ბიბლიოთეკა                       დროის შტამპი          "
 "საკონტროლო_ჯამი ვერსია ალმები"
 
-#: src/readelf.c:4294
+#: src/readelf.c:4300
 #, c-format
 msgid ""
 "\n"
@@ -5535,96 +5542,91 @@ msgstr ""
 "ობიექტის ატრიბუტების სექცია [%2zu] '%s' %<PRIu64>-დან ბაიტი წანაცვლებასთან "
 "%#0<PRIx64>:\n"
 
-#: src/readelf.c:4311
+#: src/readelf.c:4317
 msgid "  Owner          Size\n"
 msgstr "  მფლობელი          ზომა\n"
 
-#: src/readelf.c:4335
+#: src/readelf.c:4341
 #, c-format
 msgid "  %-13s  %4<PRIu32>\n"
 msgstr "  %-13s  %4<PRIu32>\n"
 
 #. Unknown subsection, print and skip.
-#: src/readelf.c:4374
+#: src/readelf.c:4380
 #, c-format
 msgid "    %-4u %12<PRIu32>\n"
 msgstr "    %-4u %12<PRIu32>\n"
 
 #. Tag_File
-#: src/readelf.c:4379
+#: src/readelf.c:4385
 #, c-format
 msgid "    File: %11<PRIu32>\n"
 msgstr "    ფაილი: %11<PRIu32>\n"
 
-#: src/readelf.c:4429
+#: src/readelf.c:4435
 #, c-format
 msgid "      %s: %<PRId64>, %s\n"
 msgstr "      %s: %<PRId64>, %s\n"
 
-#: src/readelf.c:4432
+#: src/readelf.c:4438
 #, c-format
 msgid "      %s: %<PRId64>\n"
 msgstr "      %s: %<PRId64>\n"
 
-#: src/readelf.c:4435
+#: src/readelf.c:4441
 #, c-format
 msgid "      %s: %s\n"
 msgstr "      %s: %s\n"
 
-#: src/readelf.c:4445
+#: src/readelf.c:4451
 #, c-format
 msgid "      %u: %<PRId64>\n"
 msgstr "      %u: %<PRId64>\n"
 
-#: src/readelf.c:4448
+#: src/readelf.c:4454
 #, c-format
 msgid "      %u: %s\n"
 msgstr "      %u: %s\n"
 
-#: src/readelf.c:4486
+#: src/readelf.c:4492
 msgid "Couldn't get data from section"
 msgstr "სექციიდან მონაცემების მიღება შეუძლებელია"
 
-#: src/readelf.c:4554
+#: src/readelf.c:4560
 msgid "sprintf failure"
 msgstr "sprintf-ის შეცდომა"
 
-#: src/readelf.c:5543
+#: src/readelf.c:5591
 #, c-format
 msgid "%*s[%2<PRIuMAX>] %s  <TRUNCATED>\n"
 msgstr "%*s[%2<PRIuMAX>] %s  <TRUNCATED>\n"
 
-#: src/readelf.c:5715
+#: src/readelf.c:5763
 #, c-format
 msgid "%s %#<PRIx64> used with different address sizes"
 msgstr "%s %#<PRIx64> გამოყენებულია სხვა მისამართის ზომებით"
 
-#: src/readelf.c:5722
+#: src/readelf.c:5770
 #, c-format
 msgid "%s %#<PRIx64> used with different offset sizes"
 msgstr "%s %#<PRIx64> გამოყენებულია სხვა წანაცვლების ზომებით"
 
-#: src/readelf.c:5729
-#, c-format
-msgid "%s %#<PRIx64> used with different base addresses"
-msgstr "%s %#<PRIx64> გამოყენებულია სხვა საბაზისო მისამართებით"
-
-#: src/readelf.c:5736
+#: src/readelf.c:5781
 #, c-format
 msgid "%s %#<PRIx64> used with different attribute %s and %s"
 msgstr "%s %#<PRIx64> გამოყენებულია სხვა ატრიბუტიტ %s და %s"
 
-#: src/readelf.c:5836
+#: src/readelf.c:5881
 #, c-format
 msgid " [%6tx]  <UNUSED GARBAGE IN REST OF SECTION>\n"
 msgstr " [%6tx]  <გამოუყენებელი ნაგავი დარჩენილ სექციაში>\n"
 
-#: src/readelf.c:5844
+#: src/readelf.c:5889
 #, c-format
 msgid " [%6tx]  <UNUSED GARBAGE> ... %<PRIu64> bytes ...\n"
 msgstr " [%6tx]  <გამოუყენებელი ნაგავი> ... %<PRIu64> ბაიტი ...\n"
 
-#: src/readelf.c:5951
+#: src/readelf.c:5996
 #, c-format
 msgid ""
 "\n"
@@ -5635,7 +5637,7 @@ msgstr ""
 "DWARF სექცია [%2zu] '%s' წანაცვლებაზე %#<PRIx64>:\n"
 " [ კოდი]\n"
 
-#: src/readelf.c:5959
+#: src/readelf.c:6004
 #, c-format
 msgid ""
 "\n"
@@ -5644,15 +5646,15 @@ msgstr ""
 "\n"
 "აბრევიატურის სექცია წანაცვლებასთან %<PRIu64>:\n"
 
-#: src/readelf.c:5972
+#: src/readelf.c:6017
 #, c-format
 msgid " *** error while reading abbreviation: %s\n"
 msgstr " *** შეცდომა აბრევიატურის წაკითხვისას: %s\n"
 
-#: src/readelf.c:6026 src/readelf.c:6319 src/readelf.c:6491 src/readelf.c:6864
-#: src/readelf.c:7499 src/readelf.c:9286 src/readelf.c:10032
-#: src/readelf.c:10503 src/readelf.c:10759 src/readelf.c:10922
-#: src/readelf.c:11301 src/readelf.c:11375
+#: src/readelf.c:6071 src/readelf.c:6370 src/readelf.c:6542 src/readelf.c:6915
+#: src/readelf.c:7550 src/readelf.c:9348 src/readelf.c:10094
+#: src/readelf.c:10565 src/readelf.c:10821 src/readelf.c:10984
+#: src/readelf.c:11363 src/readelf.c:11437
 #, c-format
 msgid ""
 "\n"
@@ -5661,48 +5663,48 @@ msgstr ""
 "\n"
 "DWARF სექცია [%2zu] '%s' წანაცვლებასთან %#<PRIx64>:\n"
 
-#: src/readelf.c:6129 src/readelf.c:6153
+#: src/readelf.c:6180 src/readelf.c:6204
 #, c-format
 msgid " Length:         %8<PRIu64>\n"
 msgstr " სიგრძე:         %8<PRIu64>\n"
 
-#: src/readelf.c:6131 src/readelf.c:6168
+#: src/readelf.c:6182 src/readelf.c:6219
 #, c-format
 msgid " DWARF version:  %8<PRIu16>\n"
 msgstr " DWARF ვერსია:  %8<PRIu16>\n"
 
-#: src/readelf.c:6132 src/readelf.c:6177
+#: src/readelf.c:6183 src/readelf.c:6228
 #, c-format
 msgid " Address size:   %8<PRIu64>\n"
 msgstr " მისამართის ზომა:   %8<PRIu64>\n"
 
-#: src/readelf.c:6134 src/readelf.c:6187 src/readelf.c:6559
+#: src/readelf.c:6185 src/readelf.c:6238 src/readelf.c:6610
 #, c-format
 msgid " Segment size:   %8<PRIu64>\n"
 msgstr " სეგმენტის ზომა:   %8<PRIu64>\n"
 
-#: src/readelf.c:6172 src/readelf.c:6544 src/readelf.c:10085
-#: src/readelf.c:11497
+#: src/readelf.c:6223 src/readelf.c:6595 src/readelf.c:10147
+#: src/readelf.c:11565
 #, c-format
 msgid "Unknown version"
 msgstr "უცნობი ვერსია"
 
-#: src/readelf.c:6182 src/readelf.c:6389 src/readelf.c:6554 src/readelf.c:10095
+#: src/readelf.c:6233 src/readelf.c:6440 src/readelf.c:6605 src/readelf.c:10157
 #, c-format
 msgid "unsupported address size"
 msgstr "მხარდაუჭერელი მისამართის ზომა"
 
-#: src/readelf.c:6193 src/readelf.c:6400 src/readelf.c:6564 src/readelf.c:10105
+#: src/readelf.c:6244 src/readelf.c:6451 src/readelf.c:6615 src/readelf.c:10167
 #, c-format
 msgid "unsupported segment size"
 msgstr "მხარდაუჭერელი სეგმენტის ზომა"
 
-#: src/readelf.c:6246
+#: src/readelf.c:6297
 #, c-format
 msgid "cannot get .debug_aranges content: %s"
 msgstr ".debug_aranges-ის შემცველობის მიღება შეუძლებელია: %s"
 
-#: src/readelf.c:6261
+#: src/readelf.c:6312
 #, c-format
 msgid ""
 "\n"
@@ -5717,12 +5719,12 @@ msgstr[1] ""
 "\n"
 "DWARF სექცია [%2zu] '%s' წანაცვლებასთან %#<PRIx64> %zu ჩანაწერს შეიცავს:\n"
 
-#: src/readelf.c:6292
+#: src/readelf.c:6343
 #, c-format
 msgid " [%*zu] ???\n"
 msgstr " [%*zu] ???\n"
 
-#: src/readelf.c:6294
+#: src/readelf.c:6345
 #, c-format
 msgid ""
 " [%*zu] start: %0#*<PRIx64>, length: %5<PRIu64>, CU DIE offset: %6<PRId64>\n"
@@ -5730,43 +5732,43 @@ msgstr ""
 " [%*zu] დასაწყისი: %0#*<PRIx64>, სიგრძე: %5<PRIu64>, CU DIE წანაცვლება: "
 "%6<PRId64>\n"
 
-#: src/readelf.c:6336 src/readelf.c:6508 src/readelf.c:7523 src/readelf.c:9317
-#: src/readelf.c:10049
+#: src/readelf.c:6387 src/readelf.c:6559 src/readelf.c:7574 src/readelf.c:9379
+#: src/readelf.c:10111
 #, c-format
 msgid "invalid data in section [%zu] '%s'"
 msgstr "არასწორი მონაცემები სექციაში [%zu] '%s'"
 
-#: src/readelf.c:6368
+#: src/readelf.c:6419
 #, c-format
 msgid "unsupported aranges version"
 msgstr "arranges-ის მხარდაუწერელი ვერსია"
 
-#: src/readelf.c:6451
+#: src/readelf.c:6502
 #, c-format
 msgid "   %zu padding bytes\n"
 msgstr "   %zu შევსების ბაიტი\n"
 
-#: src/readelf.c:6593 src/readelf.c:10134
+#: src/readelf.c:6644 src/readelf.c:10196
 #, c-format
 msgid " Not associated with a CU.\n"
 msgstr " CU-ისთან ასოცირებული არაა.\n"
 
-#: src/readelf.c:6604 src/readelf.c:10145
+#: src/readelf.c:6655 src/readelf.c:10207
 #, c-format
 msgid "too many offset entries for unit length"
 msgstr "მეტისმეტად ბევრი წანაცვლების ჩანაწერები ერთეულის სიგრძისთვის"
 
-#: src/readelf.c:6608 src/readelf.c:10149
+#: src/readelf.c:6659 src/readelf.c:10211
 #, c-format
 msgid "  Offsets starting at 0x%<PRIx64>:\n"
 msgstr "  წანაცვლება იწყება მისამართზე 0x%<PRIx64>:\n"
 
-#: src/readelf.c:6660
+#: src/readelf.c:6711
 #, c-format
 msgid "invalid range list data"
 msgstr "არასწორი შუალედის სიის მონაცემები"
 
-#: src/readelf.c:6847 src/readelf.c:10486
+#: src/readelf.c:6898 src/readelf.c:10548
 #, c-format
 msgid ""
 "   %zu padding bytes\n"
@@ -5775,7 +5777,7 @@ msgstr ""
 "   %zu შემავსებელი ფაილი\n"
 "\n"
 
-#: src/readelf.c:6895 src/readelf.c:10536
+#: src/readelf.c:6946 src/readelf.c:10598
 #, c-format
 msgid ""
 "\n"
@@ -5784,7 +5786,7 @@ msgstr ""
 "\n"
 " უცნობი CU-ის ბაზა: "
 
-#: src/readelf.c:6897 src/readelf.c:10538
+#: src/readelf.c:6948 src/readelf.c:10600
 #, c-format
 msgid ""
 "\n"
@@ -5793,30 +5795,30 @@ msgstr ""
 "\n"
 " CU [%6<PRIx64>] ბაზა: "
 
-#: src/readelf.c:6906 src/readelf.c:10564 src/readelf.c:10590
+#: src/readelf.c:6957 src/readelf.c:10626 src/readelf.c:10652
 #, c-format
 msgid " [%6tx]  <INVALID DATA>\n"
 msgstr " [%6tx]  <არასწორი მონაცემები>\n"
 
-#: src/readelf.c:6931 src/readelf.c:10674
+#: src/readelf.c:6982 src/readelf.c:10736
 msgid "base address\n"
 msgstr "საბაზისო მისამართი\n"
 
-#: src/readelf.c:6941 src/readelf.c:10684
+#: src/readelf.c:6992 src/readelf.c:10746
 #, c-format
 msgid " [%6tx] empty list\n"
 msgstr " [%6tx] ცარიელი სია\n"
 
-#: src/readelf.c:7208
+#: src/readelf.c:7259
 msgid "         <INVALID DATA>\n"
 msgstr "         <არასწორი მონაცემები>\n"
 
-#: src/readelf.c:7471
+#: src/readelf.c:7522
 #, c-format
 msgid "cannot get ELF: %s"
 msgstr "შეცდომა ELF-ის მიღებისას: %s"
 
-#: src/readelf.c:7495
+#: src/readelf.c:7546
 #, c-format
 msgid ""
 "\n"
@@ -5826,7 +5828,7 @@ msgstr ""
 "გამოძახების კადრის ინფორმაციის სექცია [%2zu] '%s' წანაცვლებასთან "
 "%#<PRIx64>:\n"
 
-#: src/readelf.c:7545
+#: src/readelf.c:7596
 #, c-format
 msgid ""
 "\n"
@@ -5835,65 +5837,65 @@ msgstr ""
 "\n"
 " [%6tx] ნულოვანი დამსრულებელი\n"
 
-#: src/readelf.c:7649 src/readelf.c:7803
+#: src/readelf.c:7700 src/readelf.c:7854
 #, c-format
 msgid "invalid augmentation length"
 msgstr "არასწორი აუგმენტაციის სიგრძე"
 
-#: src/readelf.c:7664
+#: src/readelf.c:7715
 msgid "FDE address encoding: "
 msgstr "FDE მისამართის კოდირება: "
 
-#: src/readelf.c:7670
+#: src/readelf.c:7721
 msgid "LSDA pointer encoding: "
 msgstr "LSDA მაჩვენებლის კოდირება: "
 
-#: src/readelf.c:7780
+#: src/readelf.c:7831
 #, c-format
 msgid " (offset: %#<PRIx64>)"
 msgstr " (წანაცვლება: %#<PRIx64>)"
 
-#: src/readelf.c:7787
+#: src/readelf.c:7838
 #, c-format
 msgid " (end offset: %#<PRIx64>)"
 msgstr " (ბოლოს წანაცვლება: %#<PRIx64>)"
 
-#: src/readelf.c:7824
+#: src/readelf.c:7875
 #, c-format
 msgid "   %-26sLSDA pointer: %#<PRIx64>\n"
 msgstr "   %-26sLSDA მაჩვენებელი: %#<PRIx64>\n"
 
-#: src/readelf.c:7912
+#: src/readelf.c:7963
 #, c-format
 msgid "DIE [%<PRIx64>] cannot get attribute code: %s"
 msgstr "DIE [%<PRIx64>] ვერ მივიღე ატრიბუტის კოდი: %s"
 
-#: src/readelf.c:7922
+#: src/readelf.c:7973
 #, c-format
 msgid "DIE [%<PRIx64>] cannot get attribute form: %s"
 msgstr "DIE [%<PRIx64>] ვერ მივიღე ატრიბუტის ფორმა: %s"
 
-#: src/readelf.c:7944
+#: src/readelf.c:7995
 #, c-format
 msgid "DIE [%<PRIx64>] cannot get attribute '%s' (%s) value: %s"
 msgstr "DIE [%<PRIx64>] ვერ მივიღე ატრიბუტის '%s' (%s) მნიშვნელობა: %s"
 
-#: src/readelf.c:8277
+#: src/readelf.c:8329
 #, c-format
 msgid "invalid file (%<PRId64>): %s"
 msgstr "არასწორი ფაილი (%<PRId64>): %s"
 
-#: src/readelf.c:8281
+#: src/readelf.c:8333
 #, c-format
 msgid "no srcfiles for CU [%<PRIx64>]"
 msgstr "წყარო ფაილების გარეშე CU-ისთვის [%<PRIx64>]"
 
-#: src/readelf.c:8285
+#: src/readelf.c:8337
 #, c-format
 msgid "couldn't get DWARF CU: %s"
 msgstr "ვერ მივიღე DWARF CU: %s"
 
-#: src/readelf.c:8608
+#: src/readelf.c:8660
 #, c-format
 msgid ""
 "\n"
@@ -5904,38 +5906,38 @@ msgstr ""
 "DWARF სექცია [%2zu] '%s' წანაცვლებასთან %#<PRIx64>:\n"
 " [წანაცვლება]\n"
 
-#: src/readelf.c:8658
+#: src/readelf.c:8710
 #, c-format
 msgid "cannot get next unit: %s"
 msgstr "შემდეგი ერთეულის მიღება შეუძლებელია: %s"
 
-#: src/readelf.c:8731
+#: src/readelf.c:8783
 #, c-format
 msgid "unknown version (%d) or unit type (%d)"
 msgstr "უცნობი ვერსია (%d), ან ერთეულის ტიპი (%d)"
 
-#: src/readelf.c:8761
+#: src/readelf.c:8813
 #, c-format
 msgid "cannot get DIE offset: %s"
 msgstr "DIE წანაცვლების მიღება შეუძლებელია: %s"
 
-#: src/readelf.c:8770
+#: src/readelf.c:8822
 #, c-format
 msgid "cannot get tag of DIE at offset [%<PRIx64>] in section '%s': %s"
 msgstr ""
 "DIE-ის ჭდის მიღება შეუძლებელია წანაცვლებასთან [%<PRIx64>] სექციაში '%s': %s"
 
-#: src/readelf.c:8806
+#: src/readelf.c:8858
 #, c-format
 msgid "cannot get next DIE: %s\n"
 msgstr "შემდეგი DIE-ის მიღება შეუძლებელია: %s\n"
 
-#: src/readelf.c:8814
+#: src/readelf.c:8866
 #, c-format
 msgid "cannot get next DIE: %s"
 msgstr "შემდეგი DIE-ის მიღება შეუძლებელია: %s"
 
-#: src/readelf.c:8858
+#: src/readelf.c:8920
 #, c-format
 msgid ""
 " Split compilation unit at offset %<PRIu64>:\n"
@@ -5946,12 +5948,12 @@ msgstr ""
 " ვერსია: %<PRIu16>, აბრევიატურის სექციის წანაცვლება: %<PRIu64>, მისამართის "
 "ზომა: %<PRIu8>, წანაცვლების ზომა: %<PRIu8>\n"
 
-#: src/readelf.c:8866
+#: src/readelf.c:8928
 #, c-format
 msgid " Unit type: %s (%<PRIu8>)"
 msgstr " ერთეულის ტიპი: %s (%<PRIu8>)"
 
-#: src/readelf.c:8913
+#: src/readelf.c:8975
 #, c-format
 msgid ""
 "\n"
@@ -5962,189 +5964,188 @@ msgstr ""
 "DWARF სექცია [%2zu] '%s' წანაცვლებასთან %#<PRIx64>:\n"
 "\n"
 
-#: src/readelf.c:9247
+#: src/readelf.c:9309
 #, c-format
 msgid "unknown form: %s"
 msgstr "უცნობი ფორმა: %s"
 
-#: src/readelf.c:9421
+#: src/readelf.c:9483
 #, c-format
 msgid "cannot handle .debug_line version: %u\n"
 msgstr ".debug_line-ის ვერსიის დამუშავება შეუძლებელია: %u\n"
 
-#: src/readelf.c:9429
+#: src/readelf.c:9491
 #, c-format
 msgid "cannot handle address size: %u\n"
 msgstr "მისამართის ზომის დამუშავება შეუძლებელია: %u\n"
 
-#: src/readelf.c:9437
+#: src/readelf.c:9499
 #, c-format
 msgid "cannot handle segment selector size: %u\n"
 msgstr "სეგმენტის ამრჩევის ზომის დამუშავება შეუძლებელია: %u\n"
 
-#: src/readelf.c:9447
+#: src/readelf.c:9509
 #, c-format
 msgid "invalid data at offset %tu in section [%zu] '%s'"
 msgstr "არასწორი მონაცემები წანაცვლებასთან %tu სექციაში [%zu] '%s'"
 
-#: src/readelf.c:9462
+#: src/readelf.c:9524
 #, c-format
 msgid "  [%*<PRIuFAST8>]  %hhu argument\n"
 msgid_plural "  [%*<PRIuFAST8>]  %hhu arguments\n"
 msgstr[0] "  [%*<PRIuFAST8>]  %hhu არგუმენტი\n"
 msgstr[1] "  [%*<PRIuFAST8>]  %hhu არგუმენტი\n"
 
-#: src/readelf.c:9611
-#| msgid "  Owner          Size\n"
+#: src/readelf.c:9673
 msgid " Entry Dir   Time      Size      Name\n"
 msgstr " ჩან. საქ.   დრო      ზომა      სახელი\n"
 
-#: src/readelf.c:9676
+#: src/readelf.c:9738
 #, c-format
 msgid "invalid maximum operations per instruction is zero"
 msgstr "არასწორი მაქს. ოპერაციები თითოეული ინსტრუქციისთვის ნულის ტოლია"
 
-#: src/readelf.c:9786
+#: src/readelf.c:9848
 #, c-format
 msgid " define new file: dir=%u, mtime=%<PRIu64>, length=%<PRIu64>, name=%s\n"
 msgstr ""
 " ახალი ფაილის აღწერა: სქღლდ=%u, ცვლდრო=%<PRIu64>, სიგრძე=%<PRIu64>, "
 "სახელი=%s\n"
 
-#: src/readelf.c:9827
+#: src/readelf.c:9889
 #, c-format
 msgid " set inlined context %u, function name %s (0x%x)\n"
 msgstr " ხაზშივე კონტექსტის %u დაყენება, ფუნქციის სახელი %s (0x%x)\n"
 
-#: src/readelf.c:9851
+#: src/readelf.c:9913
 #, c-format
 msgid " set function name %s (0x%x)\n"
 msgstr " ფუნქციის სახელის დაყენება %s (0x%x)\n"
 
 #. Unknown, ignore it.
-#: src/readelf.c:9858
+#: src/readelf.c:9920
 msgid " unknown opcode\n"
 msgstr " უცნობი ოპკოდი\n"
 
 #. Takes no argument.
-#: src/readelf.c:9931
+#: src/readelf.c:9993
 msgid " set basic block flag\n"
 msgstr " საბაზისო ბლოკის ალმის დაყენება\n"
 
-#: src/readelf.c:9946
+#: src/readelf.c:10008
 #, c-format
 msgid ", op_index to %u"
 msgstr ", op_index %u-მდე"
 
-#: src/readelf.c:9962
+#: src/readelf.c:10024
 #, c-format
 msgid " advance address by fixed value %u to \n"
 msgstr " მისამართის გაზრდა მუდმივი მნიშვნელობით %u მნიშვნელობამდე \n"
 
 #. Takes no argument.
-#: src/readelf.c:9972
+#: src/readelf.c:10034
 msgid " set prologue end flag\n"
 msgstr " პროლოგის დასრულების ალმის დაყენება\n"
 
 #. Takes no argument.
-#: src/readelf.c:9977
+#: src/readelf.c:10039
 msgid " set epilogue begin flag\n"
 msgstr " ეპილობის დასაწყისის ალმის დაყენება\n"
 
-#: src/readelf.c:9987
+#: src/readelf.c:10049
 #, c-format
 msgid " set isa to %u\n"
 msgstr " isa-ის დაყენება მნიშვნელობაზე %u\n"
 
-#: src/readelf.c:9997
+#: src/readelf.c:10059
 #, c-format
 msgid " unknown opcode with %<PRIu8> parameter:"
 msgid_plural " unknown opcode with %<PRIu8> parameters:"
 msgstr[0] " უცნობი ოპკოდი %<PRIu8> პარამეტრით:"
 msgstr[1] " უცნობი ოპკოდი %<PRIu8> პარამეტრით:"
 
-#: src/readelf.c:10198
+#: src/readelf.c:10260
 #, c-format
 msgid "    <INVALID DATA>\n"
 msgstr "    <არასწორი მონაცემები>\n"
 
-#: src/readelf.c:10239
+#: src/readelf.c:10301
 #, c-format
 msgid "invalid loclists data"
 msgstr "არასწორი loclists-ის მონაცემები"
 
-#: src/readelf.c:10711 src/readelf.c:11761
+#: src/readelf.c:10773 src/readelf.c:11829
 msgid "   <INVALID DATA>\n"
 msgstr "   <არასწორი მონაცემები>\n"
 
-#: src/readelf.c:10843
+#: src/readelf.c:10905
 #, c-format
 msgid "%*s*** non-terminated string at end of section"
 msgstr "%*s*** შეუწყვეტელი სტრიქონი სექციის ბოლოსთან"
 
-#: src/readelf.c:10866
+#: src/readelf.c:10928
 #, c-format
 msgid "%*s*** missing DW_MACINFO_start_file argument at end of section"
 msgstr "%*s*** ნაკლული DW_MACINFO_start_file არგუმენტი სექციის ბოლოსთან"
 
-#: src/readelf.c:10962
+#: src/readelf.c:11024
 #, c-format
 msgid " Offset:             0x%<PRIx64>\n"
 msgstr " წანაცვლება:             0x%<PRIx64>\n"
 
-#: src/readelf.c:10974
+#: src/readelf.c:11036
 #, c-format
 msgid " Version:            %<PRIu16>\n"
 msgstr " ვერსია:            %<PRIu16>\n"
 
-#: src/readelf.c:10980 src/readelf.c:11883
+#: src/readelf.c:11042 src/readelf.c:11951
 #, c-format
 msgid "  unknown version, cannot parse section\n"
 msgstr "  უცნობი ვერსია. სექციის დამუშავება შეუძლებელია\n"
 
-#: src/readelf.c:10987
+#: src/readelf.c:11049
 #, c-format
 msgid " Flag:               0x%<PRIx8>"
 msgstr " ალამი:               0x%<PRIx8>"
 
-#: src/readelf.c:11016
+#: src/readelf.c:11078
 #, c-format
 msgid " Offset length:      %<PRIu8>\n"
 msgstr " წანაცვლების ზომა:      %<PRIu8>\n"
 
-#: src/readelf.c:11024
+#: src/readelf.c:11086
 #, c-format
 msgid " .debug_line offset: 0x%<PRIx64>\n"
 msgstr " .debug_line-ის წანაცვლება: 0x%<PRIx64>\n"
 
-#: src/readelf.c:11049
+#: src/readelf.c:11111
 #, c-format
 msgid "  extension opcode table, %<PRIu8> items:\n"
 msgstr "  გაფართოების ოპკოდების ცხრილი %<PRIu8> ელემენტი:\n"
 
-#: src/readelf.c:11056
+#: src/readelf.c:11118
 #, c-format
 msgid "    [%<PRIx8>]"
 msgstr "    [%<PRIx8>]"
 
-#: src/readelf.c:11068
+#: src/readelf.c:11130
 #, c-format
 msgid " %<PRIu8> arguments:"
 msgstr " %<PRIu8> არგუმენტები:"
 
-#: src/readelf.c:11083
+#: src/readelf.c:11145
 #, c-format
 msgid " no arguments."
 msgstr " არგუმენტების გარეშე."
 
-#: src/readelf.c:11281
+#: src/readelf.c:11343
 #, c-format
 msgid " [%5d] DIE offset: %6<PRId64>, CU DIE offset: %6<PRId64>, name: %s\n"
 msgstr ""
 " [%5d] DIE წანაცვლება: %6<PRId64>, CU DIE წანაცვლება: %6<PRId64>, სახელი: "
 "%s\n"
 
-#: src/readelf.c:11338
+#: src/readelf.c:11400
 #, c-format
 msgid ""
 "\n"
@@ -6156,37 +6157,37 @@ msgstr ""
 " %*s  სტრიქონი\n"
 
 #. TRANS: the debugstr| prefix makes the string unique.
-#: src/readelf.c:11343
+#: src/readelf.c:11405
 msgctxt "debugstr"
 msgid "Offset"
 msgstr "წანაცვლება"
 
-#: src/readelf.c:11353
+#: src/readelf.c:11415
 #, c-format
 msgid " *** error, missing string terminator\n"
 msgstr " *** შეცდომა. სტრიქონის დამასრულებელი მითითებული არაა\n"
 
-#: src/readelf.c:11477
+#: src/readelf.c:11545
 #, c-format
 msgid " Length:        %8<PRIu64>\n"
 msgstr " სიგრძე:        %8<PRIu64>\n"
 
-#: src/readelf.c:11479
+#: src/readelf.c:11547
 #, c-format
 msgid " Offset size:   %8<PRIu8>\n"
 msgstr " წანაცვლების ზომა:   %8<PRIu8>\n"
 
-#: src/readelf.c:11493
+#: src/readelf.c:11561
 #, c-format
 msgid " DWARF version: %8<PRIu16>\n"
 msgstr " DWARF ვერსია: %8<PRIu16>\n"
 
-#: src/readelf.c:11502
+#: src/readelf.c:11570
 #, c-format
 msgid " Padding:       %8<PRIx16>\n"
 msgstr " შევსება:       %8<PRIx16>\n"
 
-#: src/readelf.c:11557
+#: src/readelf.c:11625
 #, c-format
 msgid ""
 "\n"
@@ -6195,7 +6196,7 @@ msgstr ""
 "\n"
 "გამოძახების კადრის ძებნის ცხრილის სექცია [%2zu] '.eh_frame_hdr':\n"
 
-#: src/readelf.c:11660
+#: src/readelf.c:11728
 #, c-format
 msgid ""
 " \n"
@@ -6204,22 +6205,22 @@ msgstr ""
 " \n"
 "ცხრილის სექციის დამუშავების გამონაკლისი [%2zu] '.gcc_except_table':\n"
 
-#: src/readelf.c:11683
+#: src/readelf.c:11751
 #, c-format
 msgid " LPStart encoding:    %#x "
 msgstr " LPStart კოდირება:    %#x "
 
-#: src/readelf.c:11695
+#: src/readelf.c:11763
 #, c-format
 msgid " TType encoding:      %#x "
 msgstr " TType კოდირება:      %#x "
 
-#: src/readelf.c:11712
+#: src/readelf.c:11780
 #, c-format
 msgid " Call site encoding:  %#x "
 msgstr " გამოძახების ადგილის კოდირება:  %#x "
 
-#: src/readelf.c:11727
+#: src/readelf.c:11795
 msgid ""
 "\n"
 " Call site table:\n"
@@ -6227,7 +6228,7 @@ msgstr ""
 "\n"
 " გამოძახების საიტის ცხრილი:\n"
 
-#: src/readelf.c:11743
+#: src/readelf.c:11811
 #, c-format
 msgid ""
 " [%4u] Call site start:   %#<PRIx64>\n"
@@ -6240,12 +6241,12 @@ msgstr ""
 "        შევსების ადგილი:       %#<PRIx64>\n"
 "        ქმედება:            %u\n"
 
-#: src/readelf.c:11816
+#: src/readelf.c:11884
 #, c-format
 msgid "invalid TType encoding"
 msgstr "არასწორი TType დაშიფვრა"
 
-#: src/readelf.c:11844
+#: src/readelf.c:11912
 #, c-format
 msgid ""
 "\n"
@@ -6254,42 +6255,42 @@ msgstr ""
 "\n"
 "GDB სექცია [%2zu] '%s' წანაცვლებასთან %#<PRIx64> შეიცავს %<PRId64> ბაიტს :\n"
 
-#: src/readelf.c:11873
+#: src/readelf.c:11941
 #, c-format
 msgid " Version:         %<PRId32>\n"
 msgstr " ვერსია:         %<PRId32>\n"
 
-#: src/readelf.c:11892
+#: src/readelf.c:11960
 #, c-format
 msgid " CU offset:       %#<PRIx32>\n"
 msgstr " CU წანაცვლება:       %#<PRIx32>\n"
 
-#: src/readelf.c:11899
+#: src/readelf.c:11967
 #, c-format
 msgid " TU offset:       %#<PRIx32>\n"
 msgstr " TU წანაცვლება:       %#<PRIx32>\n"
 
-#: src/readelf.c:11906
+#: src/readelf.c:11974
 #, c-format
 msgid " address offset:  %#<PRIx32>\n"
 msgstr " მისამართის წანაცვლება:  %#<PRIx32>\n"
 
-#: src/readelf.c:11913
+#: src/readelf.c:11981
 #, c-format
 msgid " symbol offset:   %#<PRIx32>\n"
 msgstr " სიმბოლოს წანაცვლება:   %#<PRIx32>\n"
 
-#: src/readelf.c:11923
+#: src/readelf.c:11991
 #, c-format
 msgid " shortcut offset: %#<PRIx32>\n"
 msgstr " მალსახმობის წანაცვლება: %#<PRIx32>\n"
 
-#: src/readelf.c:11931
+#: src/readelf.c:11999
 #, c-format
 msgid " constant offset: %#<PRIx32>\n"
 msgstr " მუდმივის წანაცვლება: %#<PRIx32>\n"
 
-#: src/readelf.c:11945
+#: src/readelf.c:12013
 #, c-format
 msgid ""
 "\n"
@@ -6298,7 +6299,7 @@ msgstr ""
 "\n"
 " CU სია წანაცვლებასთან %#<PRIx32> შეიცავს %zu ჩანაწერს:\n"
 
-#: src/readelf.c:11970
+#: src/readelf.c:12038
 #, c-format
 msgid ""
 "\n"
@@ -6307,7 +6308,7 @@ msgstr ""
 "\n"
 " TU სია წანაცვლებასთან %#<PRIx32> შეიცავს %zu ჩანაწერს:\n"
 
-#: src/readelf.c:11999
+#: src/readelf.c:12067
 #, c-format
 msgid ""
 "\n"
@@ -6316,7 +6317,7 @@ msgstr ""
 "\n"
 " მისამართების სია წანაცვლებასთან %#<PRIx32> შეიცავს %zu ჩანაწერს:\n"
 
-#: src/readelf.c:12042
+#: src/readelf.c:12110
 #, c-format
 msgid ""
 "\n"
@@ -6325,7 +6326,7 @@ msgstr ""
 "\n"
 " სიმბოლოების ცხრილი წანაცვლებასთან %#<PRIx32> შეიცავს %zu სლოტს:\n"
 
-#: src/readelf.c:12128
+#: src/readelf.c:12196
 #, c-format
 msgid ""
 "\n"
@@ -6334,28 +6335,110 @@ msgstr ""
 "\n"
 " მალსახმობების ცხრილი წანაცვლებასთან %#<PRIx32> შეიცავს %zu სლოტს:\n"
 
-#: src/readelf.c:12140
+#: src/readelf.c:12208
 #, c-format
 msgid "Language of main: %s\n"
 msgstr "main()-ის ენა: %s\n"
 
-#: src/readelf.c:12141
+#: src/readelf.c:12209
 #, c-format
 msgid "Name of main: "
 msgstr "main()-ის სახელი: "
 
-#: src/readelf.c:12287
+#: src/readelf.c:12236
+#, fuzzy, c-format
+#| msgid ""
+#| "\n"
+#| "GDB section [%2zu] '%s' at offset %#<PRIx64> contains %<PRId64> bytes :\n"
+msgid ""
+"\n"
+"DWARF section [%2zu] '%s' at offset %#<PRIx64> contains %<PRId64> bytes :\n"
+msgstr ""
+"\n"
+"GDB სექცია [%2zu] '%s' წანაცვლებასთან %#<PRIx64> შეიცავს %<PRId64> ბაიტს :\n"
+
+#: src/readelf.c:12267
+#, fuzzy, c-format
+#| msgid " Version:         %<PRId32>\n"
+msgid " Version: %8<PRId32>\n"
+msgstr " ვერსია:         %<PRId32>\n"
+
+#: src/readelf.c:12277
+#, fuzzy, c-format
+#| msgid "  unknown version, cannot parse section\n"
+msgid "unknown version, cannot parse section"
+msgstr "  უცნობი ვერსია. სექციის დამუშავება შეუძლებელია\n"
+
+#: src/readelf.c:12289
+#, fuzzy, c-format
+#| msgid " Offset size:   %8<PRIu8>\n"
+msgid " Offset Size: %4<PRIu8>\n"
+msgstr " წანაცვლების ზომა:   %8<PRIu8>\n"
+
+#: src/readelf.c:12300
+#, fuzzy, c-format
+#| msgid " Version:         %<PRId32>\n"
+msgid " Columns: %8<PRId32>\n"
+msgstr " ვერსია:         %<PRId32>\n"
+
+#: src/readelf.c:12306
+#, fuzzy, c-format
+#| msgid "    File: %11<PRIu32>\n"
+msgid " Entries: %8<PRId32>\n"
+msgstr "    ფაილი: %11<PRIu32>\n"
+
+#: src/readelf.c:12312
+#, fuzzy, c-format
+#| msgid " symbol offset:   %#<PRIx32>\n"
+msgid " Slots:   %8<PRId32>\n"
+msgstr " სიმბოლოს წანაცვლება:   %#<PRIx32>\n"
+
+#: src/readelf.c:12318
+#, c-format
+msgid "Must have at least as many slots as entries"
+msgstr ""
+
+#: src/readelf.c:12357
+#, fuzzy, c-format
+#| msgid ""
+#| "\n"
+#| " Call site table:\n"
+msgid ""
+"\n"
+" Offset table\n"
+msgstr ""
+"\n"
+" გამოძახების საიტის ცხრილი:\n"
+
+#: src/readelf.c:12383 src/readelf.c:12433
+#, c-format
+msgid "Row (%<PRIu32>) larger than unit count (%<PRIu32>)"
+msgstr ""
+
+#: src/readelf.c:12407
+#, fuzzy, c-format
+#| msgid ""
+#| "\n"
+#| " Call site table:\n"
+msgid ""
+"\n"
+" Size table\n"
+msgstr ""
+"\n"
+" გამოძახების საიტის ცხრილი:\n"
+
+#: src/readelf.c:12590
 #, c-format
 msgid "cannot get debug context descriptor: %s"
 msgstr "გამართვის კონტექსტის დესკრიპტორის მიღება შეუძლებელია: %s"
 
-#: src/readelf.c:12677 src/readelf.c:13297 src/readelf.c:13407
-#: src/readelf.c:13464
+#: src/readelf.c:12980 src/readelf.c:13606 src/readelf.c:13716
+#: src/readelf.c:13773
 #, c-format
 msgid "cannot convert core note data: %s"
 msgstr "ბირთვის შენიშვნის მონაცემების გადაყვანა შეუძლებელია: %s"
 
-#: src/readelf.c:13041
+#: src/readelf.c:13350
 #, c-format
 msgid ""
 "\n"
@@ -6364,21 +6447,21 @@ msgstr ""
 "\n"
 "%*s... <მეორდება კიდევ %u-ჯერ> ..."
 
-#: src/readelf.c:13543
+#: src/readelf.c:13852
 msgid "  Owner          Data size  Type\n"
 msgstr "  მფლობელი          მონაცემის ზომა  ტიპი\n"
 
-#: src/readelf.c:13571
+#: src/readelf.c:13880
 #, c-format
 msgid "  %-13.*s  %9<PRId32>  %s\n"
 msgstr "  %-13.*s  %9<PRId32>  %s\n"
 
-#: src/readelf.c:13623
+#: src/readelf.c:13932
 #, c-format
 msgid "cannot get content of note: %s"
 msgstr "შენიშვნის შემცველობის მიღება შეუძლებელია: %s"
 
-#: src/readelf.c:13656
+#: src/readelf.c:13965
 #, c-format
 msgid ""
 "\n"
@@ -6388,7 +6471,7 @@ msgstr ""
 "შენიშვნის სექცია [%2zu] '%s' %<PRIu64>-დან ბაიტი წანაცვლებასთან "
 "%#0<PRIx64>:\n"
 
-#: src/readelf.c:13679
+#: src/readelf.c:13988
 #, c-format
 msgid ""
 "\n"
@@ -6397,7 +6480,7 @@ msgstr ""
 "\n"
 "შენიშვნის სეგმენტი %<PRIu64> ბაიტია წანაცვლებასთან %#0<PRIx64>:\n"
 
-#: src/readelf.c:13726
+#: src/readelf.c:14035
 #, c-format
 msgid ""
 "\n"
@@ -6406,12 +6489,12 @@ msgstr ""
 "\n"
 "სექციას [%zu] '%s' დამპისთვის მონაცემები არ აქვს.\n"
 
-#: src/readelf.c:13753 src/readelf.c:13804
+#: src/readelf.c:14062 src/readelf.c:14113
 #, c-format
 msgid "cannot get data for section [%zu] '%s': %s"
 msgstr "მონაცემების მიღება შეუძლებელია სექციისთვის [%zu] '%s': %s"
 
-#: src/readelf.c:13758
+#: src/readelf.c:14067
 #, c-format
 msgid ""
 "\n"
@@ -6421,7 +6504,7 @@ msgstr ""
 "თექვსმ დამპი სექციისთვის [%zu] '%s', %<PRIu64> ბაიტი წანაცვლებასთან "
 "%#0<PRIx64>:\n"
 
-#: src/readelf.c:13763
+#: src/readelf.c:14072
 #, c-format
 msgid ""
 "\n"
@@ -6432,7 +6515,7 @@ msgstr ""
 "თექვსმ დამპი სექციისთვის [%zu] '%s', %<PRIu64> ბაიტი (%zd შეუკუმშავი) "
 "წანაცვლებასთან %#0<PRIx64>:\n"
 
-#: src/readelf.c:13777
+#: src/readelf.c:14086
 #, c-format
 msgid ""
 "\n"
@@ -6441,7 +6524,7 @@ msgstr ""
 "\n"
 "სექციას [%zu] '%s' დამპისთვის სტრიქონები არ აქვს.\n"
 
-#: src/readelf.c:13809
+#: src/readelf.c:14118
 #, c-format
 msgid ""
 "\n"
@@ -6451,7 +6534,7 @@ msgstr ""
 "სტრიქონის სექცია [%zu] '%s' შეიცავს %<PRIu64> ბაიტს წანაცვლებასთან "
 "%#0<PRIx64>:\n"
 
-#: src/readelf.c:13814
+#: src/readelf.c:14123
 #, c-format
 msgid ""
 "\n"
@@ -6462,7 +6545,7 @@ msgstr ""
 "სტრიქონის სექცია [%zu] '%s' შეიცავს %<PRIu64> ბაიტს (%zd შეუკუმშავი) "
 "წანაცვლებასთან %#0<PRIx64>:\n"
 
-#: src/readelf.c:13862
+#: src/readelf.c:14171
 #, c-format
 msgid ""
 "\n"
@@ -6471,7 +6554,7 @@ msgstr ""
 "\n"
 "სექცია [%lu] არ არსებობს"
 
-#: src/readelf.c:13892
+#: src/readelf.c:14201
 #, c-format
 msgid ""
 "\n"
@@ -6480,12 +6563,12 @@ msgstr ""
 "\n"
 "სექცია '%s' არ არსებობს"
 
-#: src/readelf.c:13947
+#: src/readelf.c:14256
 #, c-format
 msgid "cannot get symbol index of archive '%s': %s"
 msgstr "სიმბოლოების ინდექსის მიღება შეუძლებელია არქივისთვის '%s': %s"
 
-#: src/readelf.c:13950
+#: src/readelf.c:14259
 #, c-format
 msgid ""
 "\n"
@@ -6494,7 +6577,7 @@ msgstr ""
 "\n"
 "არქივს '%s' სიმბოლოების ინდექსი არ აქვს\n"
 
-#: src/readelf.c:13954
+#: src/readelf.c:14263
 #, c-format
 msgid ""
 "\n"
@@ -6503,12 +6586,12 @@ msgstr ""
 "\n"
 "არქივის '%s' ინდექსს აქვს %zu ჩანაწერი:\n"
 
-#: src/readelf.c:13972
+#: src/readelf.c:14281
 #, c-format
 msgid "cannot extract member at offset %zu in '%s': %s"
 msgstr "წევრის ამოღება შეუძლებელია წანაცვლებასთან %zu '%s'-ში: %s"
 
-#: src/readelf.c:13977
+#: src/readelf.c:14286
 #, c-format
 msgid "Archive member '%s' contains:\n"
 msgstr "არქივის წევრი '%s' შეიცავს:\n"
@@ -6636,7 +6719,7 @@ msgstr "სექციის თავსართის მიღების 
 msgid "(TOTALS)\n"
 msgstr "(ჯამები)\n"
 
-#: src/stack.c:498
+#: src/stack.c:498 src/stackprof.cxx:484
 #, c-format
 msgid "-p PID should be a positive process id."
 msgstr "-p PID დადებითი პროცესის id უნდა იყოს."
@@ -6646,7 +6729,7 @@ msgstr "-p PID დადებითი პროცესის id უნდა
 msgid "Cannot open core file '%s'"
 msgstr "ვერ გავხსენი ბირთვის ფაილი '%s'"
 
-#: src/stack.c:568
+#: src/stack.c:568 src/stackprof.cxx:491
 #, c-format
 msgid "-n MAXFRAMES should be 0 or higher."
 msgstr "-n MAXFRAMES 0 ან მეტი უნდა იყოს."
@@ -6784,182 +6867,104 @@ msgstr ""
 msgid "Couldn't show any frames."
 msgstr "კადრები ვერ ვაჩვენე."
 
-#. TODO: Need to decide log level for this message. For now, it's
-#. not a failure, and printing it by default seems harmless:
-#: src/stacktrace.c:545
-#, c-format
-msgid "Resized Dwfl table from %ld to %ld, copied %ld entries\n"
-msgstr "ზომაშეცვლილი Dwfl ცხრილი %ld-დამ %ld-მდე. დაკოპირდა %ld ჩანაწერი\n"
-
-#: src/stacktrace.c:672 src/stacktrace.c:1043 src/stacktrace.c:1127
-#: src/stacktrace.c:1335
-#, c-format
-msgid "Write error to file or FIFO '%s'"
-msgstr "ჩაწერის შეცდომა ფაილში, ან FIFO-ში '%s'"
-
-#: src/stacktrace.c:819
-#, c-format
-msgid "find_procfile pid %lld: elf not found"
-msgstr "find_procfile pid %lld: elf აღმოჩენილი არაა"
-
-#: src/stacktrace.c:870
-#, c-format
-msgid "sysprof_find_dwfl: n_regs=%d, expected %ld\n"
-msgstr "sysprof_find_dwfl: n_regs=%d, მოველოდი: %ld\n"
-
-#: src/stacktrace.c:977
-#, c-format
-msgid "* frame %d: pc_adjusted=%lx sp=%lx+(%lx) [dwfl_ent not found]\n"
-msgstr "* კადრი %d: pc_adjusted=%lx sp=%lx+(%lx) [dwfl_ent აღმოჩენილი არაა]\n"
-
-#: src/stacktrace.c:985
-#, c-format
-msgid "sysprof_unwind_frame_cb: sample exceeded maxframes %d\n"
-msgstr "sysprof_unwind_frame_cb: სინჯი გადასცდა maxframes-ს %d\n"
-
-#: src/stacktrace.c:1017
-#, c-format
-msgid "sysprof_unwind_cb pid %lld (%s): callchain sample with %d frames\n"
-msgstr "sysprof_unwind_cb pid %lld (%s): callchain-ის სინჯი %d კადრით\n"
-
-#: src/stacktrace.c:1024
-#, c-format
-msgid "sysprof_unwind_cb pid %lld (%s): could not create Dwfl table entry\n"
+#: src/stackprof.cxx:399
+msgid "Increase verbosity of logging messages (modules/samples/frames/more)."
 msgstr ""
-"sysprof_unwind_cb pid %lld (%s): Dwfl ცხრილის ჩანაწერის შექმნა შეუძლებელია\n"
 
-#: src/stacktrace.c:1088
-#, c-format
-msgid "sysprof_unwind_cb pid %lld (%s)%s: unwound %d frames\n"
-msgstr "sysprof_unwind_cb pid %lld (%s)%s: გაშლილია %d დახვეული კადრი\n"
-
-#: src/stacktrace.c:1110
-#, c-format
-msgid "sysprof_unwind_cb frame size %ld is too large (max %d)\n"
-msgstr "sysprof_unwind_cb კადრის ზომა %ld მეტისმეტად დიდია (მაქს %d)\n"
-
-#: src/stacktrace.c:1147
-msgid "Waiting for input to finish. Press twice more ^C to force exit."
+#. TODO: Add "quiet" option suppressing summary table.
+#: src/stackprof.cxx:401
+msgid "Generate gmon.BUILDID.out files for each binary."
 msgstr ""
-"შეყვანის დასრულების მოლოდინი. ნაძალადევი გასვლისთვის დააჭირეთ ღილაკებს ^C "
-"კიდევ ორჯერ."
 
-#: src/stacktrace.c:1182
-#, c-format
-msgid "Unsupported -m '%s', should be "
-msgstr "მხარდაუჭერელი -m '%s', უნდა ყოფილიყო "
-
-#: src/stacktrace.c:1193
-#, c-format
-msgid "Unsupported -f '%s', should be "
-msgstr "მხარდაუჭერელი -f '%s', უნდა ყოფილიყო "
-
-#: src/stacktrace.c:1234
-msgid "Input and output selection options:"
-msgstr "შეყვანის და გამოტანის არჩევის პარამეტრები:"
-
-#: src/stacktrace.c:1236
-msgid "File or FIFO to read stack samples from"
-msgstr "ფაილი ან FIFO სტეკის სინჯების წასაკითხად"
-
-#: src/stacktrace.c:1239
-msgid "File or FIFO to send stack traces to"
-msgstr "ფაილი ან FIFO სტეკის სინჯების გასაგზავნად"
-
-#: src/stacktrace.c:1241
-msgid "Processing options:"
-msgstr "დამუშავების პარამეტრები:"
-
-#: src/stacktrace.c:1243
-msgid "Processing mode, default 'naive'"
-msgstr "დამუშავების რეჟიმი. ნაგულისხმევია 'naive'"
-
-#: src/stacktrace.c:1247
-msgid "Show additional information for each unwound sample"
-msgstr "დამატებითი ინფორმაციის ჩვენება თითოეული გაუშლელი სინჯისთვის"
-
-#: src/stacktrace.c:1249
-msgid "Show additional information for each unwound frame"
-msgstr "დამატებითი ინფორმაციის ჩვენება თითოეული გაუშლელი კადრისთვის"
-
-#: src/stacktrace.c:1253
-msgid "Input data format, default 'sysprof'"
-msgstr "შეყვანილი მონაცემების ფორმატი. ნაგულისხმევია 'sysprof'"
-
-#: src/stacktrace.c:1263
+#: src/stackprof.cxx:402
 msgid ""
-"Process a stream of stack samples into stack traces.\n"
-"\n"
-"Experimental tool, see README.eu-stacktrace in the development branch:\n"
-"https://sourceware.org/cgit/elfutils/tree/README.eu-stacktrace?h=users/"
-"serhei/eu-stacktrace\n"
+"Split gmon histogram output into even or flexible chunks, default 'even'."
 msgstr ""
-"სტეკის სინჯების დამუშავება სტეკის ტრეისებში.\n"
-"\n"
-"ხელსაწყო ექსპერიმენტულია. იხილეთ README.eu-stacktrace სატესტო ბრენჩში:\n"
-"https://sourceware.org/cgit/elfutils/tree/README.eu-stacktrace?h=users/"
-"serhei/eu-stacktrace\n"
 
-#: src/stacktrace.c:1295
-#, c-format
-msgid "WARNING: Unknown value '%s' in environment variable %s, ignoring\n"
-msgstr "გაფრთხილება: უცნობი მნიშვნელობა '%s' გარემოს ცვლადში %s. გამოტოვება\n"
-
-#: src/stacktrace.c:1304
-#, c-format
-msgid "Cannot open input file or FIFO '%s'"
-msgstr "შეყვანის ფაილის, ან FIFO '%s'-ის გახსნა შეუძლებელია"
-
-#: src/stacktrace.c:1310
-#, c-format
-msgid "Cannot open output file or FIFO '%s'"
-msgstr "გამოტანის ფაილის, ან FIFO '%s'-ის გახსნა შეუძლებელია"
-
-#: src/stacktrace.c:1314
-#, c-format
-msgid "Cannot set signal handler for SIGINT"
-msgstr "სიგნალის დამმუშავებლის მინიჭება შეუძლებელია SIGINT-ისთვის"
-
-#. TODO: Should hide corresponding command line options when this is the case?
-#: src/stacktrace.c:1318
-#, c-format
-msgid "Sysprof support is not available in this version."
-msgstr "Sysprof-ის მხარდაჭერა ამ ვერსიაში ხელმისაწვდომი არაა."
-
-#: src/stacktrace.c:1353
-#, c-format
-msgid "Could not initialize Dwfl table"
-msgstr "Dwfl ცხრილის ინიციალიზაცია შეუძლებელია"
-
-#. XXX worst_unwound gives least preferred unwind method used for this process
-#. (i.e. eh_frame is preferred to dwarf is preferred to ebl)
-#: src/stacktrace.c:1384
-#, c-format
+#: src/stackprof.cxx:403
 msgid ""
-"%d %s -- max %d frames, received %d samples, lost %d samples (%.1f%%) (last "
-"%s, worst %s)\n"
+"Maximum number of frames to unwind, default 1 with --gmon, 256 otherwise."
+msgstr ""
+
+#: src/stackprof.cxx:404
+msgid "Output directory for gmon.BUILDID.out files."
+msgstr ""
+
+#: src/stackprof.cxx:405
+msgid "Unlink output files to force writing as new."
+msgstr ""
+
+#: src/stackprof.cxx:406
+msgid "Profile given PID, and its future children."
+msgstr ""
+
+#: src/stackprof.cxx:408 src/stackprof.cxx:410
+msgid "Sample given LIBPFM event specification."
+msgstr ""
+
+#: src/stackprof.cxx:418
+msgid "Collect systemwide stack-trace profiles."
+msgstr ""
+
+#: src/stackprof.cxx:1161
+#, fuzzy, c++-format
+#| msgid ""
+#| "%d %s -- max %d frames, received %d samples, lost %d samples (%.1f%%) "
+#| "(last %s, worst %s)\n"
+msgid ""
+"{} {} -- max {} frames, received {} samples, lost {} samples ({:.1f}%) (last "
+"{}, worst {})\n"
 msgstr ""
 "%d %s -- მაქს %d კადრი, მიღებულია %d სინჯი, დაკარგულია %d სინჯი (%.1f%%) "
 "(ბოლო %s, ყველაზე ცუდი %s)\n"
 
-#: src/stacktrace.c:1394
-#, c-format
-msgid "TOTAL -- received %d samples, lost %d samples, loaded %ld processes\n"
+#: src/stackprof.cxx:1171
+#, fuzzy, c++-format
+#| msgid ""
+#| "TOTAL -- received %d samples, lost %d samples, loaded %ld processes\n"
+msgid "TOTAL -- received {} samples, lost {} samples, loaded {} processes\n"
 msgstr ""
 "*ჯამში* -- მიღებულია %d სინჯი, დაკარგულია %d სინჯი, ჩატვირთულია %ld პროცესი\n"
 
-#: src/stacktrace.c:1403
-#, c-format
-msgid "No frames in file or FIFO '%s'"
-msgstr "კადრების გარეშე ფაილში, ან FIFO-ში '%s'"
+#: src/stackprof.cxx:1268
+#, fuzzy, c++-format
+#| msgid "find_procfile pid %lld: elf not found"
+msgid "WARNING: find_procfile pid {}: elf not found\n"
+msgstr "find_procfile pid %lld: elf აღმოჩენილი არაა"
 
-#: src/stacktrace.c:1405
-#, c-format
+#: src/stackprof.cxx:1315
+#, fuzzy, c++-format
+#| msgid "sysprof_find_dwfl: n_regs=%d, expected %ld\n"
+msgid "WARNING: find_dwfl: nregs={}, expected at least {}\n"
+msgstr "sysprof_find_dwfl: n_regs=%d, მოველოდი: %ld\n"
+
+#: src/stackprof.cxx:1402
+#, fuzzy, c++-format
+#| msgid "* frame %d: pc_adjusted=%lx sp=%lx+(%lx) [dwfl_ent not found]\n"
 msgid ""
-"Error processing file or FIFO '%s' at input offset %ld, output offset %ld"
+"* frame {:d}: rel_pc={:x} raw_pc={:x} sp={:x}+{:x} [dwfl_ent not found]\n"
+msgstr "* კადრი %d: pc_adjusted=%lx sp=%lx+(%lx) [dwfl_ent აღმოჩენილი არაა]\n"
+
+#: src/stackprof.cxx:1788
+#, c++-format
+msgid "ERROR: buildid {} -- could not open '{}' for writing\n"
 msgstr ""
-"დამუშავების შეცდომა ფაილისთვის, ან FIFO-ისთვის '%s' შეყვანის წანაცვლებასთან "
-"%ld, გამოტანის წანაცვლებასთან %ld"
+
+#: src/stackprof.cxx:1963
+#, c++-format
+msgid "buildid {} ({}{}{}) -- received {} distinct pcs, {} callgraph arcs\n"
+msgstr ""
+
+#: src/stackprof.cxx:1975
+#, c++-format
+msgid "TOTAL -- received {} buildids\n"
+msgstr ""
+
+#: src/stackprof.cxx:2038 src/stackprof.cxx:2055
+#, c++-format
+msgid ""
+"{}: Skipping pc={:x} raw_pc={:x} outside module range start={:x}..end={:x}\n"
+msgstr ""
 
 #: src/strings.c:64
 msgid "Output Selection:"
@@ -7203,93 +7208,93 @@ msgstr "გამოყოფილი სექციის '%s' წაშლ�
 msgid "Cannot both keep and remove section '%s'"
 msgstr "'%s' სექციის ორივე, მოცილება და შენარჩუნება, ერთდროულად, შეუძლებელია"
 
-#: src/strip.c:1646 src/strip.c:1761
+#: src/strip.c:1653 src/strip.c:1768
 #, c-format
 msgid "while generating output file: %s"
 msgstr "გამოტანის ფაილის გენერაციისას: %s"
 
-#: src/strip.c:1710
+#: src/strip.c:1717
 #, c-format
 msgid "%s: error while updating ELF header: %s"
 msgstr "%s: შეცდომა ELF თავსართის განახლებისას: %s"
 
-#: src/strip.c:1719
+#: src/strip.c:1726
 #, c-format
 msgid "%s: error while getting shdrstrndx: %s"
 msgstr "%s: შეცდომა shdrstrndx-ის მიღებისას: %s"
 
-#: src/strip.c:1727 src/strip.c:2569
+#: src/strip.c:1734 src/strip.c:2576
 #, c-format
 msgid "%s: error updating shdrstrndx: %s"
 msgstr "%s: შეცდომა shdrstrndx-ის განახლებისას: %s"
 
-#: src/strip.c:1744
+#: src/strip.c:1751
 #, c-format
 msgid "while preparing output for '%s'"
 msgstr "'%s'-ისთვის გამოტანის მომზადებისას"
 
-#: src/strip.c:1805 src/strip.c:1867
+#: src/strip.c:1812 src/strip.c:1874
 #, c-format
 msgid "while create section header section: %s"
 msgstr "სექციის თავსართის სექციის შექმნისას: %s"
 
-#: src/strip.c:1814
+#: src/strip.c:1821
 #, c-format
 msgid "cannot allocate section data: %s"
 msgstr "სექციის მონაცემების გამოყოფისას: %s"
 
-#: src/strip.c:1878
+#: src/strip.c:1885
 #, c-format
 msgid "while create section header string table: %s"
 msgstr "სექციის თავსართის სტრიქონის ცხრილის შექმნისას: %s"
 
-#: src/strip.c:1884
+#: src/strip.c:1891
 msgid "no memory to create section header string table"
 msgstr ""
 "სექციის თავსართის სტრიქონის ცხრილის შესაქმნელად მეხსიერება საკმარისი არაა"
 
-#: src/strip.c:2097
+#: src/strip.c:2104
 #, c-format
 msgid "Cannot remove symbol [%zd] from allocated symbol table [%zd]"
 msgstr ""
 "სიმბოლოს [%zd] წაშლა შეუძლებელია გამოყოფილი სიმბოლოების ცხრილიდან [%zd]"
 
-#: src/strip.c:2486 src/strip.c:2591
+#: src/strip.c:2493 src/strip.c:2598
 #, c-format
 msgid "while writing '%s': %s"
 msgstr "'%s'-ის ჩაწერისას: %s"
 
-#: src/strip.c:2497
+#: src/strip.c:2504
 #, c-format
 msgid "while creating '%s'"
 msgstr "'%s-ის შექმნისას"
 
-#: src/strip.c:2520
+#: src/strip.c:2527
 #, c-format
 msgid "while computing checksum for debug information"
 msgstr "საკონტროლო ჯამის გამოთვლისას გამართვის ინფორმაციისთვის"
 
-#: src/strip.c:2561
+#: src/strip.c:2568
 #, c-format
 msgid "%s: error while creating ELF header: %s"
 msgstr "%s: შეცდომა ELF თავსართის შექმნისას: %s"
 
-#: src/strip.c:2577
+#: src/strip.c:2584
 #, c-format
 msgid "%s: error while reading the file: %s"
 msgstr "%s: შეცდომა ფაილის წაკითხვისას: %s"
 
-#: src/strip.c:2616 src/strip.c:2636
+#: src/strip.c:2625 src/strip.c:2647
 #, c-format
 msgid "while writing '%s'"
 msgstr "'%s'-ის ჩაწერისას"
 
-#: src/strip.c:2673 src/strip.c:2680
+#: src/strip.c:2684 src/strip.c:2691
 #, c-format
 msgid "error while finishing '%s': %s"
 msgstr "'%s'-ის დასრულებისას: %s"
 
-#: src/strip.c:2697 src/strip.c:2773
+#: src/strip.c:2708 src/strip.c:2784
 #, c-format
 msgid "cannot set access and modification date of '%s'"
 msgstr "'%s'-ის წვდომისა და ცვლილების თარიღის დაყენება შეუძლებელია"
@@ -7778,6 +7783,17 @@ msgstr ""
 
 #. Strings for arguments in help texts.
 #: debuginfod/debuginfod-find.c:49
+#, fuzzy
+#| msgid ""
+#| "debuginfo BUILDID\n"
+#| "debuginfo PATH\n"
+#| "executable BUILDID\n"
+#| "executable PATH\n"
+#| "source BUILDID /FILENAME\n"
+#| "source PATH /FILENAME\n"
+#| "section BUILDID SECTION-NAME\n"
+#| "section PATH SECTION-NAME\n"
+#| "metadata (glob|file|KEY) (GLOB|FILENAME|VALUE)\n"
 msgid ""
 "debuginfo BUILDID\n"
 "debuginfo PATH\n"
@@ -7787,7 +7803,7 @@ msgid ""
 "source PATH /FILENAME\n"
 "section BUILDID SECTION-NAME\n"
 "section PATH SECTION-NAME\n"
-"metadata (glob|file|KEY) (GLOB|FILENAME|VALUE)\n"
+"metadata (glob|file|buildid|KEY) (GLOB|FILENAME|BUILDID|VALUE)\n"
 msgstr ""
 "debuginfo BUILDID\n"
 "debuginfo PATH\n"
@@ -7810,6 +7826,126 @@ msgstr "დამატებით ფუნქციის სახელე�
 #: tests/dwflmodtest.c:210
 msgid "Show instances of inlined functions"
 msgstr "ხაზშივე ჩასმული ფუნქციების გაშვებული ასლების ჩვენება"
+
+#, c-format
+#~ msgid "%s %#<PRIx64> used with different base addresses"
+#~ msgstr "%s %#<PRIx64> გამოყენებულია სხვა საბაზისო მისამართებით"
+
+#, c-format
+#~ msgid "Resized Dwfl table from %ld to %ld, copied %ld entries\n"
+#~ msgstr "ზომაშეცვლილი Dwfl ცხრილი %ld-დამ %ld-მდე. დაკოპირდა %ld ჩანაწერი\n"
+
+#, c-format
+#~ msgid "Write error to file or FIFO '%s'"
+#~ msgstr "ჩაწერის შეცდომა ფაილში, ან FIFO-ში '%s'"
+
+#, c-format
+#~ msgid "sysprof_unwind_frame_cb: sample exceeded maxframes %d\n"
+#~ msgstr "sysprof_unwind_frame_cb: სინჯი გადასცდა maxframes-ს %d\n"
+
+#, c-format
+#~ msgid "sysprof_unwind_cb pid %lld (%s): callchain sample with %d frames\n"
+#~ msgstr "sysprof_unwind_cb pid %lld (%s): callchain-ის სინჯი %d კადრით\n"
+
+#, c-format
+#~ msgid "sysprof_unwind_cb pid %lld (%s): could not create Dwfl table entry\n"
+#~ msgstr ""
+#~ "sysprof_unwind_cb pid %lld (%s): Dwfl ცხრილის ჩანაწერის შექმნა "
+#~ "შეუძლებელია\n"
+
+#, c-format
+#~ msgid "sysprof_unwind_cb pid %lld (%s)%s: unwound %d frames\n"
+#~ msgstr "sysprof_unwind_cb pid %lld (%s)%s: გაშლილია %d დახვეული კადრი\n"
+
+#, c-format
+#~ msgid "sysprof_unwind_cb frame size %ld is too large (max %d)\n"
+#~ msgstr "sysprof_unwind_cb კადრის ზომა %ld მეტისმეტად დიდია (მაქს %d)\n"
+
+#~ msgid "Waiting for input to finish. Press twice more ^C to force exit."
+#~ msgstr ""
+#~ "შეყვანის დასრულების მოლოდინი. ნაძალადევი გასვლისთვის დააჭირეთ ღილაკებს ^C "
+#~ "კიდევ ორჯერ."
+
+#, c-format
+#~ msgid "Unsupported -m '%s', should be "
+#~ msgstr "მხარდაუჭერელი -m '%s', უნდა ყოფილიყო "
+
+#, c-format
+#~ msgid "Unsupported -f '%s', should be "
+#~ msgstr "მხარდაუჭერელი -f '%s', უნდა ყოფილიყო "
+
+#~ msgid "Input and output selection options:"
+#~ msgstr "შეყვანის და გამოტანის არჩევის პარამეტრები:"
+
+#~ msgid "File or FIFO to read stack samples from"
+#~ msgstr "ფაილი ან FIFO სტეკის სინჯების წასაკითხად"
+
+#~ msgid "File or FIFO to send stack traces to"
+#~ msgstr "ფაილი ან FIFO სტეკის სინჯების გასაგზავნად"
+
+#~ msgid "Processing options:"
+#~ msgstr "დამუშავების პარამეტრები:"
+
+#~ msgid "Processing mode, default 'naive'"
+#~ msgstr "დამუშავების რეჟიმი. ნაგულისხმევია 'naive'"
+
+#~ msgid "Show additional information for each unwound sample"
+#~ msgstr "დამატებითი ინფორმაციის ჩვენება თითოეული გაუშლელი სინჯისთვის"
+
+#~ msgid "Show additional information for each unwound frame"
+#~ msgstr "დამატებითი ინფორმაციის ჩვენება თითოეული გაუშლელი კადრისთვის"
+
+#~ msgid "Input data format, default 'sysprof'"
+#~ msgstr "შეყვანილი მონაცემების ფორმატი. ნაგულისხმევია 'sysprof'"
+
+#~ msgid ""
+#~ "Process a stream of stack samples into stack traces.\n"
+#~ "\n"
+#~ "Experimental tool, see README.eu-stacktrace in the development branch:\n"
+#~ "https://sourceware.org/cgit/elfutils/tree/README.eu-stacktrace?h=users/"
+#~ "serhei/eu-stacktrace\n"
+#~ msgstr ""
+#~ "სტეკის სინჯების დამუშავება სტეკის ტრეისებში.\n"
+#~ "\n"
+#~ "ხელსაწყო ექსპერიმენტულია. იხილეთ README.eu-stacktrace სატესტო ბრენჩში:\n"
+#~ "https://sourceware.org/cgit/elfutils/tree/README.eu-stacktrace?h=users/"
+#~ "serhei/eu-stacktrace\n"
+
+#, c-format
+#~ msgid "WARNING: Unknown value '%s' in environment variable %s, ignoring\n"
+#~ msgstr ""
+#~ "გაფრთხილება: უცნობი მნიშვნელობა '%s' გარემოს ცვლადში %s. გამოტოვება\n"
+
+#, c-format
+#~ msgid "Cannot open input file or FIFO '%s'"
+#~ msgstr "შეყვანის ფაილის, ან FIFO '%s'-ის გახსნა შეუძლებელია"
+
+#, c-format
+#~ msgid "Cannot open output file or FIFO '%s'"
+#~ msgstr "გამოტანის ფაილის, ან FIFO '%s'-ის გახსნა შეუძლებელია"
+
+#, c-format
+#~ msgid "Cannot set signal handler for SIGINT"
+#~ msgstr "სიგნალის დამმუშავებლის მინიჭება შეუძლებელია SIGINT-ისთვის"
+
+#, c-format
+#~ msgid "Sysprof support is not available in this version."
+#~ msgstr "Sysprof-ის მხარდაჭერა ამ ვერსიაში ხელმისაწვდომი არაა."
+
+#, c-format
+#~ msgid "Could not initialize Dwfl table"
+#~ msgstr "Dwfl ცხრილის ინიციალიზაცია შეუძლებელია"
+
+#, c-format
+#~ msgid "No frames in file or FIFO '%s'"
+#~ msgstr "კადრების გარეშე ფაილში, ან FIFO-ში '%s'"
+
+#, c-format
+#~ msgid ""
+#~ "Error processing file or FIFO '%s' at input offset %ld, output offset %ld"
+#~ msgstr ""
+#~ "დამუშავების შეცდომა ფაილისთვის, ან FIFO-ისთვის '%s' შეყვანის "
+#~ "წანაცვლებასთან %ld, გამოტანის წანაცვლებასთან %ld"
 
 #, c-format
 #~ msgid " [%5u] offset: %<PRId64>, children: %s, tag: %s\n"

@@ -382,6 +382,41 @@ exit 0
 %systemd_postun_with_restart debuginfod.service
 
 %changelog
+* Fri Aug 14 2026 Aaron Merey <amerey@redhat.com> 0.196-1
+- debuginfod: The $DEBUGINFOD_TIMEOUT environment variable is now
+  enforced when establishing a connection to a server.
+- libdw: New functions dwarf_begin_type, dwarf_begin_elf_type and
+  dwarf_get_type plus new enum Dwarf_Type.  Used to select between
+  plain DWARF, split DWARF (.dwo/.dwp) and GNU LTO when opening a
+  file.
+- Added support for DWARF5 supplementary files (.debug_sup) and
+  associated DW_FORM_ref_sup4/8 and DW_FORM_strp_sup forms.
+- Added support for split DWARF debug data when contained in the
+  same file as the skeleton.
+- libdwelf: New functions dwelf_dwarf_debug_sup and
+  dwelf_dwarf_debug_dwp for querying .debug_sup and .debug_dwp
+  section data.
+- libdwfl: Now correctly handles Linux kernel module sections that
+  are not present in sysfs.
+- libdwfl_stacktrace: New functions dwflst_arch_from_uname,
+  dwflst_arch_expected_frame_nregs, dwflst_arch_sp_dwarf_reg and
+  dwflst_arch_sp_perf_reg providing per-architecture constants.  The
+  libdwfl_stacktrace interface is experimental and may be subject to
+  API/ABI changes.
+- srcfiles: Now handles CU names and files from split DWARF.
+- stackprof: New profiling tool for collecting systemwide stacktrace
+  profiles.  Replaces the eu-stacktrace tool.  Requires a C++20
+  capable compiler.
+- stacktrace: This experimental tool has been removed and replaced
+  with eu-stackprof.
+- strip: Fixed bug where a section's sh_link or sh_info reference
+  could be missing from the debug file.
+- version.h: New macro _ELFUTILS_THREAD_SAFE added to
+  <elfutils/version.h>.  Defined to 1 when the elfutils libraries are
+  built with thread safety support enabled.  Otherwise it is left
+  undefined.  Thread safety support is experimental and is not yet
+  officially supported.
+
 * Wed Apr 15 2026 Aaron Merey <amerey@redhat.com> 0.195-1
 - CONTRIBUTING: elfutils has adopted a policy on the use of Large
   Language Models (LLMs).  Contributions containing output generated
