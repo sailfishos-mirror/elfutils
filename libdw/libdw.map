@@ -400,6 +400,11 @@ ELFUTILS_0.196 {
     dwarf_get_type;
 } ELFUTILS_0.193;
 
+ELFUTILS_0.197 {
+  global:
+    dwarf_begin_elf_type;
+} ELFUTILS_0.196;
+
 /* XXX Experimental libdwfl_stacktrace API. */
 ELFUTILS_0.193_EXPERIMENTAL {
   global:
