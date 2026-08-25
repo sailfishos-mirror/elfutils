@@ -51,18 +51,22 @@ gelf_getshdr (Elf_Scn *scn, GElf_Shdr *dst)
       return NULL;
     }
 
-  rwlock_rdlock (scn->elf->lock);
-
   if (scn->elf->class == ELFCLASS32)
     {
       /* Copy the elements one-by-one.  */
-      Elf32_Shdr *shdr
-	= scn->shdr.e32 ?: __elf32_getshdr_rdlock (scn);
+      Elf32_Shdr *shdr = atomic_load_acquire (&scn->shdr.e32);
 
       if (shdr == NULL)
 	{
-	  __libelf_seterrno (ELF_E_INVALID_OPERAND);
-	  goto out;
+	  rwlock_wrlock (scn->elf->lock);
+	  shdr = __elf32_getshdr_wrlock (scn);
+	  rwlock_unlock (scn->elf->lock);
+
+	  if (shdr == NULL)
+	    {
+	      __libelf_seterrno (ELF_E_INVALID_OPERAND);
+	      return NULL;
+	    }
 	}
 
 #define COPY(name) \
@@ -82,21 +86,24 @@ gelf_getshdr (Elf_Scn *scn, GElf_Shdr *dst)
     }
   else
     {
-      Elf64_Shdr *shdr
-	= scn->shdr.e64 ?: __elf64_getshdr_rdlock (scn);
+      Elf64_Shdr *shdr = atomic_load_acquire (&scn->shdr.e64);
 
       if (shdr == NULL)
 	{
-	  __libelf_seterrno (ELF_E_INVALID_OPERAND);
-	  goto out;
+	  rwlock_wrlock (scn->elf->lock);
+	  shdr = __elf64_getshdr_wrlock (scn);
+	  rwlock_unlock (scn->elf->lock);
+
+	  if (shdr == NULL)
+	    {
+	      __libelf_seterrno (ELF_E_INVALID_OPERAND);
+	      return NULL;
+	    }
 	}
 
       /* We only have to copy the data.  */
       result = memcpy (dst, shdr, sizeof (GElf_Shdr));
     }
-
- out:
-  rwlock_unlock (scn->elf->lock);
 
   return result;
 }

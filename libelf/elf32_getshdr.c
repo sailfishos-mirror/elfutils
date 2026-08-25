@@ -196,10 +196,17 @@ load_shdr_wrlock (Elf_Scn *scn)
       goto out;
     }
 
-  /* Set the pointers in the `scn's.  */
-  for (size_t cnt = 0; cnt < shnum; ++cnt)
-    elf->state.ELFW(elf,LIBELFBITS).scns.data[cnt].shdr.ELFW(e,LIBELFBITS)
-      = &elf->state.ELFW(elf,LIBELFBITS).shdr[cnt];
+  Elf_Scn *scns = elf->state.ELFW(elf,LIBELFBITS).scns.data;
+
+  /* Set the pointers in the `scn's.  Set section 0 last to indicate that
+     all sections have been set.  */
+  for (size_t cnt = shnum; cnt > 0; --cnt)
+    {
+      VALGRIND_HG_DISABLE_CHECKING (&scns[cnt - 1].shdr,
+				    sizeof (scns[cnt - 1].shdr));
+      atomic_store_release (&scns[cnt - 1].shdr.ELFW(e,LIBELFBITS),
+			    &elf->state.ELFW(elf,LIBELFBITS).shdr[cnt - 1]);
+    }
 
   result = scn->shdr.ELFW(e,LIBELFBITS);
   assert (result != NULL);
@@ -275,9 +282,13 @@ elfw2(LIBELFBITS,getshdr) (Elf_Scn *scn)
   if (!scn_valid (scn))
     return NULL;
 
-  rwlock_rdlock (scn->elf->lock);
-  result = __elfw2(LIBELFBITS,getshdr_rdlock) (scn);
-  rwlock_unlock (scn->elf->lock);
+  result = atomic_load_acquire (&scn->shdr.ELFW(e,LIBELFBITS));
+  if (result == NULL)
+    {
+      rwlock_wrlock (scn->elf->lock);
+      result = __elfw2(LIBELFBITS,getshdr_wrlock) (scn);
+      rwlock_unlock (scn->elf->lock);
+    }
 
   return result;
 }
