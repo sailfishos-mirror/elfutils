@@ -18,6 +18,38 @@
 
 . $srcdir/test-subr.sh
 
+# to launch and cleanup a background process
+testjob=0
+
+testjob_launch()
+{
+  trap testjob_cleanup 1 2 15
+  trap testjob_exit 0
+  { /bin/sh -c 'while true; do true; done' >/dev/null 2>&1 & testjob=$! ; } &&
+  sleep 0.1
+}
+
+kill_testjob()
+{
+  test $testjob -eq 0 || {
+    kill -9 $testjob 2> /dev/null || :
+    wait $testjob 2> /dev/null || :
+  }
+  testjob=0
+}
+
+testjob_cleanup()
+{
+  kill_testjob
+  test_cleanup
+}
+
+testjob_exit()
+{
+  testjob_cleanup
+  exit_cleanup
+}
+
 check_perf_event_open() {
     tempfiles perf-test.out
     if ! testrun timeout 2 ${abs_top_builddir}/src/stackprof -v -- /bin/true > perf-test.out 2>&1; then

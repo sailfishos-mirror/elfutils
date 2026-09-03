@@ -29,6 +29,9 @@ expr `whoami` = "root" || (echo "not running as root"; exit 77)
 
 tempfiles test.out
 
+# guarantee background load on idle systems (cleaned up on exit)
+testjob_launch
+
 # run systemwide scan, no gprof output
 testrun timeout -p --kill-after=5 10 ${abs_top_builddir}/src/stackprof -v 2>&1 | tee test.out
 grep "^perf_event_attr configuration" test.out
