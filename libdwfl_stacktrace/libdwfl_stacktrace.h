@@ -119,10 +119,14 @@ extern int dwflst_tracker_linux_proc_find_elf (Dwfl_Module *mod, void **userdata
    REGS_MAPPING array specifies its position in the full register file
    expected by the DWARF infrastructure.  Calls dwfl_attach_state on
    DWFL, with architecture specified by ELF, ELF must remain vaild
-   during Dwfl lifetime.  Returns zero if all frames have been
-   processed by the callback, returns -1 on error, or the value of the
-   callback when not DWARF_CB_OK. -1 returned on error will set
-   dwfl_errno (). */
+   during Dwfl lifetime.  A dwfl_arg callback argument provided to
+   the call to dwfl_attach_state transiently retains pointers to
+   STACK, REGS, REGS_MAPPING, until the next call to
+   dwflst_sample_getframes.
+
+   Returns zero if all frames have been processed by the callback,
+   returns -1 on error, or the value of the callback when not
+   DWARF_CB_OK.  -1 returned on error will set dwfl_errno (). */
 int dwflst_sample_getframes (Dwfl *dwfl, Elf *elf, pid_t pid, pid_t tid,
 				  const void *stack, size_t stack_size,
 				  const Dwarf_Word *regs, uint32_t n_regs,
@@ -134,10 +138,13 @@ int dwflst_sample_getframes (Dwfl *dwfl, Elf *elf, pid_t pid, pid_t tid,
 /* Adapts dwflst_sample_getframes to linux perf_events stack sample
    and register file data format.  Calls dwfl_attach_state on DWFL,
    with architecture specified by ELF, ELF must remain valid during
-   Dwfl lifetime.  Returns zero if all frames have been processed by
-   the callback, returns -1 on error, or the value of the callback
-   when not DWARF_CB_OK. -1 returned on error will set dwfl_errno
-   (). */
+   Dwfl lifetime.  A dwfl_arg callback argument provided to the call to
+   dwfl_attach_state transiently retains pointers to STACK, REGS, until
+   the next call to dwflst_sample_getframes.
+
+   Returns zero if all frames have been processed by the callback,
+   returns -1 on error, or the value of the callback when not
+   DWARF_CB_OK.  -1 returned on error will set dwfl_errno (). */
 int dwflst_perf_sample_getframes (Dwfl *dwfl, Elf *elf, pid_t pid, pid_t tid,
 				  const void *stack, size_t stack_size,
 				  const Dwarf_Word *regs, uint32_t n_regs,
