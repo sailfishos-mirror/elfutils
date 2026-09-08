@@ -410,6 +410,21 @@ __libelf_decompress_zlib (void *buf_in, size_t size_in, size_t size_out)
 static void *
 __libelf_decompress_zstd (void *buf_in, size_t size_in, size_t size_out)
 {
+  /* Catch highly unlikely compression ratios so we don't allocate
+     some giant amount of memory for nothing.  The smallest zstd block
+     is a 3-byte block header followed by a 1-byte RLE payload, and a
+     single block expands to at most ZSTD_BLOCKSIZE_MAX bytes, so no
+     valid frame can expand by more than ZSTD_BLOCKSIZE_MAX / 4
+     (32768:1).  See doc/zstd_compression_format.md in the zstd
+     sources.  */
+  const size_t zstd_min_block = 3 + 1;
+  const size_t zstd_max_ratio = ZSTD_BLOCKSIZE_MAX / zstd_min_block;
+  if (unlikely (size_out / zstd_max_ratio > size_in))
+    {
+      __libelf_seterrno (ELF_E_INVALID_DATA);
+      return NULL;
+    }
+
   /* Malloc might return NULL when requesting zero size.  This is highly
      unlikely, it would only happen when the compression was forced.
      But we do need a non-NULL buffer to return and set as result.
