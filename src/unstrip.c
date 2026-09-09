@@ -2456,7 +2456,8 @@ handle_output_dir_module (const char *output_dir, Dwfl_Module *mod, bool force,
   if (file == NULL && ignore)
     return;
 
-  char *output_file = xasprintf ("%s/%s", output_dir, modnames ? name : file);
+  char *output_file = xasprintf ("%s/%s", output_dir,
+				 modnames ? xbasename (name) : file);
 
   handle_dwfl_module (output_file, true, force, mod, all, ignore, relocate);
 
