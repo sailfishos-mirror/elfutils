@@ -282,6 +282,11 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
   else
     contents_size = segments_end;
 
+  /* Make sure the image is big enough for the ELF header written out
+     below; otherwise the elfNN_xlatetof of the header overflows it.  */
+  if (contents_size < (class32 ? sizeof ehdr.e32 : sizeof ehdr.e64))
+    goto bad_elf;
+
   free (buffer);
 
   /* Now we know the size of the whole image we want read in.  */
