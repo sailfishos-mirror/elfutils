@@ -54,14 +54,20 @@
 /* Defined separately.  */
 extern size_t next_prime (size_t seed);
 
+/* Generate a table entry type from NAME.  */
+#define ENTRY(name) _ENTRY (name)
+#define _ENTRY(name) \
+  name##_ent
 
-/* Table entry type.  */
+/* Table entry type.  Entry 0 does not hold data and is instead used
+   to store the table size and a pointer to the previous table (if a
+   resize has occurred).  */
 #define _DYNHASHCONENTTYPE(name)       \
   typedef struct name##_ent         \
   {                                 \
     _Atomic(HASHTYPE) hashval;      \
     atomic_uintptr_t val_ptr;       \
-  } name##_ent
+  } ENTRY(name)
 #define DYNHASHENTTYPE(name) _DYNHASHCONENTTYPE (name)
 DYNHASHENTTYPE (NAME);
 
