@@ -38,37 +38,45 @@
    TYPE      data type of the hash table entries
  */
 
+/* Name of the table entry type.  */
+#define ENTRY(name) _ENTRY (name)
+#define _ENTRY(name) \
+  name##_ent
 
 static size_t
-lookup (NAME *htab, HASHTYPE hval)
+lookup (ENTRY(NAME) *table, size_t size, HASHTYPE hval)
 {
   /* First hash function: simply take the modulus but prevent zero.  Small values
       can skip the division, which helps performance when this is common.  */
-  size_t idx = 1 + (hval < htab->size ? hval : hval % htab->size);
+  size_t idx = 1 + (hval < size ? hval : hval % size);
 
   HASHTYPE hash;
 
-  hash = atomic_load_explicit(&htab->table[idx].hashval,
-                              memory_order_acquire);
+  hash = atomic_load_explicit(&table[idx].hashval, memory_order_acquire);
   if (hash == hval)
-    return idx;
+    {
+      ANNOTATE_HAPPENS_AFTER (&table[idx].hashval);
+      return idx;
+    }
   else if (hash == 0)
     return 0;
 
   /* Second hash function as suggested in [Knuth].  */
-  HASHTYPE second_hash = 1 + hval % (htab->size - 2);
+  HASHTYPE second_hash = 1 + hval % (size - 2);
 
   for(;;)
     {
       if (idx <= second_hash)
-          idx = htab->size + idx - second_hash;
+          idx = size + idx - second_hash;
       else
           idx -= second_hash;
 
-      hash = atomic_load_explicit(&htab->table[idx].hashval,
-                                  memory_order_acquire);
+      hash = atomic_load_explicit(&table[idx].hashval, memory_order_acquire);
       if (hash == hval)
-	return idx;
+	{
+	  ANNOTATE_HAPPENS_AFTER (&table[idx].hashval);
+	  return idx;
+	}
       else if (hash == 0)
 	return 0;
     }
@@ -267,7 +275,7 @@ static void resize_helper(NAME *htab, int blocking)
 
 /* Called by the main thread holding the htab->resize_rwl lock to
    coordinate the moving of hash table data. Allocates the new hash
-   table and frees the old one when moving all data is done.  */
+   table.  */
 static void
 resize_coordinator(NAME *htab)
 {
@@ -277,8 +285,19 @@ resize_coordinator(NAME *htab)
   htab->old_table = htab->table;
 
   htab->size = next_prime(htab->size * 2);
-  htab->table = malloc((1 + htab->size) * sizeof(htab->table[0]));
-  assert(htab->table);
+
+  ENTRY(NAME) *table = malloc((1 + htab->size) * sizeof(htab->table[0]));
+  assert(table);
+
+  /* Store this table's size with the table itself.  */
+  atomic_init (&table[0].hashval, htab->size);
+
+  /* Preserve old_table in case other threads are reading it.  */
+  atomic_init (&table[0].val_ptr, (uintptr_t) htab->old_table);
+
+  ANNOTATE_HAPPENS_BEFORE (&htab->table);
+  VALGRIND_HG_DISABLE_CHECKING (&htab->table, sizeof (htab->table));
+  __atomic_store_n(&htab->table, table, __ATOMIC_RELEASE);
 
   /* Change state from ALLOCATING_MEMORY to MOVING_DATA */
   ANNOTATE_HAPPENS_BEFORE (&htab->resizing_state);
@@ -305,12 +324,11 @@ resize_coordinator(NAME *htab)
   atomic_store_explicit(&htab->next_move_block, 0, memory_order_relaxed);
   atomic_store_explicit(&htab->num_moved_blocks, 0, memory_order_relaxed);
 
-  free(htab->old_table);
 
   /* Change state to NO_RESIZING */
+  ANNOTATE_HAPPENS_BEFORE (&htab->resizing_state);
   atomic_fetch_xor_explicit(&htab->resizing_state, CLEANING ^ NO_RESIZING,
-                            memory_order_relaxed);
-
+                            memory_order_release);
 }
 
 /* Called by any thread that wants to do an insert or find operation
@@ -388,7 +406,12 @@ INIT(NAME) (NAME *htab, size_t init_size)
   if (htab->table == NULL)
       return -1;
 
-  for (size_t i = 0; i <= init_size; i++)
+  /* Entry zero stores the size of this table as well as the previous table
+     used prior to the last resize (NULL in this case).  */
+  atomic_init(&htab->table[0].hashval, (uintptr_t) init_size);
+  atomic_init(&htab->table[0].val_ptr, (uintptr_t) NULL);
+
+  for (size_t i = 1; i <= init_size; i++)
     {
       atomic_init(&htab->table[i].hashval, (uintptr_t) NULL);
       atomic_init(&htab->table[i].val_ptr, (uintptr_t) NULL);
@@ -407,7 +430,16 @@ name##_free
 FREE(NAME) (NAME *htab)
 {
   pthread_rwlock_destroy(&htab->resize_rwl);
-  free (htab->table);
+
+  ENTRY(NAME) *cur = htab->table;
+  while (cur != NULL)
+    {
+      ENTRY(NAME) *t = cur;
+      cur = (ENTRY(NAME) *) atomic_load_explicit(&cur[0].val_ptr,
+                                                  memory_order_relaxed);
+      free (t);
+    }
+
   return 0;
 }
 
@@ -491,17 +523,41 @@ TYPE
   name##_find
 FIND(NAME) (NAME *htab, HASHTYPE hval)
 {
+  size_t idx = 0;
+
+  /* Snapshot of the current table.  This pointer stays valid even if a
+     new table is allocated during resize.  */
+  ENTRY(NAME) *table = __atomic_load_n(&htab->table, __ATOMIC_ACQUIRE);
+  ANNOTATE_HAPPENS_AFTER (&htab->table);
+
+  /* Make the hash data nonzero.  */
+  hval = hval ?: 1;
+
+  /* Make sure the current table isn't in the middle of a resize with
+     uninitialized entries present.  */
+  if (atomic_load_explicit(&htab->resizing_state, memory_order_acquire)
+      == NO_RESIZING)
+    {
+      ANNOTATE_HAPPENS_AFTER (&htab->resizing_state);
+
+      size_t size = atomic_load_explicit(&table[0].hashval,
+                                         memory_order_acquire);
+
+      /* Lock-free check for whether the entry is present.  */
+      idx = lookup(table, size, hval);
+
+      if (idx == 0)
+        return NULL;
+      return (TYPE) atomic_load_explicit(&table[idx].val_ptr,
+                                         memory_order_acquire);
+    }
+
   /* If we cannot get the resize_rwl lock someone is resizing
      the hash table, try to help out by moving table data.  */
   while (pthread_rwlock_tryrdlock(&htab->resize_rwl) != 0)
     resize_worker(htab);
 
-  size_t idx;
-
-  /* Make the hash data nonzero.  */
-  hval = hval ?: 1;
-  idx = lookup(htab, hval);
-
+  idx = lookup(htab->table, htab->size, hval);
   if (idx == 0)
     {
       pthread_rwlock_unlock(&htab->resize_rwl);

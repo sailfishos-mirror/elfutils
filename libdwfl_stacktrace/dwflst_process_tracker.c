@@ -168,7 +168,6 @@ void dwflst_tracker_end (Dwflst_Process_Tracker *tracker)
   /* HACK to allow iteration of dynamicsizehash_concurrent.  */
   /* XXX Based on lib/dynamicsizehash_concurrent.c free().  */
   rwlock_fini (tracker->elftab_lock);
-  pthread_rwlock_destroy(&tracker->elftab.resize_rwl);
   for (idx = 1; idx <= tracker->elftab.size; idx++)
     {
       dwflst_tracker_elftab_ent *ent = &tracker->elftab.table[idx];
@@ -184,11 +183,10 @@ void dwflst_tracker_end (Dwflst_Process_Tracker *tracker)
 	elf_end(t->elf);
       free(t); /* TODO: Check necessity. */
     }
-  free (tracker->elftab.table);
+  dwflst_tracker_elftab_free (&tracker->elftab);
 
   /* XXX Based on lib/dynamicsizehash_concurrent.c free().  */
   rwlock_fini (tracker->dwfltab_lock);
-  pthread_rwlock_destroy(&tracker->dwfltab.resize_rwl);
   for (idx = 1; idx <= tracker->dwfltab.size; idx++)
     {
       dwflst_tracker_dwfltab_ent *ent = &tracker->dwfltab.table[idx];
@@ -201,7 +199,7 @@ void dwflst_tracker_end (Dwflst_Process_Tracker *tracker)
 	INTUSE(dwfl_end) (t->dwfl);
       free(t);
     }
-  free (tracker->dwfltab.table);
+  dwflst_tracker_dwfltab_free (&tracker->dwfltab);
 
   free (tracker);
 }

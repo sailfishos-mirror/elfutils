@@ -54,8 +54,9 @@
 /* Defined separately.  */
 extern size_t next_prime (size_t seed);
 
-
-/* Table entry type.  */
+/* Table entry type.  Entry 0 does not hold data and is instead used
+   to store the table size and a pointer to the previous table (if a
+   resize has occurred).  */
 #define _DYNHASHCONENTTYPE(name)       \
   typedef struct name##_ent         \
   {                                 \
