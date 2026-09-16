@@ -49,8 +49,12 @@ set_address (Elf *elf, size_t offset)
 	{
 	  if (child->map_address == NULL)
 	    {
+	      /* The archive image is malloced but owned by the parent
+		 archive, so the child must not free it.  */
+	      child->flags |= ELF_F_PARENT_MALLOCED;
 	      child->map_address = elf->map_address;
 	      child->start_offset -= offset;
+
 	      if (child->kind == ELF_K_AR)
 		child->state.ar.offset -= offset;
 
