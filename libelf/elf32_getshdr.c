@@ -91,11 +91,12 @@ load_shdr_wrlock (Elf_Scn *scn)
       /* All the data is already mapped.  If we could use it
 	 directly this would already have happened.  Unless
 	 we allocated the memory ourselves and the ELF_F_MALLOCED
-	 flag is set.  */
+	 flag is set, or a parent archive allocated the memory
+	 and ELF_F_PARENT_MALLOCED is set.  */
       void *file_shdr = ((char *) elf->map_address
 			 + elf->start_offset + ehdr->e_shoff);
 
-      assert ((elf->flags & ELF_F_MALLOCED)
+      assert ((elf->flags & (ELF_F_MALLOCED | ELF_F_PARENT_MALLOCED))
 	      || ehdr->e_ident[EI_DATA] != MY_ELFDATA
 	      || elf->cmd == ELF_C_READ_MMAP
 	      || (! ALLOW_UNALIGNED
@@ -105,7 +106,7 @@ load_shdr_wrlock (Elf_Scn *scn)
       /* Now copy the data and at the same time convert the byte order.  */
       if (ehdr->e_ident[EI_DATA] == MY_ELFDATA)
 	{
-	  assert ((elf->flags & ELF_F_MALLOCED)
+	  assert ((elf->flags & (ELF_F_MALLOCED | ELF_F_PARENT_MALLOCED))
 		  || elf->cmd == ELF_C_READ_MMAP
 		  || ! ALLOW_UNALIGNED);
 	  memcpy (shdr, file_shdr, size);
