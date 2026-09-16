@@ -603,6 +603,9 @@ extern void * __libelf_decompress (int chtype, void *buf_in, size_t size_in,
 extern void * __libelf_decompress_elf (Elf_Scn *scn,
 				       size_t *size_out, size_t *addralign)
      internal_function;
+extern void * __libelf_decompress_elf_wrlock (Elf_Scn *scn, size_t *size_out,
+					      size_t *addralign)
+     internal_function;
 
 
 extern void __libelf_reset_rawdata (Elf_Scn *scn, void *buf, size_t size,

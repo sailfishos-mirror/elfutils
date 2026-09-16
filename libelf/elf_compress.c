@@ -465,13 +465,30 @@ __libelf_decompress (int chtype, void *buf_in, size_t size_in, size_t size_out)
     }
 }
 
-void *
-internal_function
-__libelf_decompress_elf (Elf_Scn *scn, size_t *size_out, size_t *addralign)
+static void *
+decompress_elf (Elf_Scn *scn, size_t *size_out, size_t *addralign,
+		bool wrlocked)
 {
   GElf_Chdr chdr;
-  if (gelf_getchdr (scn, &chdr) == NULL)
-    return NULL;
+
+  if (scn->elf->class == ELFCLASS32)
+    {
+      Elf32_Chdr *c
+	= wrlocked ? __elf32_getchdr_wrlock (scn) : elf32_getchdr (scn);
+      if (c == NULL)
+	return NULL;
+      chdr.ch_type = c->ch_type;
+      chdr.ch_size = c->ch_size;
+      chdr.ch_addralign = c->ch_addralign;
+    }
+  else
+    {
+      Elf64_Chdr *c
+	= wrlocked ? __elf64_getchdr_wrlock (scn) : elf64_getchdr (scn);
+      if (c == NULL)
+	return NULL;
+      chdr = *c;
+    }
 
   bool unknown_compression = false;
   if (chdr.ch_type != ELFCOMPRESS_ZLIB)
@@ -503,7 +520,8 @@ __libelf_decompress_elf (Elf_Scn *scn, size_t *size_out, size_t *addralign)
      is slightly inefficient when the raw data needs to be
      converted since then we'll be converting the whole buffer and
      not just Chdr.  */
-  Elf_Data *data = elf_getdata (scn, NULL);
+  Elf_Data *data
+    = wrlocked ? __elf_getdata_wrlock (scn, NULL) : elf_getdata (scn, NULL);
   if (data == NULL)
     return NULL;
 
@@ -518,6 +536,21 @@ __libelf_decompress_elf (Elf_Scn *scn, size_t *size_out, size_t *addralign)
   *size_out = chdr.ch_size;
   *addralign = chdr.ch_addralign;
   return buf_out;
+}
+
+void *
+internal_function
+__libelf_decompress_elf_wrlock (Elf_Scn *scn, size_t *size_out,
+				size_t *addralign)
+{
+  return decompress_elf (scn, size_out, addralign, true);
+}
+
+void *
+internal_function
+__libelf_decompress_elf (Elf_Scn *scn, size_t *size_out, size_t *addralign)
+{
+  return decompress_elf (scn, size_out, addralign, false);
 }
 
 /* Assumes buf is a malloced buffer.  */
