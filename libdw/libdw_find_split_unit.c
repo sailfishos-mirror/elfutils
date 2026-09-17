@@ -90,6 +90,8 @@ try_split_file (Dwarf_CU *cu, const char *dwo_path)
 static void
 try_dwp_file (Dwarf_CU *cu)
 {
+  mutex_lock (cu->dbg->dwp_lock);
+
   if (cu->dbg->dwp_dwarf == NULL)
     {
       uint8_t is_dwp;
@@ -122,6 +124,7 @@ try_dwp_file (Dwarf_CU *cu)
 	  if (dwp_path == NULL)
 	    {
 	      __libdw_seterrno (DWARF_E_NOMEM);
+	      mutex_unlock (cu->dbg->dwp_lock);
 	      return;
 	    }
 	  memcpy (dwp_path, cu->dbg->elfpath, elfpath_len);
@@ -149,6 +152,8 @@ try_dwp_file (Dwarf_CU *cu)
       if (cu->dbg->dwp_dwarf == NULL)
 	cu->dbg->dwp_dwarf = (Dwarf *) -1;
     }
+
+  mutex_unlock (cu->dbg->dwp_lock);
 
   if (cu->dbg->dwp_dwarf != (Dwarf *) -1)
     {
