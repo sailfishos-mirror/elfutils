@@ -354,8 +354,8 @@ cache_op_table (Dwarf *dbg, int sec_index, Dwarf_Off macoff,
       return NULL;
     }
 
-  Dwarf_Macro_Op_Table **ret = eu_tsearch_nolock (table, &dbg->macro_ops_tree,
-						  macro_op_compare);
+  Dwarf_Macro_Op_Table **ret = eu_tsearch (table, &dbg->macro_ops_tree,
+					   macro_op_compare);
   mutex_unlock (dbg->macro_lock);
 
   if (unlikely (ret == NULL))
