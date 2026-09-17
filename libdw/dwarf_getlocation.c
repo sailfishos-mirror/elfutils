@@ -166,17 +166,22 @@ dwarf_getlocation_implicit_value (Dwarf_Attribute *attr, const Dwarf_Op *op,
   if (attr == NULL)
     return -1;
 
+  mutex_lock (attr->cu->intern_lock);
+
   struct loc_block_s fake = { .addr = (void *) op };
-  struct loc_block_s **found = eu_tfind (&fake, &attr->cu->locs_tree,
-					 loc_compare);
+  struct loc_block_s **found = eu_tfind_nolock (&fake, &attr->cu->locs_tree,
+						loc_compare);
   if (unlikely (found == NULL))
     {
+      mutex_unlock (attr->cu->intern_lock);
       __libdw_seterrno (DWARF_E_NO_BLOCK);
       return -1;
     }
 
   return_block->length = (*found)->length;
   return_block->data = (*found)->data;
+
+  mutex_unlock (attr->cu->intern_lock);
   return 0;
 }
 
