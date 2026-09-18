@@ -136,6 +136,7 @@ dwarf_end (Dwarf *dwarf)
       mutex_fini (dwarf->dwarf_lock);
       mutex_fini (dwarf->macro_lock);
       mutex_fini (dwarf->dwp_lock);
+      mutex_fini (dwarf->lines_files_lock);
 
       /* Free the pubnames helper structure.  */
       free (dwarf->pubnames_sets);

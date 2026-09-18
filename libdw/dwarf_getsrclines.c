@@ -1332,9 +1332,13 @@ get_lines_or_files (Dwarf *dbg, Dwarf_Off debug_line_offset,
 		    const char *comp_dir, unsigned address_size,
 		    Dwarf_Lines **linesp, Dwarf_Files **filesp)
 {
+  int ret = -1;
+
+  mutex_lock (dbg->lines_files_lock);
+
   struct files_lines_s fake = { .debug_line_offset = debug_line_offset };
-  struct files_lines_s **found = eu_tfind (&fake, &dbg->files_lines_tree,
-					   files_lines_compare);
+  struct files_lines_s **found = eu_tfind_nolock (&fake, &dbg->files_lines_tree,
+						  files_lines_compare);
   if (found == NULL)
     {
       /* This .debug_line is being read for the first time.  */
@@ -1342,7 +1346,7 @@ get_lines_or_files (Dwarf *dbg, Dwarf_Off debug_line_offset,
       if (data == NULL
 	  || __libdw_offset_in_section (dbg, IDX_debug_line,
 					debug_line_offset, 1) != 0)
-	return -1;
+	goto out;
 
       const unsigned char *linep = data->d_buf + debug_line_offset;
       const unsigned char *lineendp = data->d_buf + data->d_size;
@@ -1359,19 +1363,20 @@ get_lines_or_files (Dwarf *dbg, Dwarf_Off debug_line_offset,
 	{
 	  if (read_srcfiles (dbg, linep, lineendp, comp_dir, address_size,
 			     NULL, &node->files) != 0)
-	    return -1;
+	    goto out;
 	}
       else if (read_srclines (dbg, linep, lineendp, comp_dir, address_size,
 			 &node->lines, &node->files, false) != 0)
-	return -1;
+	goto out;
 
       node->debug_line_offset = debug_line_offset;
 
-      found = eu_tsearch (node, &dbg->files_lines_tree, files_lines_compare);
+      found = eu_tsearch_nolock (node, &dbg->files_lines_tree,
+				 files_lines_compare);
       if (found == NULL)
 	{
 	  __libdw_seterrno (DWARF_E_NOMEM);
-	  return -1;
+	  goto out;
 	}
     }
   else if (*found != NULL
@@ -1384,7 +1389,7 @@ get_lines_or_files (Dwarf *dbg, Dwarf_Off debug_line_offset,
       if (data == NULL
 	  || __libdw_offset_in_section (dbg, IDX_debug_line,
 					debug_line_offset, 1) != 0)
-	return -1;
+	goto out;
 
       const unsigned char *linep = data->d_buf + debug_line_offset;
       const unsigned char *lineendp = data->d_buf + data->d_size;
@@ -1393,7 +1398,7 @@ get_lines_or_files (Dwarf *dbg, Dwarf_Off debug_line_offset,
 
       if (read_srclines (dbg, linep, lineendp, comp_dir, address_size,
 			 &node->lines, &node->files, true) != 0)
-	return -1;
+	goto out;
     }
   else if (*found != NULL
 	   && (*found)->files == NULL
@@ -1401,7 +1406,7 @@ get_lines_or_files (Dwarf *dbg, Dwarf_Off debug_line_offset,
     {
       /* If srclines were read then srcfiles should have also been read.  */
       __libdw_seterrno (DWARF_E_INVALID_DEBUG_LINE);
-      return -1;
+      goto out;
     }
 
   if (linesp != NULL)
@@ -1410,7 +1415,11 @@ get_lines_or_files (Dwarf *dbg, Dwarf_Off debug_line_offset,
   if (filesp != NULL)
     *filesp = (*found)->files;
 
-  return 0;
+  ret = 0;
+
+out:
+  mutex_unlock (dbg->lines_files_lock);
+  return ret;
 }
 
 int
