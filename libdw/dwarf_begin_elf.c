@@ -441,6 +441,7 @@ valid_p (Dwarf *result)
       mutex_init (result->dwarf_lock);
       mutex_init (result->macro_lock);
       mutex_init (result->dwp_lock);
+      mutex_init (result->lines_files_lock);
       eu_search_tree_init (&result->cu_tree);
       eu_search_tree_init (&result->tu_tree);
       eu_search_tree_init (&result->split_tree);
