@@ -155,7 +155,19 @@ dwarf_end (Dwarf *dwarf)
 	  cu_free (dwarf->fake_loclists_cu);
 	  free (dwarf->fake_loclists_cu);
 	}
-      if (dwarf->fake_addr_cu != NULL)
+
+      /* Free dwp_dwarf before freeing fake_addr_cu.  The fake_addr_cu pointer
+	 needs to be valid during the freeing of dwp_dwarf so that it can tell
+	 whether or not it owns fake_addr_cu.  */
+      if (dwarf->dwp_fd != -1)
+	{
+	  INTUSE(dwarf_end) (dwarf->dwp_dwarf);
+	  close (dwarf->dwp_fd);
+	}
+
+      /* Free fake_addr_cu only if this dwarf owns it.  */
+      if (dwarf->fake_addr_cu != NULL
+	  && dwarf->fake_addr_cu->dbg == dwarf)
 	{
 	  cu_free (dwarf->fake_addr_cu);
 	  free (dwarf->fake_addr_cu);
@@ -166,12 +178,6 @@ dwarf_end (Dwarf *dwarf)
 	{
 	  INTUSE(dwarf_end) (dwarf->alt_dwarf);
 	  close (dwarf->alt_fd);
-	}
-
-      if (dwarf->dwp_fd != -1)
-	{
-	  INTUSE(dwarf_end) (dwarf->dwp_dwarf);
-	  close (dwarf->dwp_fd);
 	}
 
       /* The cached path and dir we found the Dwarf ELF file in.  */
