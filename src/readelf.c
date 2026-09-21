@@ -12130,7 +12130,8 @@ print_gdb_index_section (Dwfl_Module *dwflmod, Ebl *ebl,
 	  fprintf (out, " [%4zu] symbol: %s, CUs: ", n, sym);
 
 	  const unsigned char *readcus = const_start + vector;
-	  if (unlikely ((size_t) (dataend - const_start) < vector))
+	  if (unlikely ((size_t) (dataend - const_start) < vector
+			|| (size_t) (dataend - readcus) < sizeof (uint32_t)))
 	    goto invalid_data;
 	  uint32_t cus = read_4ubyte_unaligned (dbg, readcus);
 	  while (cus--)
