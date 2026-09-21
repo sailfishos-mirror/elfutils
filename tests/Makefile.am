@@ -748,8 +748,8 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     run-eu-search-cfi.sh run-eu-search-macros.sh \
 	     run-eu-search-lines.sh run-eu-search-die.sh \
 	     run-dwelf-dwarf-debug-sup.sh \
-	     testfile-dwarf5-ref-sup.bz2 testfile-dwarf5.sup.bz2
-
+	     testfile-dwarf5-ref-sup.bz2 testfile-dwarf5.sup.bz2 \
+	     run-dwflst-tracker-concurrent.sh
 
 if USE_HELGRIND
 valgrind_cmd=valgrind -q --tool=helgrind --error-exitcode=1 --track-fds=yes \
@@ -807,6 +807,17 @@ libasm = ../libasm/libasm.so
 endif
 libebl = ../libebl/libebl.a ../backends/libebl_backends.a ../libcpu/libcpu.a
 libeu = ../lib/libeu.a
+
+check_PROGRAMS += dwflst-tracker-concurrent
+
+TESTS += run-dwflst-tracker-concurrent.sh
+
+dwflst_tracker_concurrent_CPPFLAGS = $(AM_CPPFLAGS) \
+                                     -I$(top_srcdir)/libdwfl_stacktrace
+
+dwflst_tracker_concurrent_LDFLAGS = -pthread $(AM_LDFLAGS)
+
+dwflst_tracker_concurrent_LDADD = $(libdw) $(libelf)
 
 arextract_LDADD = $(libelf)
 arsymtest_LDADD = $(libelf)

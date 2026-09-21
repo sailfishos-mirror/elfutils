@@ -33,8 +33,6 @@
 
 #include <sys/stat.h>
 #include "../libelf/libelfP.h"
-/* XXX: Private header needed for Elf * ref_count field. */
-/* TODO: Consider dup_elf() rather than direct ref_count access. */
 
 #include "libdwfl_stacktraceP.h"
 
@@ -83,7 +81,6 @@ dwflst_tracker_find_cached_elf (Dwflst_Process_Tracker *tracker,
 
   rwlock_rdlock(tracker->elftab_lock);
   ent = dwflst_tracker_elftab_find(&tracker->elftab, hval);
-  rwlock_unlock(tracker->elftab_lock);
 
   /* Guard against collisions.
      TODO: Need proper chaining, dynamicsizehash_concurrent isn't really
@@ -92,18 +89,23 @@ dwflst_tracker_find_cached_elf (Dwflst_Process_Tracker *tracker,
     rc = fstat(ent->fd, &sb);
   if (rc < 0 || strcmp (module_name, ent->module_name) != 0
       || ent->dev != sb.st_dev || ent->ino != sb.st_ino)
-    return -1;
+    {
+      rwlock_unlock(tracker->elftab_lock);
+      return -1;
+    }
 
   /* Verify that ent->fd has not been updated: */
   if (rc < 0 || ent->dev != sb.st_dev || ent->ino != sb.st_ino
       || ent->last_mtime != sb.st_mtime)
-    return -1;
-
-  if (ent->elf != NULL)
-    ent->elf->ref_count++;
-  *elfp = ent->elf;
-  *file_name = strdup(ent->module_name);
-  return ent->fd;
+    {
+      rwlock_unlock(tracker->elftab_lock);
+      return -1;
+    }
+  *elfp = __libelf_keep (ent->elf);
+  *file_name = strdup (ent->module_name);
+  int fd = ent->fd;
+  rwlock_unlock(tracker->elftab_lock);
+  return fd;
 }
 INTDEF(dwflst_tracker_find_cached_elf)
 
@@ -170,7 +172,7 @@ dwflst_tracker_cache_elf (Dwflst_Process_Tracker *tracker,
 	elf_end(ent->elf);
     }
   if (elf != NULL && ent->elf != elf)
-    elf->ref_count++;
+    __libelf_keep (elf);
   ent->elf = elf;
   ent->fd = fd;
   if (rc == 0)
