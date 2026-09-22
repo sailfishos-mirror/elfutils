@@ -155,7 +155,11 @@ dwarf_end (Dwarf *dwarf)
 	  cu_free (dwarf->fake_loclists_cu);
 	  free (dwarf->fake_loclists_cu);
 	}
-      if (dwarf->fake_addr_cu != NULL)
+      /* fake_addr_cu may be shared between a split Dwarf file and the
+	 skeleton it belongs to.  Free fake_addr_cu only if dwarf owns
+	 fake_addr_cu.  */
+      if (dwarf->fake_addr_cu != NULL
+	  && dwarf->fake_addr_cu->dbg == dwarf)
 	{
 	  cu_free (dwarf->fake_addr_cu);
 	  free (dwarf->fake_addr_cu);

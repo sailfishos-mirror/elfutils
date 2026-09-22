@@ -1523,26 +1523,18 @@ __libdw_link_skel_split (Dwarf_CU *skel, Dwarf_CU *split)
   skel->split = split;
   split->split = skel;
 
-  /* Get .debug_addr and addr_base greedy.
-     We also need it for the fake addr cu.
-     This needs to be done for each split unit (one per .dwo file, or multiple
-     per .dwp file).  */
+  /* Get addr_base greedy.  This needs to be done for each split unit
+     (one per .dwo file, or multiple per .dwp file).  .debug_addr and
+     fake_addr_cu were already linked when the split Dwarf was opened.  */
   Dwarf *dbg = skel->dbg;
   Dwarf *sdbg = split->dbg;
+
+  /* If the split file is using our .debug_addr rather than one of its
+     own then link the address information for this file and unit.  */
   if (dbg->sectiondata[IDX_debug_addr] != NULL
-      /* If this split file hasn't been linked yet...  */
-      && (sdbg->sectiondata[IDX_debug_addr] == NULL
-	  /* ... or it was linked to the same skeleton file for another
-	     unit...  */
-	  || (sdbg->sectiondata[IDX_debug_addr]
-	      == dbg->sectiondata[IDX_debug_addr])))
-    {
-      /* ... then link the address information for this file and unit.  */
-      sdbg->sectiondata[IDX_debug_addr]
-	= dbg->sectiondata[IDX_debug_addr];
-      split->addr_base = __libdw_cu_addr_base (skel);
-      sdbg->fake_addr_cu = dbg->fake_addr_cu;
-    }
+      && (sdbg->sectiondata[IDX_debug_addr]
+	  == dbg->sectiondata[IDX_debug_addr]))
+    split->addr_base = __libdw_cu_addr_base (skel);
 }
 
 

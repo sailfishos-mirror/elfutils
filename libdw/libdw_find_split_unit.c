@@ -42,6 +42,17 @@
 #include <fcntl.h>
 
 static void
+link_debug_addr (Dwarf *dbg, Dwarf *sdbg)
+{
+  if (dbg->sectiondata[IDX_debug_addr] != NULL
+      && sdbg->sectiondata[IDX_debug_addr] == NULL)
+    {
+      sdbg->sectiondata[IDX_debug_addr] = dbg->sectiondata[IDX_debug_addr];
+      sdbg->fake_addr_cu = dbg->fake_addr_cu;
+    }
+}
+
+static void
 try_split_file (Dwarf_CU *cu, const char *dwo_path)
 {
   int split_fd = open (dwo_path, O_RDONLY);
@@ -57,6 +68,8 @@ try_split_file (Dwarf_CU *cu, const char *dwo_path)
 	      if (split->unit_type == DW_UT_split_compile
 		  && cu->unit_id8 == split->unit_id8)
 		{
+		  link_debug_addr (cu->dbg, split->dbg);
+
 		  if (eu_tsearch (split->dbg, &cu->dbg->split_tree,
 				  __libdw_finddbg_cb) == NULL)
 		    {
@@ -118,6 +131,7 @@ try_dwp_file (Dwarf_CU *cu)
 		  && (dwp_dwarf->sectiondata[IDX_debug_cu_index] != NULL
 		      || dwp_dwarf->sectiondata[IDX_debug_tu_index] != NULL))
 		{
+		  link_debug_addr (cu->dbg, dwp_dwarf);
 		  cu->dbg->dwp_dwarf = dwp_dwarf;
 		  cu->dbg->dwp_fd = dwp_fd;
 		}
