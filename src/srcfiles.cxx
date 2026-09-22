@@ -273,10 +273,14 @@ collect_sourcefiles (Dwfl_Module *dwflmod,
             clog << "skipping cu=" << cuname << " due to empty comp_dir" << endl;
           continue;
         }
-      for (size_t f = 1; f < nfiles; ++f)
+      for (size_t f = 0; f < nfiles; ++f)
         {
+	  /* For --cu-only we are only interested in the "zero" entry.  */
+	  if (CU_only && f != 0)
+	    break;
+
           const char *hat;
-          if (CU_only)
+          if (f == 0)
           {
             if (strcmp(cuname, "<unknown>") == 0 || strcmp(cuname, "<artificial>") == 0 )
               continue;
