@@ -440,6 +440,7 @@ valid_p (Dwarf *result)
       /* Initialize locks and search_trees.  */
       mutex_init (result->dwarf_lock);
       mutex_init (result->macro_lock);
+      mutex_init (result->dwp_lock);
       eu_search_tree_init (&result->cu_tree);
       eu_search_tree_init (&result->tu_tree);
       eu_search_tree_init (&result->split_tree);

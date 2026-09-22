@@ -272,6 +272,9 @@ struct Dwarf
   /* Synchronize access to dwarf_macro_getsrcfiles and cache_op_table.  */
   mutex_define(, macro_lock);
 
+  /* Synchronize lazy-loading of dwp_dwarf and dwp_fd in try_dwp_file.  */
+  mutex_define(, dwp_lock);
+
   /* Internal memory handling.  This is basically a simplified thread-local
      reimplementation of obstacks.  Unfortunately the standard obstack
      implementation is not usable in libraries.  */
