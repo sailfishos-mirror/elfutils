@@ -29,6 +29,14 @@
 #ifndef LOCKS_H
 #define LOCKS_H     1
 
+#if USE_VG_ANNOTATIONS == 1
+# include <valgrind/helgrind.h>
+#else
+# define ANNOTATE_HAPPENS_BEFORE(X)
+# define ANNOTATE_HAPPENS_AFTER(X)
+# define VALGRIND_HG_DISABLE_CHECKING(X, Y)
+#endif
+
 #ifdef USE_LOCKS
 # include <pthread.h>
 # include <assert.h>

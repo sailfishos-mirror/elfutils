@@ -426,13 +426,13 @@ AC_ARG_WITH([valgrind],
 AS_HELP_STRING([--with-valgrind],[include directory for Valgrind headers]),
 [with_valgrind_headers=$withval], [with_valgrind_headers=no])
 if test "x$with_valgrind_headers" != xno; then
-    save_CFLAGS="$CFLAGS"
-    CFLAGS="$CFLAGS -I$with_valgrind_headers"
+    save_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS -I$with_valgrind_headers"
     AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
       #include <valgrind/valgrind.h>
       int main() { return 0; }
     ]])], [ HAVE_VALGRIND_HEADERS="yes"
-            CFLAGS="$save_CFLAGS -I$with_valgrind_headers" ],
+            CPPFLAGS="$save_CPPFLAGS -I$with_valgrind_headers" ],
           [ AC_MSG_ERROR([invalid valgrind include directory: $with_valgrind_headers]) ])
 fi
 
@@ -454,6 +454,8 @@ if test "$use_vg_annotations" = yes; then
       ]])], [ AC_MSG_RESULT([yes]) ],
             [ AC_MSG_ERROR([valgrind annotations requested but no headers are available]) ])
     fi
+    AC_DEFINE([USE_VG_ANNOTATIONS], [1],
+	      [Defined if valgrind annotations are enabled.])
 fi
 AM_CONDITIONAL(USE_VG_ANNOTATIONS, test "$use_vg_annotations" = yes)
 
@@ -1093,6 +1095,7 @@ AC_MSG_NOTICE([
 
     CFLAGS=${CFLAGS}
     CXXFLAGS=${CXXFLAGS}
+    CPPFLAGS=${CPPFLAGS}
 
   RECOMMENDED FEATURES (should all be yes)
     gzip support                       : ${with_zlib}
