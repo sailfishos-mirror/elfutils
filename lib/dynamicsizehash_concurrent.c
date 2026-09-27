@@ -99,6 +99,9 @@ insert_helper (NAME *htab, HASHTYPE hval, TYPE val)
 
       if (val_ptr == NULL)
         {
+          ANNOTATE_HAPPENS_BEFORE (&htab->table[idx].hashval);
+          VALGRIND_HG_DISABLE_CHECKING (&htab->table[idx].hashval,
+                                        sizeof (htab->table[idx].hashval));
           atomic_store_explicit(&htab->table[idx].hashval, hval,
                                 memory_order_release);
           return 0;
@@ -141,6 +144,10 @@ insert_helper (NAME *htab, HASHTYPE hval, TYPE val)
 
           if (val_ptr == NULL)
             {
+              ANNOTATE_HAPPENS_BEFORE (&htab->table[idx].hashval);
+              VALGRIND_HG_DISABLE_CHECKING (&htab->table[idx].hashval,
+                                            sizeof (htab->table[idx]
+                                                    .hashval));
               atomic_store_explicit(&htab->table[idx].hashval, hval,
                                     memory_order_release);
               return 0;
@@ -207,10 +214,12 @@ static void resize_helper(NAME *htab, int blocking)
       num_finished_blocks++;
     }
 
+  ANNOTATE_HAPPENS_BEFORE (&htab->num_initialized_blocks);
   atomic_fetch_add_explicit(&htab->num_initialized_blocks,
                             num_finished_blocks, memory_order_release);
   while (atomic_load_explicit(&htab->num_initialized_blocks,
                               memory_order_acquire) != num_new_blocks);
+  ANNOTATE_HAPPENS_AFTER (&htab->num_initialized_blocks);
 
   /* All block are initialized, start moving */
   num_finished_blocks = 0;
@@ -242,14 +251,18 @@ static void resize_helper(NAME *htab, int blocking)
       num_finished_blocks++;
     }
 
+  ANNOTATE_HAPPENS_BEFORE (&htab->num_moved_blocks);
   atomic_fetch_add_explicit(&htab->num_moved_blocks, num_finished_blocks,
                             memory_order_release);
 
   /* The coordinating thread will block here waiting for all blocks to
      be moved.  */
   if (blocking)
+    {
       while (atomic_load_explicit(&htab->num_moved_blocks,
                                   memory_order_acquire) != num_old_blocks);
+      ANNOTATE_HAPPENS_AFTER (&htab->num_moved_blocks);
+    }
 }
 
 /* Called by the main thread holding the htab->resize_rwl lock to
@@ -258,6 +271,8 @@ static void resize_helper(NAME *htab, int blocking)
 static void
 resize_coordinator(NAME *htab)
 {
+  ANNOTATE_HAPPENS_AFTER (htab);
+
   htab->old_size = htab->size;
   htab->old_table = htab->table;
 
@@ -266,6 +281,7 @@ resize_coordinator(NAME *htab)
   assert(htab->table);
 
   /* Change state from ALLOCATING_MEMORY to MOVING_DATA */
+  ANNOTATE_HAPPENS_BEFORE (&htab->resizing_state);
   atomic_fetch_xor_explicit(&htab->resizing_state,
                             ALLOCATING_MEMORY ^ MOVING_DATA,
                             memory_order_release);
@@ -279,6 +295,7 @@ resize_coordinator(NAME *htab)
   while (GET_ACTIVE_WORKERS(resize_state) != 0)
       resize_state = atomic_load_explicit(&htab->resizing_state,
                                           memory_order_acquire);
+  ANNOTATE_HAPPENS_AFTER (&htab->resizing_state);
 
   /* There are no more active workers */
   atomic_store_explicit(&htab->next_init_block, 0, memory_order_relaxed);
@@ -325,6 +342,7 @@ resize_worker(NAME *htab)
   while (GET_STATE(resize_state) == ALLOCATING_MEMORY)
       resize_state = atomic_load_explicit(&htab->resizing_state,
                                           memory_order_acquire);
+  ANNOTATE_HAPPENS_AFTER (&htab->resizing_state);
 
   /* Check if the resize is done */
   assert(GET_STATE(resize_state) != NO_RESIZING);
@@ -338,6 +356,7 @@ resize_worker(NAME *htab)
   resize_helper(htab, 0);
 
   /* Deregister worker */
+  ANNOTATE_HAPPENS_BEFORE (&htab->resizing_state);
   atomic_fetch_sub_explicit(&htab->resizing_state, STATE_INCREMENT,
                             memory_order_release);
 }
@@ -374,6 +393,8 @@ INIT(NAME) (NAME *htab, size_t init_size)
       atomic_init(&htab->table[i].hashval, (uintptr_t) NULL);
       atomic_init(&htab->table[i].val_ptr, (uintptr_t) NULL);
     }
+
+  ANNOTATE_HAPPENS_BEFORE (htab);
 
   return 0;
 }
