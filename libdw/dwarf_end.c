@@ -135,6 +135,7 @@ dwarf_end (Dwarf *dwarf)
       pthread_rwlock_destroy (&dwarf->mem_rwl);
       mutex_fini (dwarf->dwarf_lock);
       mutex_fini (dwarf->macro_lock);
+      mutex_fini (dwarf->dwp_lock);
 
       /* Free the pubnames helper structure.  */
       free (dwarf->pubnames_sets);
