@@ -50,8 +50,6 @@ elf_getscn (Elf *elf, size_t idx)
       return NULL;
     }
 
-  rwlock_rdlock (elf->lock);
-
   Elf_Scn *result = NULL;
 
   /* Find the section in the list.  */
@@ -63,39 +61,51 @@ elf_getscn (Elf *elf, size_t idx)
   /* Section zero is special.  It always exists even if there is no
      "first" section.  And it is needed to store "overflow" values
      from the Elf header.  */
-  if (idx == 0 && runp->cnt == 0 && runp->max > 0)
+  if (idx == 0 && atomic_load_acquire (&runp->cnt) == 0 && runp->max > 0)
     {
-      Elf_Scn *scn0 = &runp->data[0];
-      if (elf->class == ELFCLASS32)
+      rwlock_wrlock (elf->lock);
+
+      /* Check whether section zero was set up before this thread acquired
+	 the wrlock.  */
+      if (runp->cnt == 0)
 	{
-	  scn0->shdr.e32 = calloc (1, sizeof (Elf32_Shdr));
-	  if (scn0->shdr.e32 == NULL)
+	  Elf_Scn *scn0 = &runp->data[0];
+	  if (elf->class == ELFCLASS32)
 	    {
-	      __libelf_seterrno (ELF_E_NOMEM);
-	      goto out;
+	      scn0->shdr.e32 = calloc (1, sizeof (Elf32_Shdr));
+	      if (scn0->shdr.e32 == NULL)
+		{
+		  __libelf_seterrno (ELF_E_NOMEM);
+		  rwlock_unlock (elf->lock);
+		  return NULL;
+		}
 	    }
-	}
-      else
-	{
-	  scn0->shdr.e64 = calloc (1, sizeof (Elf64_Shdr));
-	  if (scn0->shdr.e64 == NULL)
+	  else
 	    {
-	      __libelf_seterrno (ELF_E_NOMEM);
-	      goto out;
+	      scn0->shdr.e64 = calloc (1, sizeof (Elf64_Shdr));
+	      if (scn0->shdr.e64 == NULL)
+		{
+		  __libelf_seterrno (ELF_E_NOMEM);
+		  rwlock_unlock (elf->lock);
+		  return NULL;
+		}
 	    }
+
+	  scn0->elf = elf;
+	  scn0->shdr_flags = ELF_F_DIRTY | ELF_F_MALLOCED;
+	  scn0->list = elf->state.elf.scns_last;
+	  scn0->data_read = 1;
+	  atomic_store_release (&runp->cnt, 1);
 	}
-      scn0->elf = elf;
-      scn0->shdr_flags = ELF_F_DIRTY | ELF_F_MALLOCED;
-      scn0->list = elf->state.elf.scns_last;
-      scn0->data_read = 1;
-      runp->cnt = 1;
+
+      rwlock_unlock (elf->lock);
     }
 
   while (1)
     {
       if (idx < runp->max)
 	{
-	  if (idx < runp->cnt)
+	  if (idx < atomic_load_acquire (&runp->cnt))
 	    result = &runp->data[idx];
 	  else
 	    __libelf_seterrno (ELF_E_INVALID_INDEX);
@@ -111,9 +121,6 @@ elf_getscn (Elf *elf, size_t idx)
 	  break;
 	}
     }
-
- out:
-  rwlock_unlock (elf->lock);
 
   return result;
 }
