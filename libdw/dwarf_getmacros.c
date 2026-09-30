@@ -330,14 +330,11 @@ cache_op_table (Dwarf *dbg, int sec_index, Dwarf_Off macoff,
 		Dwarf_Die *cudie)
 {
   Dwarf_Macro_Op_Table fake = { .offset = macoff, .sec_index = sec_index };
-  Dwarf_Macro_Op_Table **found = eu_tfind (&fake, &dbg->macro_ops_tree,
-					macro_op_compare);
-  if (found != NULL)
-    return *found;
 
   mutex_lock (dbg->macro_lock);
 
-  found = eu_tfind_nolock (&fake, &dbg->macro_ops_tree, macro_op_compare);
+  Dwarf_Macro_Op_Table **found = eu_tfind_nolock (&fake, &dbg->macro_ops_tree,
+						  macro_op_compare);
   if (found != NULL)
     {
       mutex_unlock (dbg->macro_lock);
