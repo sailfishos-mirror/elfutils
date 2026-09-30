@@ -107,18 +107,26 @@ __libdw_getabbrev (Dwarf *dbg, struct Dwarf_CU *cu, Dwarf_Off offset,
 	goto out;
     }
 
-  /* If there is already a value in the hash table we are going to
-     overwrite its content.  This must not be a problem, since the
-     content better be the same.  */
-  abb->code = code;
   if (abbrevp >= end)
     goto invalid;
-  get_uleb128 (abb->tag, abbrevp, end);
+
+  unsigned int tag;
+  get_uleb128 (tag, abbrevp, end);
+
   if (abbrevp + 1 >= end)
     goto invalid;
-  abb->has_children = *abbrevp++ == DW_CHILDREN_yes;
-  abb->attrp = (unsigned char *) abbrevp;
-  abb->offset = offset;
+
+  bool has_children = *abbrevp++ == DW_CHILDREN_yes;
+
+  /* Set the entry's fields if it was just allocated.  */
+  if (! foundit)
+    {
+      abb->code = code;
+      abb->tag = tag;
+      abb->has_children = has_children;
+      abb->attrp = (unsigned char *) abbrevp;
+      abb->offset = offset;
+    }
 
   /* Skip over all the attributes and check rest of the abbrev is valid.  */
   unsigned int attrname;
