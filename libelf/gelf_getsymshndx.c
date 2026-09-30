@@ -58,8 +58,6 @@ gelf_getsymshndx (Elf_Data *symdata, Elf_Data *shndxdata, int ndx,
       return NULL;
     }
 
-  rwlock_rdlock (symdata_scn->s->elf->lock);
-
   /* The user is not required to pass a data descriptor for an extended
      section index table.  */
   if (likely (shndxdata_scn != NULL))
@@ -67,7 +65,7 @@ gelf_getsymshndx (Elf_Data *symdata, Elf_Data *shndxdata, int ndx,
       if (INVALID_NDX (ndx, Elf32_Word, &shndxdata_scn->d))
 	{
 	  __libelf_seterrno (ELF_E_INVALID_INDEX);
-	  goto out;
+	  return NULL;
 	}
 
       shndx = ((Elf32_Word *) shndxdata_scn->d.d_buf)[ndx];
@@ -87,7 +85,7 @@ gelf_getsymshndx (Elf_Data *symdata, Elf_Data *shndxdata, int ndx,
       if (INVALID_NDX (ndx, Elf32_Sym, symdata))
 	{
 	  __libelf_seterrno (ELF_E_INVALID_INDEX);
-	  goto out;
+	  return NULL;
 	}
 
       src = &((Elf32_Sym *) symdata->d_buf)[ndx];
@@ -116,7 +114,7 @@ gelf_getsymshndx (Elf_Data *symdata, Elf_Data *shndxdata, int ndx,
       if (INVALID_NDX (ndx, GElf_Sym, symdata))
 	{
 	  __libelf_seterrno (ELF_E_INVALID_INDEX);
-	  goto out;
+	  return NULL;
 	}
 
       *dst = ((GElf_Sym *) symdata->d_buf)[ndx];
@@ -127,9 +125,6 @@ gelf_getsymshndx (Elf_Data *symdata, Elf_Data *shndxdata, int ndx,
     *dstshndx = shndx;
 
   result = dst;
-
- out:
-  rwlock_unlock (symdata_scn->s->elf->lock);
 
   return result;
 }
