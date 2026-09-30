@@ -58,8 +58,9 @@ elfw2(LIBELFBITS,offscn) (Elf *elf, ElfW2(LIBELFBITS,Off) offset)
 
   /* If we have not looked at section headers before,
      we might need to read them in first.  */
-  if (runp->cnt > 0
-      && unlikely (runp->data[0].shdr.ELFW(e,LIBELFBITS) == NULL)
+  if (atomic_load_acquire (&runp->cnt) > 0
+      && unlikely (atomic_load_acquire (&runp->data[0].shdr.ELFW(e,LIBELFBITS))
+		   == NULL)
       && unlikely (elfw2(LIBELFBITS,getshdr) (&runp->data[0]) == NULL))
     return NULL;
 
