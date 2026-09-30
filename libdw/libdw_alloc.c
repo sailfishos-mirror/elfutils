@@ -36,12 +36,6 @@
 #include "libdwP.h"
 #include "system.h"
 #include <stdatomic.h>
-#if USE_VG_ANNOTATIONS == 1
-#include <helgrind.h>
-#else
-#define ANNOTATE_HAPPENS_BEFORE(X)
-#define ANNOTATE_HAPPENS_AFTER(X)
-#endif
 
 #define THREAD_ID_UNSET ((size_t) -1)
 static __thread size_t thread_id = THREAD_ID_UNSET;
