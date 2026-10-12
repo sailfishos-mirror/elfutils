@@ -42,8 +42,9 @@
 static const Ebl_Register_Location prstatus_regs[] =
   {
     { .offset = 0, .regno = 0, .count = 31, .bits = 64 }, /* r0-r30 */
-    { .offset = 32 * 8, .regno = 64, .count = 1, .bits = 64 }, /* pc */
-    { .offset = 33 * 8, .regno = 66, .count = 1, .bits = 64 }, /* unique */
+    { .offset = 31 * 8, .regno = 64, .count = 1, .bits = 64,
+      .pc_register = true }, /* pc */
+    { .offset = 32 * 8, .regno = 66, .count = 1, .bits = 64 }, /* unique */
   };
 #define PRSTATUS_REGS_SIZE	(33 * 8)
 
