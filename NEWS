@@ -1,3 +1,7 @@
+Version 0.197
+
+backends: Add unwinding support for alpha core files and processes.
+
 Version 0.196 "Split Personality"
 
 debuginfod: The $DEBUGINFOD_TIMEOUT environment variable is now enforced

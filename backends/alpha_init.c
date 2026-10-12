@@ -62,6 +62,7 @@ alpha_init (Elf *elf __attribute__ ((unused)),
      DWARF_ALT_FRAME_RETURN_COLUMN and glibc's signal trampolines use
      as the return address column.  */
   eh->frame_nregs = 65;
+  HOOK (eh, set_initial_registers_tid);
   eh->sysvhash_entrysize = sizeof (Elf64_Xword);
 
   return eh;
