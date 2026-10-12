@@ -53,7 +53,7 @@ x86_64_SRCS = x86_64_init.c x86_64_symbol.c x86_64_corenote.c x86_64_cfi.c \
 ia64_SRCS = ia64_init.c ia64_symbol.c ia64_regs.c ia64_retval.c
 
 alpha_SRCS = alpha_init.c alpha_symbol.c alpha_retval.c alpha_regs.c \
-	     alpha_corenote.c alpha_auxv.c
+	     alpha_corenote.c alpha_auxv.c alpha_cfi.c
 
 arm_SRCS = arm_init.c arm_symbol.c arm_regs.c arm_corenote.c \
 	   arm_auxv.c arm_attrs.c arm_retval.c arm_cfi.c arm_initreg.c \

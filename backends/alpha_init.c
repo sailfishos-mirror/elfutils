@@ -57,6 +57,11 @@ alpha_init (Elf *elf __attribute__ ((unused)),
   HOOK (eh, register_info);
   HOOK (eh, core_note);
   HOOK (eh, auxv_info);
+  HOOK (eh, abi_cfi);
+  /* $0-$31, $f0-$f31, and column 64 for the PC, which gcc's
+     DWARF_ALT_FRAME_RETURN_COLUMN and glibc's signal trampolines use
+     as the return address column.  */
+  eh->frame_nregs = 65;
   eh->sysvhash_entrysize = sizeof (Elf64_Xword);
 
   return eh;
