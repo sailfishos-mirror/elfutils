@@ -71,6 +71,8 @@ dwflst_arch_from_uname (const char *umachine)
     return EM_AARCH64;
   else if (strncmp(umachine, "armv7l", 6) == 0)
     return EM_ARM;
+  else if (strncmp(umachine, "alpha", 5) == 0)
+    return EM_ALPHA;
   /* XXX Other architectures not yet supported. */
   return EM_NONE;
 }
@@ -87,6 +89,9 @@ dwflst_arch_expected_frame_nregs (GElf_Half machine)
     return 14;
   if (machine == EM_ARM)
     return 16;
+  /* On alpha, expect everything the kernel can sample:  */
+  if (machine == EM_ALPHA)
+    return 25;
   /* On x86, expect everything except FLAGS:  */
   if (machine == EM_X86_64 || machine == EM_386)
     /* XXX An external user of the library can't access the Ebl, hence
@@ -112,6 +117,8 @@ dwflst_arch_sp_dwarf_reg (GElf_Half machine, bool force_abi32)
     return 13;
   case EM_AARCH64:
     return force_abi32 ? 13 : 31;
+  case EM_ALPHA:
+    return 30;
   default:
     /* XXX Other architectures are not supported yet.  */
     return -1;
@@ -130,6 +137,9 @@ dwflst_arch_sp_perf_reg (GElf_Half machine,
   else if (machine == EM_ARM || machine == EM_AARCH64)
     sp_perf_index = (is_abi32 ? 13 : 31);
     /* basic linear mapping of perf_regs<->dwarf_regs */
+  else if (machine == EM_ALPHA)
+    sp_perf_index = 30;
+    /* PERF_REG_ALPHA_SP */
   else
     /* XXX Other architectures are not supported yet.  */
     return -1;

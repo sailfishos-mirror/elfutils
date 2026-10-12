@@ -37,6 +37,10 @@
 /* || defined(other_architecture)... */
 # include <asm/perf_regs.h>
 #endif
+/* Alpha's asm/perf_regs.h is only in newer kernel headers.  */
+#if defined(__alpha__) && defined(HAVE_ASM_PERF_REGS_H)
+# include <asm/perf_regs.h>
+#endif
 #endif
 
 #if defined(_ASM_X86_PERF_REGS_H)
@@ -99,6 +103,18 @@
    different arch, we can't unwind aarch64 perf sample frames.  */
 #define PERF_FRAME_REGISTERS_AARCH64 0
 #endif /* _ASM_ARM64_PERF_REGS_H */
+
+#if defined(_ASM_ALPHA_PERF_REGS_H)
+/* Everything the kernel can sample.  The callee-saved $9-$15 are not
+   in pt_regs.  */
+#define PERF_FRAME_REGISTERS_ALPHA (((1ULL << PERF_REG_ALPHA_MAX) - 1) \
+  & ~(0x7fULL << PERF_REG_ALPHA_R9))
+/* Register ordering defined in linux arch/alpha/include/uapi/asm/perf_regs.h.  */
+#else
+/* Since asm/perf_regs.h is absent, or gives the register layout for a
+   different arch, we can't unwind alpha perf sample frames.  */
+#define PERF_FRAME_REGISTERS_ALPHA 0
+#endif /* _ASM_ALPHA_PERF_REGS_H */
 
 static inline bool
 generic_sample_sp_pc (const Dwarf_Word *regs, uint32_t n_regs,

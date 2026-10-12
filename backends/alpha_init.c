@@ -34,6 +34,7 @@
 #define BACKEND		alpha_
 #define RELOC_PREFIX	R_ALPHA_
 #include "libebl_CPU.h"
+#include "libebl_PERF_FLAGS.h"
 
 /* This defines the common reloc hooks based on alpha_reloc.def.  */
 #include "common-reloc.c"
@@ -63,6 +64,10 @@ alpha_init (Elf *elf __attribute__ ((unused)),
      as the return address column.  */
   eh->frame_nregs = 65;
   HOOK (eh, set_initial_registers_tid);
+  HOOK (eh, set_initial_registers_sample);
+  HOOK (eh, sample_sp_pc);
+  /* sample_perf_regs_mapping is default ver  */
+  eh->perf_frame_regs_mask = PERF_FRAME_REGISTERS_ALPHA;
   eh->sysvhash_entrysize = sizeof (Elf64_Xword);
 
   return eh;

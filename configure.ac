@@ -937,7 +937,7 @@ AC_CHECK_HEADERS([perfmon/pfmlib_perf_event.h])
 AM_CONDITIONAL([HAVE_LIBPFM], [test "x${ac_cv_header_perfmon_pfmlib_perf_event_h}" = "xyes" ])
 AC_CHECK_LIB(pfm, pfm_get_os_event_encoding, [AC_SUBST(libpfm_LIBS, '-lpfm')])
 # required:
-AC_CHECK_HEADERS([linux/perf_event.h])
+AC_CHECK_HEADERS([linux/perf_event.h asm/perf_regs.h])
 AC_CHECK_MEMBER([struct perf_event_attr.build_id],
   [have_perf_event_attr_build_id=yes],
   [have_perf_event_attr_build_id=no],
@@ -956,6 +956,10 @@ AS_IF([test "x$HAVE_CXX20" = "xyes"], [
 case $host_cpu in
   i?86|x86_64|amd64|arm*|aarch64*)
     stackprof_arch_supported=yes
+    ;;
+  alpha*)
+    # Alpha's <asm/perf_regs.h> is only in newer kernel headers.
+    stackprof_arch_supported=${ac_cv_header_asm_perf_regs_h}
     ;;
   *)
     stackprof_arch_supported=no
