@@ -12326,19 +12326,26 @@ print_cu_index_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
   const unsigned char *hash_table = readp;
   /* Indices (which slot is used for each hash id entry) start after
      the hash table (ids of 8 bytes).  */
-  const unsigned char *indices = hash_table + slot_count * 8;
+  const unsigned char *indices = hash_table + (size_t) slot_count * 8;
   /* Sections used starts after the indices, indices and hash table
      have the same number of slots, indices are 4 bytes each, */
-  const unsigned char *sections = indices + slot_count * 4;
-  /* Offset slots for each section follow the one row of sections.  */
-  const unsigned char *offsets = sections + section_count * 4;
+  const unsigned char *sections = indices + (size_t) slot_count * 4;
+  /* Offset slots for each section follow the one row of sections.
+     NB: the counts are 32-bit, so compute the extents in size_t.
+     Done in 32-bit arithmetic (as before) a large section_count
+     wraps around, producing a small offsets/lengths that wrongly
+     passes the dataend checks below, while the print loops index
+     with size_t and read far past the end of the section.  */
+  const unsigned char *offsets = sections + (size_t) section_count * 4;
   /* Size slots for each section follow the offsets (used rows).  */
   const unsigned char *lengths = (offsets +
-				  unit_count * section_count * off_bytes);
+				  (size_t) unit_count * section_count
+				  * off_bytes);
   /* The size table has one row of section_count slots per unit,
      just like the offset table, so it spans unit_count rows (not one).  */
   const unsigned char *lengths_end = (lengths +
-				      unit_count * section_count * off_bytes);
+				      (size_t) unit_count * section_count
+				      * off_bytes);
 
   /* Sanity check the above against dataend.  */
   if ((slot_count > UINT32_MAX / 8)
@@ -12348,6 +12355,8 @@ print_cu_index_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
       || ((section_count != 0) && (unit_count > SIZE_MAX / section_count))
       || ((unit_count != 0)
 	  && (section_count > SIZE_MAX / (4 * (size_t) unit_count)))
+      || ((unit_count != 0)
+	  && (section_count > SIZE_MAX / off_bytes / unit_count))
       || (indices > dataend)
       || (sections > dataend)
       || (offsets > dataend)
@@ -12387,7 +12396,7 @@ print_cu_index_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	    }
 	  /* Note row is one based, not zero based.  */
 	  const unsigned char *prow = (offsets
-				       + ((row - 1) * section_count
+				       + ((size_t) (row - 1) * section_count
 					  * off_bytes));
 	  if (off_bytes == 4)
 	    for (size_t j = 0; j < section_count; j++)
@@ -12437,7 +12446,8 @@ print_cu_index_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	    }
 	  /* Note row is one based, not zero based.  */
 	  const unsigned char *prow = (lengths
-				       + (row - 1) * section_count * off_bytes);
+				       + (size_t) (row - 1) * section_count
+				       * off_bytes);
 	  if (off_bytes == 4)
 	    for (size_t j = 0; j < section_count; j++)
 	      {
