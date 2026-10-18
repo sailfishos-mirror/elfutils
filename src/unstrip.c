@@ -1779,7 +1779,8 @@ more sections in stripped file than debug file -- arguments reversed?"));
 
 	    Elf_Data *shndxdata = NULL;	/* XXX */
 
-	    if (shdr_mem.sh_entsize == 0 || shdr_mem.sh_size < shdr_mem.sh_entsize)
+	    if (shdr_mem.sh_entsize == 0
+		|| shdr_mem.sh_size < shdr_mem.sh_entsize)
 	      error_exit (0,
 			  _("SYMTAB section cannot have zero sh_entsize"
 			    " or a sh_size smaller than sh_entsize"));
@@ -1848,7 +1849,8 @@ more sections in stripped file than debug file -- arguments reversed?"));
       /* Merge the stripped file's symbol table into the unstripped one.  */
       if (stripped_symtab != NULL
 	  && (stripped_symtab->shdr.sh_entsize == 0
-	      || stripped_symtab->shdr.sh_size < stripped_symtab->shdr.sh_entsize))
+	      || (stripped_symtab->shdr.sh_size
+		  < stripped_symtab->shdr.sh_entsize)))
 	error_exit (0,
 		    _("stripped SYMTAB section cannot have zero sh_entsize"
 		      " or a sh_size smaller than sh_entsize"));
