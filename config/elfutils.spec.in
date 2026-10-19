@@ -382,6 +382,24 @@ exit 0
 %systemd_postun_with_restart debuginfod.service
 
 %changelog
+* Mon Oct 19 2026 Aaron Merey <amerey@redhat.com> 0.197-1
+- THREAD-SAFETY: New document describing the thread safety model for
+  elfutils libraries when built with --enable-thread-safety.  Thread
+  safety support remains experimental.
+- backends: Add unwinding support for alpha core files and processes.
+- libdebuginfod: The progress callback function is now also invoked
+  when waiting for a server's initial response.
+- libdw: dwarf_begin_elf_type is now exported from libdw.so.
+  Previously this function was missing from the exported symbols.
+- libelf: Improved handling of corrupt ZSTD compression headers.
+- readelf: Improved handling of corrupt .gdb_index and .debug_cu_index
+  sections.
+- translations: New Swedish translation.
+- unstrip: Improved handling of corrupt symbol tables.  When -m is
+  given, the -d output path is now built from the module basename to
+  avoid writing the reconstructed module image outside the intended
+  output directory.
+
 * Fri Aug 14 2026 Aaron Merey <amerey@redhat.com> 0.196-1
 - debuginfod: The $DEBUGINFOD_TIMEOUT environment variable is now
   enforced when establishing a connection to a server.

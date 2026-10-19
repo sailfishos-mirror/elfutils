@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: elfutils\n"
 "Report-Msgid-Bugs-To: https://sourceware.org/bugzilla/\n"
-"POT-Creation-Date: 2026-08-14 07:07-0400\n"
+"POT-Creation-Date: 2026-10-18 19:01-0400\n"
 "PO-Revision-Date: 2020-03-28 14:59+0200\n"
 "Last-Translator: Yuri Chornoivan <yurchor@ukr.net>\n"
 "Language-Team: Ukrainian <kde-i18n-uk@kde.org>\n"
@@ -54,7 +54,7 @@ msgstr ""
 "гарантій, зокрема гарантій працездатності або придатності для певної мети.\n"
 
 #: lib/xasprintf.c:47 lib/xmalloc.c:47 lib/xmalloc.c:60 lib/xmalloc.c:72
-#: src/readelf.c:12930 src/unstrip.c:311
+#: src/readelf.c:12941 src/unstrip.c:311
 #, c-format
 msgid "memory exhausted"
 msgstr "пам’ять вичерпано"
@@ -310,7 +310,7 @@ msgstr "пропущено розділ .debug_addr"
 msgid "unknown section"
 msgstr "невідома версія"
 
-#: libdwfl/argp-std.c:45 src/stack.c:664 src/unstrip.c:2605
+#: libdwfl/argp-std.c:45 src/stack.c:664 src/unstrip.c:2615
 msgid "Input selection options:"
 msgstr "Вибір параметрів виведення даних:"
 
@@ -727,7 +727,7 @@ msgid "invalid section header"
 msgstr "некоректний заголовок розділу"
 
 #: libelf/elf_error.c:190 src/readelf.c:11032 src/readelf.c:11645
-#: src/readelf.c:11747 src/readelf.c:11936 src/readelf.c:12257
+#: src/readelf.c:11747 src/readelf.c:11936 src/readelf.c:12258
 #, c-format
 msgid "invalid data"
 msgstr "некоректні дані"
@@ -1663,7 +1663,7 @@ msgstr "Некоректне значення «%s» параметра --gaps."
 
 #: src/elfcmp.c:733 src/findtextrel.c:194 src/nm.c:363 src/ranlib.c:140
 #: src/size.c:271 src/strings.c:184 src/strip.c:1048 src/strip.c:1085
-#: src/unstrip.c:2252 src/unstrip.c:2281
+#: src/unstrip.c:2261 src/unstrip.c:2290
 #, c-format
 msgid "cannot open '%s'"
 msgstr "не вдалося відкрити «%s»"
@@ -4114,8 +4114,8 @@ msgstr "не вдалося створити дерево пошуку"
 #: src/readelf.c:1718 src/readelf.c:1867 src/readelf.c:2094 src/readelf.c:2336
 #: src/readelf.c:2532 src/readelf.c:2708 src/readelf.c:2830 src/readelf.c:3093
 #: src/readelf.c:3409 src/readelf.c:3484 src/readelf.c:3570 src/readelf.c:4167
-#: src/readelf.c:4215 src/readelf.c:4284 src/readelf.c:12739
-#: src/readelf.c:13946 src/readelf.c:14156 src/readelf.c:14224 src/size.c:396
+#: src/readelf.c:4215 src/readelf.c:4284 src/readelf.c:12750
+#: src/readelf.c:13957 src/readelf.c:14167 src/readelf.c:14235 src/size.c:396
 #: src/size.c:467 src/strip.c:1101
 #, c-format
 msgid "cannot get section header string table index"
@@ -4779,11 +4779,11 @@ msgstr "не вдалося визначити кількість розділі
 msgid "cannot get section: %s"
 msgstr "не вдалося отримати розділ: %s"
 
-#: src/readelf.c:904 src/readelf.c:1531 src/readelf.c:1749 src/readelf.c:14176
+#: src/readelf.c:904 src/readelf.c:1531 src/readelf.c:1749 src/readelf.c:14187
 #: src/unstrip.c:396 src/unstrip.c:427 src/unstrip.c:490 src/unstrip.c:622
-#: src/unstrip.c:640 src/unstrip.c:680 src/unstrip.c:897 src/unstrip.c:1263
-#: src/unstrip.c:1390 src/unstrip.c:1414 src/unstrip.c:1470 src/unstrip.c:1511
-#: src/unstrip.c:1704 src/unstrip.c:1855 src/unstrip.c:2005 src/unstrip.c:2113
+#: src/unstrip.c:640 src/unstrip.c:681 src/unstrip.c:898 src/unstrip.c:1264
+#: src/unstrip.c:1391 src/unstrip.c:1415 src/unstrip.c:1471 src/unstrip.c:1512
+#: src/unstrip.c:1705 src/unstrip.c:1863 src/unstrip.c:2014 src/unstrip.c:2122
 #, c-format
 msgid "cannot get section header: %s"
 msgstr "не вдалося отримати заголовок розділу: %s"
@@ -4794,7 +4794,7 @@ msgid "cannot get section name"
 msgstr "не вдалося отримати назву розділу"
 
 #: src/readelf.c:921 src/readelf.c:7533 src/readelf.c:11633 src/readelf.c:11736
-#: src/readelf.c:11921 src/readelf.c:12245
+#: src/readelf.c:11921 src/readelf.c:12246
 #, c-format
 msgid "cannot get %s content: %s"
 msgstr "не вдалося отримати дані %s: %s"
@@ -5150,7 +5150,7 @@ msgstr ""
 " Відображення розділів на сегмент:\n"
 "  Розділи сегмента..."
 
-#: src/readelf.c:1731 src/unstrip.c:2172 src/unstrip.c:2214 src/unstrip.c:2221
+#: src/readelf.c:1731 src/unstrip.c:2181 src/unstrip.c:2223 src/unstrip.c:2230
 #, c-format
 msgid "cannot get program header: %s"
 msgstr "не вдалося отримати заголовок програми: %s"
@@ -5200,8 +5200,8 @@ msgid "<INVALID SECTION>"
 msgstr "<НЕКОРЕКТНИЙ РОЗДІЛ>"
 
 #: src/readelf.c:1925 src/readelf.c:2840 src/readelf.c:4183 src/readelf.c:4483
-#: src/readelf.c:14048 src/readelf.c:14055 src/readelf.c:14099
-#: src/readelf.c:14106
+#: src/readelf.c:14059 src/readelf.c:14066 src/readelf.c:14110
+#: src/readelf.c:14117
 msgid "Couldn't uncompress section"
 msgstr "Не вдалося розпакувати розділ"
 
@@ -6502,7 +6502,7 @@ msgstr ""
 "\n"
 " Таблиця символів за зміщенням %#<PRIx32> містить %zu позицій:\n"
 
-#: src/readelf.c:12196
+#: src/readelf.c:12197
 #, fuzzy, c-format
 #| msgid ""
 #| "\n"
@@ -6514,17 +6514,17 @@ msgstr ""
 "\n"
 " Таблиця символів за зміщенням %#<PRIx32> містить %zu позицій:\n"
 
-#: src/readelf.c:12208
+#: src/readelf.c:12209
 #, c-format
 msgid "Language of main: %s\n"
 msgstr ""
 
-#: src/readelf.c:12209
+#: src/readelf.c:12210
 #, c-format
 msgid "Name of main: "
 msgstr ""
 
-#: src/readelf.c:12236
+#: src/readelf.c:12237
 #, fuzzy, c-format
 #| msgid ""
 #| "\n"
@@ -6536,48 +6536,48 @@ msgstr ""
 "\n"
 "Розділ GDB [%2zu] «%s» за зміщенням %#<PRIx64> містить %<PRId64> байтів:\n"
 
-#: src/readelf.c:12267
+#: src/readelf.c:12268
 #, fuzzy, c-format
 #| msgid " Version:         %<PRId32>\n"
 msgid " Version: %8<PRId32>\n"
 msgstr " Версія:          %<PRId32>\n"
 
-#: src/readelf.c:12277
+#: src/readelf.c:12278
 #, fuzzy, c-format
 #| msgid "  unknown version, cannot parse section\n"
 msgid "unknown version, cannot parse section"
 msgstr "  невідома версія, не вдалося обробити розділ\n"
 
-#: src/readelf.c:12289
+#: src/readelf.c:12290
 #, fuzzy, c-format
 #| msgid " Offset size:   %8<PRIu8>\n"
 msgid " Offset Size: %4<PRIu8>\n"
 msgstr " Розмір зсуву:   %8<PRIu8>\n"
 
-#: src/readelf.c:12300
+#: src/readelf.c:12301
 #, fuzzy, c-format
 #| msgid " Version:         %<PRId32>\n"
 msgid " Columns: %8<PRId32>\n"
 msgstr " Версія:          %<PRId32>\n"
 
-#: src/readelf.c:12306
+#: src/readelf.c:12307
 #, fuzzy, c-format
 #| msgid "    File: %11<PRIu32>\n"
 msgid " Entries: %8<PRId32>\n"
 msgstr "    Файл: %11<PRIu32>\n"
 
-#: src/readelf.c:12312
+#: src/readelf.c:12313
 #, fuzzy, c-format
 #| msgid " symbol offset:   %#<PRIx32>\n"
 msgid " Slots:   %8<PRId32>\n"
 msgstr " зміщення символу: %#<PRIx32>\n"
 
-#: src/readelf.c:12318
+#: src/readelf.c:12319
 #, c-format
 msgid "Must have at least as many slots as entries"
 msgstr ""
 
-#: src/readelf.c:12357
+#: src/readelf.c:12367
 #, fuzzy, c-format
 #| msgid " Offset entries: %8<PRIu64>\n"
 msgid ""
@@ -6585,12 +6585,12 @@ msgid ""
 " Offset table\n"
 msgstr " Записи зміщення: %8<PRIu64>\n"
 
-#: src/readelf.c:12383 src/readelf.c:12433
+#: src/readelf.c:12393 src/readelf.c:12443
 #, c-format
 msgid "Row (%<PRIu32>) larger than unit count (%<PRIu32>)"
 msgstr ""
 
-#: src/readelf.c:12407
+#: src/readelf.c:12417
 #, fuzzy, c-format
 #| msgid ""
 #| "\n"
@@ -6602,18 +6602,18 @@ msgstr ""
 "\n"
 " Таблиця місця виклику:"
 
-#: src/readelf.c:12590
+#: src/readelf.c:12601
 #, c-format
 msgid "cannot get debug context descriptor: %s"
 msgstr "не вдалося отримати дескриптор контексту зневаджування: %s"
 
-#: src/readelf.c:12980 src/readelf.c:13606 src/readelf.c:13716
-#: src/readelf.c:13773
+#: src/readelf.c:12991 src/readelf.c:13617 src/readelf.c:13727
+#: src/readelf.c:13784
 #, c-format
 msgid "cannot convert core note data: %s"
 msgstr "не вдалося перетворити дані запису ядра: %s"
 
-#: src/readelf.c:13350
+#: src/readelf.c:13361
 #, c-format
 msgid ""
 "\n"
@@ -6622,21 +6622,21 @@ msgstr ""
 "\n"
 "%*s... <повторюється %u разів> ..."
 
-#: src/readelf.c:13852
+#: src/readelf.c:13863
 msgid "  Owner          Data size  Type\n"
 msgstr "  Власник        Розм. даних Тип\n"
 
-#: src/readelf.c:13880
+#: src/readelf.c:13891
 #, c-format
 msgid "  %-13.*s  %9<PRId32>  %s\n"
 msgstr "  %-13.*s  %9<PRId32>  %s\n"
 
-#: src/readelf.c:13932
+#: src/readelf.c:13943
 #, c-format
 msgid "cannot get content of note: %s"
 msgstr "не вдалося отримати вміст нотатки: %s"
 
-#: src/readelf.c:13965
+#: src/readelf.c:13976
 #, c-format
 msgid ""
 "\n"
@@ -6646,7 +6646,7 @@ msgstr ""
 "Розділ записів (note) [%2zu] «%s» з %<PRIu64> байтів за зміщенням "
 "%#0<PRIx64>:\n"
 
-#: src/readelf.c:13988
+#: src/readelf.c:13999
 #, c-format
 msgid ""
 "\n"
@@ -6655,7 +6655,7 @@ msgstr ""
 "\n"
 "Сегмент записів з %<PRIu64> байтів за зміщенням %#0<PRIx64>:\n"
 
-#: src/readelf.c:14035
+#: src/readelf.c:14046
 #, c-format
 msgid ""
 "\n"
@@ -6664,12 +6664,12 @@ msgstr ""
 "\n"
 "У розділі [%zu] «%s» не міститься даних для створення дампу.\n"
 
-#: src/readelf.c:14062 src/readelf.c:14113
+#: src/readelf.c:14073 src/readelf.c:14124
 #, c-format
 msgid "cannot get data for section [%zu] '%s': %s"
 msgstr "не вдалося отримати дані для розділу [%zu] «%s»: %s"
 
-#: src/readelf.c:14067
+#: src/readelf.c:14078
 #, c-format
 msgid ""
 "\n"
@@ -6678,7 +6678,7 @@ msgstr ""
 "\n"
 "Шіст. дамп розділу [%zu] «%s», %<PRIu64> байтів за зміщенням %#0<PRIx64>:\n"
 
-#: src/readelf.c:14072
+#: src/readelf.c:14083
 #, c-format
 msgid ""
 "\n"
@@ -6689,7 +6689,7 @@ msgstr ""
 "Шіст. дамп розділу [%zu] «%s», %<PRIu64> байтів (%zd нестиснено) за "
 "зміщенням %#0<PRIx64>:\n"
 
-#: src/readelf.c:14086
+#: src/readelf.c:14097
 #, c-format
 msgid ""
 "\n"
@@ -6698,7 +6698,7 @@ msgstr ""
 "\n"
 "У розділі [%zu] «%s» не міститься рядків для створення дампу.\n"
 
-#: src/readelf.c:14118
+#: src/readelf.c:14129
 #, c-format
 msgid ""
 "\n"
@@ -6707,7 +6707,7 @@ msgstr ""
 "\n"
 "Розділ рядків [%zu] «%s» містить %<PRIu64> байтів за зміщенням %#0<PRIx64>:\n"
 
-#: src/readelf.c:14123
+#: src/readelf.c:14134
 #, c-format
 msgid ""
 "\n"
@@ -6718,7 +6718,7 @@ msgstr ""
 "Рядок розділу [%zu] «%s» містить %<PRIu64> байти (%zd нестиснено) на "
 "зміщенні %#0<PRIx64>:\n"
 
-#: src/readelf.c:14171
+#: src/readelf.c:14182
 #, c-format
 msgid ""
 "\n"
@@ -6727,7 +6727,7 @@ msgstr ""
 "\n"
 "розділу [%lu] не існує"
 
-#: src/readelf.c:14201
+#: src/readelf.c:14212
 #, c-format
 msgid ""
 "\n"
@@ -6736,12 +6736,12 @@ msgstr ""
 "\n"
 "розділу «%s» не існує"
 
-#: src/readelf.c:14256
+#: src/readelf.c:14267
 #, c-format
 msgid "cannot get symbol index of archive '%s': %s"
 msgstr "не вдалося отримати покажчик символів архіву «%s»: %s"
 
-#: src/readelf.c:14259
+#: src/readelf.c:14270
 #, c-format
 msgid ""
 "\n"
@@ -6750,7 +6750,7 @@ msgstr ""
 "\n"
 "У архіві «%s» немає покажчика символів\n"
 
-#: src/readelf.c:14263
+#: src/readelf.c:14274
 #, c-format
 msgid ""
 "\n"
@@ -6759,12 +6759,12 @@ msgstr ""
 "\n"
 "Покажчик архіву «%s» містить %zu записів:\n"
 
-#: src/readelf.c:14281
+#: src/readelf.c:14292
 #, c-format
 msgid "cannot extract member at offset %zu in '%s': %s"
 msgstr "не вдалося видобути елемент за зміщенням %zu у «%s»: %s"
 
-#: src/readelf.c:14286
+#: src/readelf.c:14297
 #, c-format
 msgid "Archive member '%s' contains:\n"
 msgstr "Елемент архіву «%s» містить:\n"
@@ -7577,7 +7577,7 @@ msgstr "не вдалося створити заголовок ELF: %s"
 msgid "cannot get shdrstrndx:%s"
 msgstr "не вдалося отримати shdrstrndx:%s"
 
-#: src/unstrip.c:243 src/unstrip.c:2143
+#: src/unstrip.c:243 src/unstrip.c:2152
 #, c-format
 msgid "cannot get ELF header: %s"
 msgstr "не вдалося отримати заголовок ELF: %s"
@@ -7597,12 +7597,12 @@ msgstr "неможливо оновити новий нульовий розді
 msgid "cannot copy ELF header: %s"
 msgstr "не вдалося скопіювати заголовок ELF: %s"
 
-#: src/unstrip.c:264 src/unstrip.c:2161 src/unstrip.c:2204
+#: src/unstrip.c:264 src/unstrip.c:2170 src/unstrip.c:2213
 #, c-format
 msgid "cannot get number of program headers: %s"
 msgstr "не вдалося отримати кількість заголовків програми: %s"
 
-#: src/unstrip.c:269 src/unstrip.c:2165
+#: src/unstrip.c:269 src/unstrip.c:2174
 #, c-format
 msgid "cannot create program headers: %s"
 msgstr "не вдалося створити заголовки програми: %s"
@@ -7617,12 +7617,12 @@ msgstr "не вдалося скопіювати заголовок програ
 msgid "cannot copy section header: %s"
 msgstr "не вдалося скопіювати заголовок розділу: %s"
 
-#: src/unstrip.c:288 src/unstrip.c:1749
+#: src/unstrip.c:288 src/unstrip.c:1750
 #, c-format
 msgid "cannot get section data: %s"
 msgstr "не вдалося отримати дані розділу: %s"
 
-#: src/unstrip.c:290 src/unstrip.c:1751
+#: src/unstrip.c:290 src/unstrip.c:1752
 #, c-format
 msgid "cannot copy section data: %s"
 msgstr "не вдалося скопіювати дані розділу: %s"
@@ -7632,14 +7632,14 @@ msgstr "не вдалося скопіювати дані розділу: %s"
 msgid "cannot create directory '%s'"
 msgstr "не вдалося створити каталог «%s»"
 
-#: src/unstrip.c:392 src/unstrip.c:666 src/unstrip.c:700 src/unstrip.c:868
-#: src/unstrip.c:1791
+#: src/unstrip.c:392 src/unstrip.c:667 src/unstrip.c:701 src/unstrip.c:869
+#: src/unstrip.c:1794
 #, c-format
 msgid "cannot get symbol table entry: %s"
 msgstr "не вдалося отримати запис таблиці символів: %s"
 
-#: src/unstrip.c:408 src/unstrip.c:669 src/unstrip.c:690 src/unstrip.c:703
-#: src/unstrip.c:1812 src/unstrip.c:2014 src/unstrip.c:2038
+#: src/unstrip.c:408 src/unstrip.c:670 src/unstrip.c:691 src/unstrip.c:704
+#: src/unstrip.c:1815 src/unstrip.c:2023 src/unstrip.c:2047
 #, c-format
 msgid "cannot update symbol table: %s"
 msgstr "не вдалося оновити таблицю символів: %s"
@@ -7674,164 +7674,188 @@ msgstr "не вдалося отримати версію символу: %s"
 msgid "unexpected section type in [%zu] with sh_link to symtab"
 msgstr "неочікуваний тип розділу у [%zu] з посиланням sh_link на symtab"
 
-#: src/unstrip.c:857
+#: src/unstrip.c:642
+msgid ""
+"Symbol table section cannot have zero sh_entsize or a sh_size smaller than "
+"sh_entsize"
+msgstr ""
+
+#: src/unstrip.c:858
 #, c-format
 msgid "cannot get symbol section data: %s"
 msgstr "не вдалося отримати дані розділу символів: %s"
 
-#: src/unstrip.c:859
+#: src/unstrip.c:860
 #, c-format
 msgid "cannot get string section data: %s"
 msgstr "не вдалося отримати дані розділу рядків: %s"
 
-#: src/unstrip.c:876
+#: src/unstrip.c:877
 #, c-format
 msgid "invalid string offset in symbol [%zu]"
 msgstr "некоректне зміщення рядка у символі [%zu]"
 
-#: src/unstrip.c:939
+#: src/unstrip.c:940
 msgid "found two identical index map positions."
 msgstr ""
 
-#: src/unstrip.c:990
+#: src/unstrip.c:991
 msgid "section symbols in unexpected order"
 msgstr ""
 
-#: src/unstrip.c:996
+#: src/unstrip.c:997
 #, fuzzy
 #| msgid "Show demangled symbols (ARG is always ignored)"
 msgid "found two identical symbols"
 msgstr "Виводити розшифровані символи (АРГ завжди ігнорується)"
 
-#: src/unstrip.c:1066 src/unstrip.c:1474
+#: src/unstrip.c:1067 src/unstrip.c:1475
 #, c-format
 msgid "cannot read section [%zu] name: %s"
 msgstr "не вдалося прочитати назву розділу [%zu]: %s"
 
-#: src/unstrip.c:1081
+#: src/unstrip.c:1082
 #, c-format
 msgid "bad sh_link for group section: %s"
 msgstr "помилкове значення sh_link для розділу груп: %s"
 
-#: src/unstrip.c:1087
+#: src/unstrip.c:1088
 #, c-format
 msgid "couldn't get shdr for group section: %s"
 msgstr "не вдалося отримати shdr для розділу груп: %s"
 
-#: src/unstrip.c:1092
+#: src/unstrip.c:1093
 #, c-format
 msgid "bad data for group symbol section: %s"
 msgstr "помилкові дані для розділу символів груп: %s"
 
-#: src/unstrip.c:1098
+#: src/unstrip.c:1099
 #, c-format
 msgid "couldn't get symbol for group section: %s"
 msgstr "не вдалося отримати символ для розділу груп: %s"
 
-#: src/unstrip.c:1103
+#: src/unstrip.c:1104
 #, c-format
 msgid "bad symbol name for group section: %s"
 msgstr "помилкова назва символу для розділу груп: %s"
 
-#: src/unstrip.c:1114 src/unstrip.c:1594
+#: src/unstrip.c:1115 src/unstrip.c:1595
 #, c-format
 msgid "cannot find matching section for [%zu] '%s'"
 msgstr "не вдалося знайти відповідний розділ для [%zu] «%s»"
 
-#: src/unstrip.c:1159 src/unstrip.c:1178 src/unstrip.c:1216
+#: src/unstrip.c:1160 src/unstrip.c:1179 src/unstrip.c:1217
 #, c-format
 msgid "cannot read '.gnu.prelink_undo' section: %s"
 msgstr "не вдалося прочитати розділ «.gnu.prelink_undo»: %s"
 
-#: src/unstrip.c:1196
+#: src/unstrip.c:1197
 #, c-format
 msgid "overflow with shnum = %zu in '%s' section"
 msgstr "переповнення з shnum = %zu у розділі «%s»"
 
-#: src/unstrip.c:1207
+#: src/unstrip.c:1208
 #, c-format
 msgid "invalid contents in '%s' section"
 msgstr "некоректний вміст розділу «%s»"
 
-#: src/unstrip.c:1378 src/unstrip.c:1394 src/unstrip.c:1675 src/unstrip.c:1973
+#: src/unstrip.c:1379 src/unstrip.c:1395 src/unstrip.c:1676 src/unstrip.c:1982
 #, c-format
 msgid "cannot add section name to string table: %s"
 msgstr "не вдалося додати назву розділу до таблиці рядків: %s"
 
-#: src/unstrip.c:1403
+#: src/unstrip.c:1404
 #, c-format
 msgid "cannot update section header string table data: %s"
 msgstr "не вдалося оновити дані заголовка розділу у таблиці рядків: %s"
 
-#: src/unstrip.c:1432 src/unstrip.c:1436
+#: src/unstrip.c:1433 src/unstrip.c:1437
 #, c-format
 msgid "cannot get section header string table section index: %s"
 msgstr ""
 "не вдалося визначити індекс розділу заголовка розділу у таблиці рядків: %s"
 
-#: src/unstrip.c:1440 src/unstrip.c:1444 src/unstrip.c:1690
+#: src/unstrip.c:1441 src/unstrip.c:1445 src/unstrip.c:1691
 #, c-format
 msgid "cannot get section count: %s"
 msgstr "не вдалося отримати кількість розділів: %s"
 
-#: src/unstrip.c:1447
+#: src/unstrip.c:1448
 msgid "more sections in stripped file than debug file -- arguments reversed?"
 msgstr ""
 "у очищеному файлі більше розділів ніж у файлі з даними для зневаджування — "
 "помилковий порядок параметрів?"
 
-#: src/unstrip.c:1451
+#: src/unstrip.c:1452
 msgid "no sections in stripped file"
 msgstr "у очищеному файлі немає розділів"
 
-#: src/unstrip.c:1499 src/unstrip.c:1609
+#: src/unstrip.c:1500 src/unstrip.c:1610
 #, c-format
 msgid "cannot read section header string table: %s"
 msgstr "не вдалося прочитати таблицю рядків заголовка розділу: %s"
 
-#: src/unstrip.c:1668
+#: src/unstrip.c:1669
 #, c-format
 msgid "cannot add new section: %s"
 msgstr "не вдалося додати новий розділ: %s"
 
-#: src/unstrip.c:1799
+#: src/unstrip.c:1785
+msgid ""
+"SYMTAB section cannot have zero sh_entsize or a sh_size smaller than "
+"sh_entsize"
+msgstr ""
+
+#: src/unstrip.c:1802
 #, c-format
 msgid "symbol [%zu] has invalid section index"
 msgstr "символ [%zu] має некоректний індекс розділу"
 
-#: src/unstrip.c:1831
+#: src/unstrip.c:1834
 #, c-format
 msgid "group has invalid section index [%zd]"
 msgstr "група містить некоректний індекс розділу [%zd]"
 
-#: src/unstrip.c:2122
+#: src/unstrip.c:1855
+msgid ""
+"stripped SYMTAB section cannot have zero sh_entsize or a sh_size smaller "
+"than sh_entsize"
+msgstr ""
+
+#: src/unstrip.c:1866
+msgid ""
+"unstripped SYMTAB section cannot have zero sh_entsize or a sh_size smaller "
+"than sh_entsize"
+msgstr ""
+
+#: src/unstrip.c:2131
 #, c-format
 msgid "cannot read section data: %s"
 msgstr "не вдалося прочитати дані розділу: %s"
 
-#: src/unstrip.c:2151
+#: src/unstrip.c:2160
 #, c-format
 msgid "cannot update ELF header: %s"
 msgstr "не вдалося оновити заголовок ELF: %s"
 
-#: src/unstrip.c:2175
+#: src/unstrip.c:2184
 #, c-format
 msgid "cannot update program header: %s"
 msgstr "не вдалося оновити заголовок програми: %s"
 
-#: src/unstrip.c:2180 src/unstrip.c:2263
+#: src/unstrip.c:2189 src/unstrip.c:2272
 #, c-format
 msgid "cannot write output file: %s"
 msgstr "не вдалося записати файл виведених даних: %s"
 
-#: src/unstrip.c:2231
+#: src/unstrip.c:2240
 #, c-format
 msgid "DWARF data not adjusted for prelinking bias; consider prelink -u"
 msgstr ""
 "Дані DWARF не скориговано відповідно до відхилення перед компонуванням; "
 "спробуйте виправити це командою prelink -u"
 
-#: src/unstrip.c:2234
+#: src/unstrip.c:2243
 #, c-format
 msgid ""
 "DWARF data in '%s' not adjusted for prelinking bias; consider prelink -u"
@@ -7839,74 +7863,74 @@ msgstr ""
 "Дані DWARF у «%s» не скориговано відповідно до відхилення перед "
 "компонуванням; спробуйте виправити це командою prelink -u"
 
-#: src/unstrip.c:2254 src/unstrip.c:2306 src/unstrip.c:2318 src/unstrip.c:2408
+#: src/unstrip.c:2263 src/unstrip.c:2315 src/unstrip.c:2327 src/unstrip.c:2417
 #, c-format
 msgid "cannot create ELF descriptor: %s"
 msgstr "не вдалося створити дескриптор ELF: %s"
 
-#: src/unstrip.c:2292
+#: src/unstrip.c:2301
 msgid "WARNING: "
 msgstr "УВАГА: "
 
-#: src/unstrip.c:2294
+#: src/unstrip.c:2303
 msgid ", use --force"
 msgstr ", скористайтеся --force"
 
-#: src/unstrip.c:2322
+#: src/unstrip.c:2331
 msgid "ELF header identification (e_ident) different"
 msgstr "Різні ідентифікатори заголовків ELF (e_ident)"
 
-#: src/unstrip.c:2326
+#: src/unstrip.c:2335
 msgid "ELF header type (e_type) different"
 msgstr "Різні типи заголовків ELF (e_type)"
 
-#: src/unstrip.c:2330
+#: src/unstrip.c:2339
 msgid "ELF header machine type (e_machine) different"
 msgstr "Різні типи архітектур заголовків ELF (e_machine)"
 
-#: src/unstrip.c:2334
+#: src/unstrip.c:2343
 msgid "stripped program header (e_phnum) smaller than unstripped"
 msgstr "очищений заголовок програми (e_phnum) є меншим за неочищений"
 
-#: src/unstrip.c:2365
+#: src/unstrip.c:2374
 #, c-format
 msgid "cannot find stripped file for module '%s': %s"
 msgstr "не вдалося знайти очищений файл для модуля «%s»: %s"
 
-#: src/unstrip.c:2369
+#: src/unstrip.c:2378
 #, c-format
 msgid "cannot open stripped file '%s' for module '%s': %s"
 msgstr "не вдалося відкрити очищений файл «%s» для модуля «%s»: %s"
 
-#: src/unstrip.c:2384
+#: src/unstrip.c:2393
 #, c-format
 msgid "cannot find debug file for module '%s': %s"
 msgstr "не вдалося знайти файл діагностичних даних для модуля «%s»: %s"
 
-#: src/unstrip.c:2388
+#: src/unstrip.c:2397
 #, c-format
 msgid "cannot open debug file '%s' for module '%s': %s"
 msgstr "не вдалося відкрити файл діагностичних даних «%s» для модуля «%s»: %s"
 
-#: src/unstrip.c:2401
+#: src/unstrip.c:2410
 #, c-format
 msgid "module '%s' file '%s' is not stripped"
 msgstr "у модулі «%s» файл «%s» не очищено strip"
 
-#: src/unstrip.c:2432
+#: src/unstrip.c:2441
 #, c-format
 msgid "cannot cache section addresses for module '%s': %s"
 msgstr "не вдалося кешувати адреси розділів для модуля «%s»: %s"
 
-#: src/unstrip.c:2560
+#: src/unstrip.c:2570
 msgid "no matching modules found"
 msgstr "відповідних модулів не виявлено"
 
-#: src/unstrip.c:2570
+#: src/unstrip.c:2580
 msgid "matched more than one module"
 msgstr "встановлено відповідність декількох модулів"
 
-#: src/unstrip.c:2615
+#: src/unstrip.c:2625
 msgid ""
 "STRIPPED-FILE DEBUG-FILE\n"
 "[MODULE...]"
@@ -7914,7 +7938,7 @@ msgstr ""
 "ОЧИЩЕНИЙ-ФАЙЛ ФАЙЛ-DEBUG\n"
 "[МОДУЛЬ...]"
 
-#: src/unstrip.c:2616
+#: src/unstrip.c:2626
 msgid ""
 "Combine stripped files with separate symbols and debug information.\n"
 "\n"
@@ -7992,7 +8016,7 @@ msgid ""
 "metadata (glob|file|buildid|KEY) (GLOB|FILENAME|BUILDID|VALUE)\n"
 msgstr ""
 
-#: tests/backtrace.c:491
+#: tests/backtrace.c:492
 msgid "Run executable"
 msgstr "Запустити виконуваний файл"
 

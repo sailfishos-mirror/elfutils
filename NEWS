@@ -1,6 +1,28 @@
-Version 0.197
+Version 0.197 "Anti-Corruption"
+
+THREAD-SAFETY: New document describing the thread safety model for elfutils
+	       libraries when built with --enable-thread-safety.  Thread
+	       safety support remains experimental.
 
 backends: Add unwinding support for alpha core files and processes.
+
+libdebuginfod: The progress callback function is now also invoked when
+	       waiting for a server's initial response.
+
+libdw: dwarf_begin_elf_type is now exported from libdw.so.  Previously
+       this function was missing from the exported symbols.
+
+libelf: Improved handling of corrupt ZSTD compression headers.
+
+readelf: Improved handling of corrupt .gdb_index and .debug_cu_index
+	 sections.
+
+translations: New Swedish translation.
+
+unstrip: Improved handling of corrupt symbol tables.  When -m is given,
+	 the -d output path is now built from the module basename to avoid
+	 writing the reconstructed module image outside the intended
+	 output directory.
 
 Version 0.196 "Split Personality"
 

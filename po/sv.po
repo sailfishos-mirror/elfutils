@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: elfutils 0.194\n"
 "Report-Msgid-Bugs-To: https://sourceware.org/bugzilla/\n"
-"POT-Creation-Date: 2026-08-14 07:07-0400\n"
+"POT-Creation-Date: 2026-10-18 19:01-0400\n"
 "PO-Revision-Date: 2026-10-03 14:53+0000\n"
 "Last-Translator: Daniel Nylander <po@danielnylander.se>\n"
 "Language-Team: \n"
@@ -49,11 +49,12 @@ msgid ""
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
 "Copyright © %s Utvecklarna av elfutils <%s>.\n"
-"Detta är fri programvara; se källkoden för kopieringsvillkor. Det finns INGEN\n"
+"Detta är fri programvara; se källkoden för kopieringsvillkor. Det finns "
+"INGEN\n"
 "garanti, inte ens för SÄLJBARHET eller LÄMPLIGHET FÖR ETT SÄRSKILT SYFTE.\n"
 
 #: lib/xasprintf.c:47 lib/xmalloc.c:47 lib/xmalloc.c:60 lib/xmalloc.c:72
-#: src/readelf.c:12930 src/unstrip.c:311
+#: src/readelf.c:12941 src/unstrip.c:311
 #, c-format
 msgid "memory exhausted"
 msgstr "minnet är slut"
@@ -304,7 +305,7 @@ msgstr "avsnittet .debug_addr saknas"
 msgid "unknown section"
 msgstr "okänt avsnitt"
 
-#: libdwfl/argp-std.c:45 src/stack.c:664 src/unstrip.c:2605
+#: libdwfl/argp-std.c:45 src/stack.c:664 src/unstrip.c:2615
 msgid "Input selection options:"
 msgstr "Flaggor för val av indata:"
 
@@ -325,8 +326,8 @@ msgid ""
 "Find addresses in files mapped as read from FILE in Linux /proc/PID/maps "
 "format"
 msgstr ""
-"Hitta adresser i filer som mappats utifrån FIL i Linux-formatet "
-"/proc/PID/maps"
+"Hitta adresser i filer som mappats utifrån FIL i Linux-formatet /proc/PID/"
+"maps"
 
 #: libdwfl/argp-std.c:54
 msgid "Find addresses in the running kernel"
@@ -717,7 +718,7 @@ msgid "invalid section header"
 msgstr "ogiltig avsnittsrubrik"
 
 #: libelf/elf_error.c:190 src/readelf.c:11032 src/readelf.c:11645
-#: src/readelf.c:11747 src/readelf.c:11936 src/readelf.c:12257
+#: src/readelf.c:11747 src/readelf.c:11936 src/readelf.c:12258
 #, c-format
 msgid "invalid data"
 msgstr "ogiltiga data"
@@ -830,8 +831,8 @@ msgstr "Visa även radtabellflaggor"
 
 #: src/addr2line.c:72
 msgid ""
-"Show all source locations that caused inline expansion of subroutines at the"
-" address."
+"Show all source locations that caused inline expansion of subroutines at the "
+"address."
 msgstr ""
 "Visa alla källpositioner som orsakade inline-expansion av subrutiner på "
 "adressen."
@@ -1270,8 +1271,8 @@ msgid ""
 "File is an ELF file with symbol table or .debug_* sections and can be "
 "stripped further"
 msgstr ""
-"Filen är en ELF-fil med symboltabell eller .debug_*-avsnitt och kan strippas"
-" ytterligare"
+"Filen är en ELF-fil med symboltabell eller .debug_*-avsnitt och kan strippas "
+"ytterligare"
 
 #: src/elfclassify.c:1010
 msgid "File is an ELF file with .debug_* sections"
@@ -1302,8 +1303,7 @@ msgid "File is a linux kernel module"
 msgstr "Filen är en Linux-kärnmodul"
 
 #: src/elfclassify.c:1027
-msgid ""
-"File is a debug only ELF file (separate .debug, .dwo or dwz multi-file)"
+msgid "File is a debug only ELF file (separate .debug, .dwo or dwz multi-file)"
 msgstr ""
 "Filen är en ELF-fil endast för felsökning (separat .debug, .dwo eller dwz-"
 "multifil)"
@@ -1337,8 +1337,8 @@ msgid ""
 "Also read file names to process from standard input, separated by ASCII NUL "
 "bytes"
 msgstr ""
-"Läs även filnamn som ska bearbetas från standardindata, separerade med "
-"ASCII-NUL-byte"
+"Läs även filnamn som ska bearbetas från standardindata, separerade med ASCII-"
+"NUL-byte"
 
 #: src/elfclassify.c:1073
 msgid "Do not read files from standard input (default)"
@@ -1346,8 +1346,7 @@ msgstr "Läs inte filer från standardindata (standard)"
 
 #: src/elfclassify.c:1075
 msgid "Try to open compressed files or embedded (kernel) ELF images"
-msgstr ""
-"Försök att öppna komprimerade filer eller inbäddade (kärn-) ELF-bilder"
+msgstr "Försök att öppna komprimerade filer eller inbäddade (kärn-) ELF-bilder"
 
 #: src/elfclassify.c:1078
 msgid "Output flags"
@@ -1395,43 +1394,91 @@ msgstr "FIL..."
 msgid ""
 "Determine the type of an ELF file.\n"
 "\n"
-"All of the classification options must apply at the same time to a particular file.  Or if --any-ar-member is given the file must be an ELF archive and the classification options must apply to at least one archive member.  Classification options can be negated using a \"--not-\" prefix.\n"
+"All of the classification options must apply at the same time to a "
+"particular file.  Or if --any-ar-member is given the file must be an ELF "
+"archive and the classification options must apply to at least one archive "
+"member.  Classification options can be negated using a \"--not-\" prefix.\n"
 "\n"
-"Since modern ELF does not clearly distinguish between programs and dynamic shared objects, you should normally use either --executable or --shared to identify the primary purpose of a file.  Only one of the --shared and --executable checks can pass for a file.\n"
+"Since modern ELF does not clearly distinguish between programs and dynamic "
+"shared objects, you should normally use either --executable or --shared to "
+"identify the primary purpose of a file.  Only one of the --shared and --"
+"executable checks can pass for a file.\n"
 "\n"
-"If you want to know whether an ELF object might a program or a shared library (but could be both), then use --program or --library. Some ELF files will classify as both a program and a library.\n"
+"If you want to know whether an ELF object might a program or a shared "
+"library (but could be both), then use --program or --library. Some ELF files "
+"will classify as both a program and a library.\n"
 "\n"
-"If you just want to know whether an ELF file is loadable (as program or library) use --loadable.  Note that files that only contain (separate) debug information (--debug-only) are never --loadable (even though they might contain program headers).  Linux kernel modules are also not --loadable (in the normal sense).\n"
+"If you just want to know whether an ELF file is loadable (as program or "
+"library) use --loadable.  Note that files that only contain (separate) debug "
+"information (--debug-only) are never --loadable (even though they might "
+"contain program headers).  Linux kernel modules are also not --loadable (in "
+"the normal sense).\n"
 "\n"
-"Detecting whether an ELF file can be stripped, because it has .[z]debug_* sections and/or a symbol table (.symtab) is done with --unstripped. To detect whether an ELF file just has .[z]debug_* sections use --has-debug-section. Use --debug-only to detect ELF files that contain only debuginfo (possibly just a .symtab), but no loadable program bits (like separate .debug files, dwz multi-files or .dwo files).\n"
+"Detecting whether an ELF file can be stripped, because it has .[z]debug_* "
+"sections and/or a symbol table (.symtab) is done with --unstripped. To "
+"detect whether an ELF file just has .[z]debug_* sections use --has-debug-"
+"section. Use --debug-only to detect ELF files that contain only debuginfo "
+"(possibly just a .symtab), but no loadable program bits (like "
+"separate .debug files, dwz multi-files or .dwo files).\n"
 "\n"
-"Without any of the --print options, the program exits with status 0 if the requested checks pass for all input files, with 1 if a check fails for any file, and 2 if there is an environmental issue (such as a file read error or a memory allocation error).\n"
+"Without any of the --print options, the program exits with status 0 if the "
+"requested checks pass for all input files, with 1 if a check fails for any "
+"file, and 2 if there is an environmental issue (such as a file read error or "
+"a memory allocation error).\n"
 "\n"
-"When printing file names, the program exits with status 0 even if no file names are printed, and exits with status 2 if there is an environmental issue.\n"
+"When printing file names, the program exits with status 0 even if no file "
+"names are printed, and exits with status 2 if there is an environmental "
+"issue.\n"
 "\n"
-"On usage error (e.g. a bad option was given), the program exits with a status code larger than 2.\n"
+"On usage error (e.g. a bad option was given), the program exits with a "
+"status code larger than 2.\n"
 "\n"
-"The --quiet or -q option suppresses some error warning output, but doesn't change the exit status."
+"The --quiet or -q option suppresses some error warning output, but doesn't "
+"change the exit status."
 msgstr ""
 "Bestäm typen av en ELF-fil.\n"
 "\n"
-"Alla klassificeringsflaggor måste gälla samtidigt för en viss fil. Om --any-ar-member anges måste filen vara ett ELF-arkiv och klassificeringsflaggorna måste gälla minst en arkivmedlem. Klassificeringsflaggor kan negeras med prefixet \"--not-\".\n"
+"Alla klassificeringsflaggor måste gälla samtidigt för en viss fil. Om --any-"
+"ar-member anges måste filen vara ett ELF-arkiv och klassificeringsflaggorna "
+"måste gälla minst en arkivmedlem. Klassificeringsflaggor kan negeras med "
+"prefixet \"--not-\".\n"
 "\n"
-"Eftersom moderna ELF-filer inte tydligt skiljer mellan program och dynamiska delade objekt bör du normalt använda antingen --executable eller --shared för att identifiera filens primära syfte. Endast en av kontrollerna --shared och --executable kan godkännas för en fil.\n"
+"Eftersom moderna ELF-filer inte tydligt skiljer mellan program och dynamiska "
+"delade objekt bör du normalt använda antingen --executable eller --shared "
+"för att identifiera filens primära syfte. Endast en av kontrollerna --shared "
+"och --executable kan godkännas för en fil.\n"
 "\n"
-"Om du vill veta om ett ELF-objekt kan vara ett program eller ett delat bibliotek, men även kan vara båda, använder du --program eller --library. Vissa ELF-filer klassificeras både som program och bibliotek.\n"
+"Om du vill veta om ett ELF-objekt kan vara ett program eller ett delat "
+"bibliotek, men även kan vara båda, använder du --program eller --library. "
+"Vissa ELF-filer klassificeras både som program och bibliotek.\n"
 "\n"
-"Om du bara vill veta om en ELF-fil är laddningsbar, som program eller bibliotek, använder du --loadable. Observera att filer som endast innehåller separat felsökningsinformation (--debug-only) aldrig är --loadable, även om de kan innehålla programhuvuden. Linux-kärnmoduler är inte heller --loadable i vanlig mening.\n"
+"Om du bara vill veta om en ELF-fil är laddningsbar, som program eller "
+"bibliotek, använder du --loadable. Observera att filer som endast innehåller "
+"separat felsökningsinformation (--debug-only) aldrig är --loadable, även om "
+"de kan innehålla programhuvuden. Linux-kärnmoduler är inte heller --loadable "
+"i vanlig mening.\n"
 "\n"
-"Om du vill upptäcka om en ELF-fil kan strippas eftersom den har .[z]debug_*-avsnitt och/eller en symboltabell (.symtab), använder du --unstripped. För att upptäcka om en ELF-fil endast har .[z]debug_*-avsnitt använder du --has-debug-section. Använd --debug-only för att upptäcka ELF-filer som endast innehåller felsökningsinformation, möjligen bara en .symtab, men inga laddningsbara programdelar, som separata .debug-filer, dwz-multifiler eller .dwo-filer.\n"
+"Om du vill upptäcka om en ELF-fil kan strippas eftersom den har .[z]debug_*-"
+"avsnitt och/eller en symboltabell (.symtab), använder du --unstripped. För "
+"att upptäcka om en ELF-fil endast har .[z]debug_*-avsnitt använder du --has-"
+"debug-section. Använd --debug-only för att upptäcka ELF-filer som endast "
+"innehåller felsökningsinformation, möjligen bara en .symtab, men inga "
+"laddningsbara programdelar, som separata .debug-filer, dwz-multifiler "
+"eller .dwo-filer.\n"
 "\n"
-"Utan något av --print-alternativen avslutas programmet med status 0 om de begärda kontrollerna godkänns för alla indatafiler, med 1 om en kontroll misslyckas för någon fil och med 2 om det finns ett miljöproblem, till exempel ett filläsningsfel eller ett minnesallokeringsfel.\n"
+"Utan något av --print-alternativen avslutas programmet med status 0 om de "
+"begärda kontrollerna godkänns för alla indatafiler, med 1 om en kontroll "
+"misslyckas för någon fil och med 2 om det finns ett miljöproblem, till "
+"exempel ett filläsningsfel eller ett minnesallokeringsfel.\n"
 "\n"
-"När filnamn skrivs ut avslutas programmet med status 0 även om inga filnamn skrivs ut och med status 2 om det finns ett miljöproblem.\n"
+"När filnamn skrivs ut avslutas programmet med status 0 även om inga filnamn "
+"skrivs ut och med status 2 om det finns ett miljöproblem.\n"
 "\n"
-"Vid användningsfel, till exempel om en felaktig flagga anges, avslutas programmet med en statuskod större än 2.\n"
+"Vid användningsfel, till exempel om en felaktig flagga anges, avslutas "
+"programmet med en statuskod större än 2.\n"
 "\n"
-"Flaggan --quiet eller -q undertrycker vissa felmeddelanden men ändrar inte avslutningsstatusen."
+"Flaggan --quiet eller -q undertrycker vissa felmeddelanden men ändrar inte "
+"avslutningsstatusen."
 
 #: src/elfcmp.c:59
 msgid "Control options:"
@@ -1464,8 +1511,7 @@ msgstr "Skriv inte ut något; returnera endast avslutningsstatus"
 #. Short description of program.
 #: src/elfcmp.c:74
 msgid "Compare relevant parts of two ELF files for equality."
-msgstr ""
-"Jämför relevanta delar av två ELF-filer för att se om de är identiska."
+msgstr "Jämför relevanta delar av två ELF-filer för att se om de är identiska."
 
 #. Strings for arguments in help texts.
 #: src/elfcmp.c:78
@@ -1586,8 +1632,7 @@ msgstr "%s %s skiljer sig åt: bygg-ID-innehåll"
 #, c-format
 msgid "%s %s differ: section [%zu] '%s' note '%s' content"
 msgstr ""
-"%s %s skiljer sig åt: avsnitt [%zu] '%s' anteckningen '%s' har annat "
-"innehåll"
+"%s %s skiljer sig åt: avsnitt [%zu] '%s' anteckningen '%s' har annat innehåll"
 
 #: src/elfcmp.c:542
 #, c-format
@@ -1631,7 +1676,7 @@ msgstr "Ogiltigt värde '%s' för parametern --gaps."
 
 #: src/elfcmp.c:733 src/findtextrel.c:194 src/nm.c:363 src/ranlib.c:140
 #: src/size.c:271 src/strings.c:184 src/strip.c:1048 src/strip.c:1085
-#: src/unstrip.c:2252 src/unstrip.c:2281
+#: src/unstrip.c:2261 src/unstrip.c:2290
 #, c-format
 msgid "cannot open '%s'"
 msgstr "kan inte öppna '%s'"
@@ -1703,10 +1748,10 @@ msgid ""
 "(.zdebug GNU style compression, 'gnu' is an alias) or 'zstd' (ELF ZSTD "
 "compression)"
 msgstr ""
-"Välj typ av komprimering. TYPE kan vara 'none' (dekomprimering), 'zlib' (ELF"
-" ZLIB-komprimering, standard; 'zlib-gabi' är ett alias), 'zlib-gnu' "
-"(.zdebug-komprimering i GNU-stil; 'gnu' är ett alias) eller 'zstd' (ELF "
-"ZSTD-komprimering)"
+"Välj typ av komprimering. TYPE kan vara 'none' (dekomprimering), 'zlib' (ELF "
+"ZLIB-komprimering, standard; 'zlib-gabi' är ett alias), 'zlib-gnu' (.zdebug-"
+"komprimering i GNU-stil; 'gnu' är ett alias) eller 'zstd' (ELF ZSTD-"
+"komprimering)"
 
 #: src/elfcompress.c:1519
 msgid ""
@@ -1722,8 +1767,8 @@ msgstr "Skriv ut ett meddelande för varje avsnitt som (av)komprimeras"
 
 #: src/elfcompress.c:1525
 msgid ""
-"Force compression of section even if it would become larger or "
-"update/rewrite the file even if no section would be (de)compressed"
+"Force compression of section even if it would become larger or update/"
+"rewrite the file even if no section would be (de)compressed"
 msgstr ""
 "Tvinga komprimering av sektionen även om den skulle bli större eller "
 "uppdatera/skriva om filen även om ingen sektion skulle (de)komprimeras"
@@ -1939,8 +1984,7 @@ msgstr ""
 #: src/elflint.c:599
 #, c-format
 msgid ""
-"section [%2d] '%s': section group [%2zu] '%s' does not precede group "
-"member\n"
+"section [%2d] '%s': section group [%2zu] '%s' does not precede group member\n"
 msgstr ""
 "sektion [%2d] '%s': sektionsgrupp [%2zu] '%s' föregår inte gruppmedlemmen\n"
 
@@ -2012,8 +2056,8 @@ msgstr "sektion [%2d] '%s': symbol %zu: ogiltigt namnvärde\n"
 #: src/elflint.c:733
 #, c-format
 msgid ""
-"section [%2d] '%s': symbol %zu (%s): too large section index but no extended"
-" section index section\n"
+"section [%2d] '%s': symbol %zu (%s): too large section index but no extended "
+"section index section\n"
 msgstr ""
 "sektion [%2d] '%s': symbol %zu (%s): för stort sektionsindex men inget "
 "utökat sektionsindexavsnitt\n"
@@ -2060,15 +2104,15 @@ msgstr ""
 
 #: src/elflint.c:782
 #, c-format
-msgid "section [%2d] '%s': symbol %zu (%s): local COMMON symbols are nonsense\n"
+msgid ""
+"section [%2d] '%s': symbol %zu (%s): local COMMON symbols are nonsense\n"
 msgstr ""
 "sektion [%2d] '%s': symbol %zu (%s): lokala COMMON-symboler är meningslösa\n"
 
 #: src/elflint.c:786
 #, c-format
 msgid ""
-"section [%2d] '%s': symbol %zu (%s): function in COMMON section is "
-"nonsense\n"
+"section [%2d] '%s': symbol %zu (%s): function in COMMON section is nonsense\n"
 msgstr ""
 "avsnitt [%2d] '%s': symbol %zu (%s): funktion i avsnittet COMMON är "
 "meningslös\n"
@@ -2076,7 +2120,8 @@ msgstr ""
 #: src/elflint.c:837
 #, c-format
 msgid "section [%2d] '%s': symbol %zu (%s): st_value out of bounds\n"
-msgstr "sektion [%2d] '%s': symbol %zu (%s): st_value-värde utanför gränserna\n"
+msgstr ""
+"sektion [%2d] '%s': symbol %zu (%s): st_value-värde utanför gränserna\n"
 
 #: src/elflint.c:843 src/elflint.c:868 src/elflint.c:917
 #, c-format
@@ -2117,8 +2162,8 @@ msgstr ""
 #: src/elflint.c:895
 #, c-format
 msgid ""
-"section [%2d] '%s': symbol %zu (%s): TLS symbol but couldn't get TLS program"
-" header entry\n"
+"section [%2d] '%s': symbol %zu (%s): TLS symbol but couldn't get TLS program "
+"header entry\n"
 msgstr ""
 "sektion [%2d] '%s': symbol %zu (%s): TLS-symbol men kunde inte hämta TLS-"
 "programhuvudposten\n"
@@ -2135,8 +2180,8 @@ msgstr ""
 #: src/elflint.c:930
 #, c-format
 msgid ""
-"section [%2d] '%s': symbol %zu (%s): local symbol outside range described in"
-" sh_info\n"
+"section [%2d] '%s': symbol %zu (%s): local symbol outside range described in "
+"sh_info\n"
 msgstr ""
 "sektion [%2d] '%s': symbol %zu (%s): lokal symbol utanför intervallet som "
 "beskrivs i sh_info\n"
@@ -2200,14 +2245,14 @@ msgid ""
 "section [%2d] '%s': _GLOBAL_OFFSET_TABLE_ symbol present, but no .got "
 "section\n"
 msgstr ""
-"sektion [%2d] '%s': _GLOBAL_OFFSET_TABLE_-symbolen finns, men .got-sektionen"
-" saknas\n"
+"sektion [%2d] '%s': _GLOBAL_OFFSET_TABLE_-symbolen finns, men .got-sektionen "
+"saknas\n"
 
 #: src/elflint.c:1048
 #, c-format
 msgid ""
-"section [%2d] '%s': _DYNAMIC_ symbol value %#<PRIx64> does not match dynamic"
-" segment address %#<PRIx64>\n"
+"section [%2d] '%s': _DYNAMIC_ symbol value %#<PRIx64> does not match dynamic "
+"segment address %#<PRIx64>\n"
 msgstr ""
 "sektion [%2d] '%s': _DYNAMIC_-symbolvärde %#<PRIx64> stämmer inte överens "
 "med det dynamiska segmentets adress %#<PRIx64>\n"
@@ -2224,11 +2269,11 @@ msgstr ""
 #: src/elflint.c:1068
 #, c-format
 msgid ""
-"section [%2d] '%s': symbol %zu (%s): symbol in dynamic symbol table with "
-"non-default visibility\n"
+"section [%2d] '%s': symbol %zu (%s): symbol in dynamic symbol table with non-"
+"default visibility\n"
 msgstr ""
-"sektion [%2d] '%s': symbol %zu (%s): symbol i dynamisk symboltabell med "
-"icke-standardiserad synlighet\n"
+"sektion [%2d] '%s': symbol %zu (%s): symbol i dynamisk symboltabell med icke-"
+"standardiserad synlighet\n"
 
 #: src/elflint.c:1072
 #, c-format
@@ -2328,8 +2373,8 @@ msgid ""
 "section [%2d] '%s': relocation %zu: only symbol '_GLOBAL_OFFSET_TABLE_' can "
 "be used with %s\n"
 msgstr ""
-"sektion [%2d] '%s': omplacering %zu: endast symbolen '_GLOBAL_OFFSET_TABLE_'"
-" kan användas med %s\n"
+"sektion [%2d] '%s': omplacering %zu: endast symbolen '_GLOBAL_OFFSET_TABLE_' "
+"kan användas med %s\n"
 
 #: src/elflint.c:1447
 #, c-format
@@ -2342,8 +2387,8 @@ msgid ""
 "section [%2d] '%s': relocation %zu: copy relocation against symbol of type "
 "%s\n"
 msgstr ""
-"sektion [%2d] '%s': omplacering %zu: kopieringsomplacering mot symbol av typ"
-" %s\n"
+"sektion [%2d] '%s': omplacering %zu: kopieringsomplacering mot symbol av typ "
+"%s\n"
 
 #: src/elflint.c:1483
 #, c-format
@@ -2372,8 +2417,8 @@ msgstr "mer än en dynamisk sektion finns\n"
 #: src/elflint.c:1709
 #, c-format
 msgid ""
-"section [%2d]: referenced as string table for section [%2d] '%s' but section"
-" link value is invalid\n"
+"section [%2d]: referenced as string table for section [%2d] '%s' but section "
+"link value is invalid\n"
 msgstr ""
 "sektion [%2d]: refereras till som strängtabell för sektion [%2d] '%s', men "
 "sektionslänkens värde är ogiltigt\n"
@@ -2427,12 +2472,13 @@ msgid ""
 "section [%2d] '%s': entry %zu: pointer does not match address of section "
 "[%2d] '%s' referenced by sh_link\n"
 msgstr ""
-"sektion [%2d] '%s': post %zu: pekaren stämmer inte överens med adressen till"
-" sektion [%2d] '%s' som sh_link refererar till\n"
+"sektion [%2d] '%s': post %zu: pekaren stämmer inte överens med adressen till "
+"sektion [%2d] '%s' som sh_link refererar till\n"
 
 #: src/elflint.c:1843
 #, c-format
-msgid "section [%2d] '%s': entry %zu: %s value must point into loaded segment\n"
+msgid ""
+"section [%2d] '%s': entry %zu: %s value must point into loaded segment\n"
 msgstr ""
 "sektion [%2d] '%s': post %zu: %s-värdet måste peka in i det laddade "
 "segmentet\n"
@@ -2501,8 +2547,7 @@ msgstr ""
 #, c-format
 msgid "section [%2d] '%s': sh_link extended section index [%2d] is invalid\n"
 msgstr ""
-"sektion [%2d] '%s': det utökade sektionsindexet [%2d] i sh_link är "
-"ogiltigt\n"
+"sektion [%2d] '%s': det utökade sektionsindexet [%2d] i sh_link är ogiltigt\n"
 
 #: src/elflint.c:1995
 #, c-format
@@ -2527,8 +2572,8 @@ msgid ""
 "section [%2d] '%s': extended section index in section [%2zu] '%s' refers to "
 "same symbol table\n"
 msgstr ""
-"avsnitt [%2d] '%s': utökat avsnittsindex i avsnitt [%2zu] '%s' hänvisar till"
-" samma symboltabell\n"
+"avsnitt [%2d] '%s': utökat avsnittsindex i avsnitt [%2zu] '%s' hänvisar till "
+"samma symboltabell\n"
 
 #: src/elflint.c:2040
 #, c-format
@@ -2597,14 +2642,15 @@ msgstr ""
 #, c-format
 msgid "section [%2d] '%s': 2nd hash function shift too big: %u\n"
 msgstr ""
-"sektion [%2d] '%s': förskjutningen för den andra hashfunktionen är för stor:"
-" %u\n"
+"sektion [%2d] '%s': förskjutningen för den andra hashfunktionen är för stor: "
+"%u\n"
 
 #: src/elflint.c:2253
 #, c-format
 msgid ""
 "section [%2d] '%s': hash chain for bucket %zu lower than symbol index bias\n"
-msgstr "sektion [%2d] '%s': hashkedja för bucket %zu lägre än symbolindexbias\n"
+msgstr ""
+"sektion [%2d] '%s': hashkedja för bucket %zu lägre än symbolindexbias\n"
 
 #: src/elflint.c:2274
 #, c-format
@@ -2641,8 +2687,7 @@ msgstr "sektion [%2d] '%s': hashkedja för bucket %zu utanför gränserna\n"
 msgid ""
 "section [%2d] '%s': symbol reference in chain for bucket %zu out of bounds\n"
 msgstr ""
-"sektion [%2d] '%s': symbolreferens i kedja för bucket %zu utanför "
-"gränserna\n"
+"sektion [%2d] '%s': symbolreferens i kedja för bucket %zu utanför gränserna\n"
 
 #: src/elflint.c:2338
 #, c-format
@@ -2731,8 +2776,8 @@ msgid ""
 "symbol %d referenced in new hash table in [%2zu] '%s' but not in old hash "
 "table in [%2zu] '%s'\n"
 msgstr ""
-"symbol %d refereras till i den nya hashtabellen i [%2zu] '%s' men inte i den"
-" gamla hashtabellen i [%2zu] '%s'\n"
+"symbol %d refereras till i den nya hashtabellen i [%2zu] '%s' men inte i den "
+"gamla hashtabellen i [%2zu] '%s'\n"
 
 #: src/elflint.c:2633
 #, c-format
@@ -2751,8 +2796,7 @@ msgstr "sektion [%2d] '%s': icke-noll sh_%s för NULL-sektion\n"
 #: src/elflint.c:2669
 #, c-format
 msgid ""
-"section [%2d] '%s': section groups only allowed in relocatable object "
-"files\n"
+"section [%2d] '%s': section groups only allowed in relocatable object files\n"
 msgstr ""
 "sektion [%2d] '%s': sektionsgrupper är endast tillåtna i flyttbara "
 "objektfiler\n"
@@ -2837,7 +2881,8 @@ msgstr "sektion [%2d] '%s': sektionsindex %zu utanför intervallet\n"
 #: src/elflint.c:2783
 #, c-format
 msgid "section [%2d] '%s': cannot get section header for element %zu: %s\n"
-msgstr "sektion [%2d] '%s': kan inte hämta sektionsrubrik för element %zu: %s\n"
+msgstr ""
+"sektion [%2d] '%s': kan inte hämta sektionsrubrik för element %zu: %s\n"
 
 #: src/elflint.c:2790
 #, c-format
@@ -2898,7 +2943,8 @@ msgstr "sektion [%2d] '%s': symbol %d: ogiltigt versionsindex %d\n"
 
 #: src/elflint.c:3071
 #, c-format
-msgid "section [%2d] '%s': symbol %d: version index %d is for defined version\n"
+msgid ""
+"section [%2d] '%s': symbol %d: version index %d is for defined version\n"
 msgstr ""
 "sektion [%2d] '%s': symbol %d: versionsindex %d är för definierad version\n"
 
@@ -2906,7 +2952,8 @@ msgstr ""
 #, c-format
 msgid ""
 "section [%2d] '%s': symbol %d: version index %d is for requested version\n"
-msgstr "sektion [%2d] '%s': symbol %d: versionsindex %d är för begärd version\n"
+msgstr ""
+"sektion [%2d] '%s': symbol %d: versionsindex %d är för begärd version\n"
 
 #: src/elflint.c:3134
 #, c-format
@@ -2956,8 +3003,8 @@ msgid ""
 "section [%2d] '%s': auxiliary entry %d of entry %d has wrong hash value: "
 "%#x, expected %#x\n"
 msgstr ""
-"sektion [%2d] '%s': hjälppost %d i post %d har fel hashvärde: %#x, förväntat"
-" %#x\n"
+"sektion [%2d] '%s': hjälppost %d i post %d har fel hashvärde: %#x, förväntat "
+"%#x\n"
 
 #: src/elflint.c:3230
 #, c-format
@@ -2982,8 +3029,8 @@ msgstr "sektion [%2d] '%s': post %d har ogiltig förskjutning till nästa post\n
 #: src/elflint.c:3266 src/elflint.c:3442
 #, c-format
 msgid ""
-"section [%2d] '%s': entry %d has zero offset to next entry, but sh_info says"
-" there are more entries\n"
+"section [%2d] '%s': entry %d has zero offset to next entry, but sh_info says "
+"there are more entries\n"
 msgstr ""
 "sektion [%2d] '%s': post %d har noll förskjutning till nästa post, men "
 "sh_info säger att det finns fler poster\n"
@@ -3056,7 +3103,8 @@ msgstr "sektion [%2d] '%s': okänt attributformat\n"
 
 #: src/elflint.c:3518
 #, c-format
-msgid "section [%2d] '%s': offset %zu: zero length field in attribute section\n"
+msgid ""
+"section [%2d] '%s': offset %zu: zero length field in attribute section\n"
 msgstr ""
 "sektion [%2d] '%s': förskjutning %zu: fält med längd noll i "
 "attributsektionen\n"
@@ -3076,8 +3124,7 @@ msgstr ""
 #: src/elflint.c:3556
 #, c-format
 msgid ""
-"section [%2d] '%s': offset %zu: endless ULEB128 in attribute subsection "
-"tag\n"
+"section [%2d] '%s': offset %zu: endless ULEB128 in attribute subsection tag\n"
 msgstr ""
 "sektion [%2d] '%s': förskjutning %zu: oändlig ULEB128 i taggen för "
 "attributunderavsnittet\n"
@@ -3097,7 +3144,8 @@ msgstr ""
 
 #: src/elflint.c:3589
 #, c-format
-msgid "section [%2d] '%s': offset %zu: invalid length in attribute subsection\n"
+msgid ""
+"section [%2d] '%s': offset %zu: invalid length in attribute subsection\n"
 msgstr ""
 "sektion [%2d] '%s': offset %zu: ogiltig längd i attributets underavsnitt\n"
 
@@ -3248,8 +3296,7 @@ msgstr "sektion [%2zu] '%s' finns i objektfilen\n"
 #: src/elflint.c:3915 src/elflint.c:3947
 #, c-format
 msgid ""
-"section [%2zu] '%s' has SHF_ALLOC flag set but there is no loadable "
-"segment\n"
+"section [%2zu] '%s' has SHF_ALLOC flag set but there is no loadable segment\n"
 msgstr ""
 "sektion [%2zu] '%s' har flaggan SHF_ALLOC inställd men det finns inget "
 "laddningsbart segment\n"
@@ -3316,7 +3363,8 @@ msgstr "avsnitt [%2zu] '%s': nobits-avsnittet kan inte komprimeras\n"
 
 #: src/elflint.c:4045
 #, c-format
-msgid "section [%2zu] '%s': compressed section with no compression header: %s\n"
+msgid ""
+"section [%2zu] '%s': compressed section with no compression header: %s\n"
 msgstr "sektion [%2zu] '%s': komprimerat avsnitt utan komprimeringshuvud: %s\n"
 
 #: src/elflint.c:4051
@@ -3332,7 +3380,8 @@ msgstr "avsnitt [%2zu] '%s': ogiltig avsnittsreferens i info-värdet\n"
 #: src/elflint.c:4063
 #, c-format
 msgid "section [%2zu] '%s': strings flag set without merge flag\n"
-msgstr "avsnitt [%2zu] '%s': strängflagga inställd utan sammanslagningsflagga\n"
+msgstr ""
+"avsnitt [%2zu] '%s': strängflagga inställd utan sammanslagningsflagga\n"
 
 #: src/elflint.c:4068
 #, c-format
@@ -3412,8 +3461,8 @@ msgstr ""
 #: src/elflint.c:4218
 #, c-format
 msgid ""
-"section [%2zu] '%s': ELF header says this is the section header string table"
-" but type is not SHT_TYPE\n"
+"section [%2zu] '%s': ELF header says this is the section header string table "
+"but type is not SHT_TYPE\n"
 msgstr ""
 "sektion [%2zu] '%s': ELF-rubriken anger att detta är "
 "sektionsrubriksträngtabellen, men typen är inte SHT_TYPE\n"
@@ -3474,8 +3523,8 @@ msgid ""
 "phdr[%d]: name missing null terminator for core file note with type "
 "%<PRIu32> at offset %<PRIu64>\n"
 msgstr ""
-"phdr[%d]: namn saknar nollterminator för kärnfilanteckning med typ %<PRIu32>"
-" vid förskjutning %<PRIu64>\n"
+"phdr[%d]: namn saknar nollterminator för kärnfilanteckning med typ %<PRIu32> "
+"vid förskjutning %<PRIu64>\n"
 
 #: src/elflint.c:4399
 #, c-format
@@ -3483,8 +3532,8 @@ msgid ""
 "section [%2d] '%s': name missing null terminator for core file note with "
 "type %<PRIu32> at offset %zu\n"
 msgstr ""
-"sektion [%2d] '%s': namn saknar nollterminator för kärnfilanteckning med typ"
-" %<PRIu32> vid förskjutning %zu\n"
+"sektion [%2d] '%s': namn saknar nollterminator för kärnfilanteckning med typ "
+"%<PRIu32> vid förskjutning %zu\n"
 
 #: src/elflint.c:4408
 #, c-format
@@ -3752,8 +3801,7 @@ msgstr "Använd PATH som rot i debuginfo-hierarkin"
 #. Short description of program.
 #: src/findtextrel.c:70
 msgid "Locate source of text relocations in FILEs (a.out by default)."
-msgstr ""
-"Leta reda på källan till textflyttningar i FILER (a.out som standard)."
+msgstr "Leta reda på källan till textflyttningar i FILER (a.out som standard)."
 
 #. Strings for arguments in help texts.
 #: src/findtextrel.c:74 src/nm.c:107 src/objdump.c:70 src/size.c:79
@@ -3818,18 +3866,19 @@ msgstr "%s har inte kompilerats med -fpic/-fPIC\n"
 
 #: src/findtextrel.c:560
 #, c-format
-msgid "the file containing the function '%s' is not compiled with -fpic/-fPIC\n"
+msgid ""
+"the file containing the function '%s' is not compiled with -fpic/-fPIC\n"
 msgstr ""
 "filen som innehåller funktionen '%s' är inte kompilerad med -fpic/-fPIC\n"
 
 #: src/findtextrel.c:567 src/findtextrel.c:587
 #, c-format
 msgid ""
-"the file containing the function '%s' might not be compiled with "
-"-fpic/-fPIC\n"
+"the file containing the function '%s' might not be compiled with -fpic/-"
+"fPIC\n"
 msgstr ""
-"filen som innehåller funktionen '%s' kanske inte har kompilerats med "
-"-fpic/-fPIC\n"
+"filen som innehåller funktionen '%s' kanske inte har kompilerats med -fpic/-"
+"fPIC\n"
 
 #: src/findtextrel.c:575
 #, c-format
@@ -3845,8 +3894,7 @@ msgstr ""
 msgid ""
 "a relocation modifies memory at offset %llu in a write-protected segment\n"
 msgstr ""
-"en omplacering modifierar minnet vid offset %llu i ett skrivskyddat "
-"segment\n"
+"en omplacering modifierar minnet vid offset %llu i ett skrivskyddat segment\n"
 
 #: src/nm.c:65 src/strip.c:69
 msgid "Output selection:"
@@ -3995,8 +4043,8 @@ msgstr "kan inte skapa sökträd"
 #: src/readelf.c:1718 src/readelf.c:1867 src/readelf.c:2094 src/readelf.c:2336
 #: src/readelf.c:2532 src/readelf.c:2708 src/readelf.c:2830 src/readelf.c:3093
 #: src/readelf.c:3409 src/readelf.c:3484 src/readelf.c:3570 src/readelf.c:4167
-#: src/readelf.c:4215 src/readelf.c:4284 src/readelf.c:12739
-#: src/readelf.c:13946 src/readelf.c:14156 src/readelf.c:14224 src/size.c:396
+#: src/readelf.c:4215 src/readelf.c:4284 src/readelf.c:12750
+#: src/readelf.c:13957 src/readelf.c:14167 src/readelf.c:14235 src/size.c:396
 #: src/size.c:467 src/strip.c:1101
 #, c-format
 msgid "cannot get section header string table index"
@@ -4182,8 +4230,7 @@ msgstr "ELF-ingångsval:"
 
 #: src/readelf.c:111
 msgid ""
-"Use the named SECTION (default .gnu_debugdata) as (compressed) ELF input "
-"data"
+"Use the named SECTION (default .gnu_debugdata) as (compressed) ELF input data"
 msgstr ""
 "Använd den namngivna SEKTIONEN (standard .gnu_debugdata) som (komprimerad) "
 "ELF-indata"
@@ -4262,8 +4309,8 @@ msgstr "Ytterligare utgångsval:"
 
 #: src/readelf.c:143
 msgid ""
-"Display DWARF section content.  SECTION can be one of abbrev, addr, aranges,"
-" cu_index, decodedaranges, frame, gdb_index, info, info+, loc, line, "
+"Display DWARF section content.  SECTION can be one of abbrev, addr, aranges, "
+"cu_index, decodedaranges, frame, gdb_index, info, info+, loc, line, "
 "decodedline, ranges, pubnames, str, macinfo, macro or exception"
 msgstr ""
 "Visa innehåll i DWARF-sektion. SECTION kan vara abbrev, addr, aranges, "
@@ -4311,8 +4358,8 @@ msgid ""
 "Show compression information for compressed sections (when used with -S); "
 "decompress section before dumping data (when used with -p or -x)"
 msgstr ""
-"Visa komprimeringsinformation för komprimerade sektioner (vid användning med"
-" -S); dekomprimera sektionen innan data dumpas (vid användning med -p eller "
+"Visa komprimeringsinformation för komprimerade sektioner (vid användning med "
+"-S); dekomprimera sektionen innan data dumpas (vid användning med -p eller "
 "-x)"
 
 #: src/readelf.c:168
@@ -4573,11 +4620,11 @@ msgstr "kan inte bestämma antalet sektioner: %s"
 msgid "cannot get section: %s"
 msgstr "kan inte hämta avsnitt: %s"
 
-#: src/readelf.c:904 src/readelf.c:1531 src/readelf.c:1749 src/readelf.c:14176
+#: src/readelf.c:904 src/readelf.c:1531 src/readelf.c:1749 src/readelf.c:14187
 #: src/unstrip.c:396 src/unstrip.c:427 src/unstrip.c:490 src/unstrip.c:622
-#: src/unstrip.c:640 src/unstrip.c:680 src/unstrip.c:897 src/unstrip.c:1263
-#: src/unstrip.c:1390 src/unstrip.c:1414 src/unstrip.c:1470 src/unstrip.c:1511
-#: src/unstrip.c:1704 src/unstrip.c:1855 src/unstrip.c:2005 src/unstrip.c:2113
+#: src/unstrip.c:640 src/unstrip.c:681 src/unstrip.c:898 src/unstrip.c:1264
+#: src/unstrip.c:1391 src/unstrip.c:1415 src/unstrip.c:1471 src/unstrip.c:1512
+#: src/unstrip.c:1705 src/unstrip.c:1863 src/unstrip.c:2014 src/unstrip.c:2122
 #, c-format
 msgid "cannot get section header: %s"
 msgstr "kan inte hämta sektionsrubrik: %s"
@@ -4587,8 +4634,8 @@ msgstr "kan inte hämta sektionsrubrik: %s"
 msgid "cannot get section name"
 msgstr "kan inte hämta avsnittsnamn"
 
-#: src/readelf.c:921 src/readelf.c:7533 src/readelf.c:11633
-#: src/readelf.c:11736 src/readelf.c:11921 src/readelf.c:12245
+#: src/readelf.c:921 src/readelf.c:7533 src/readelf.c:11633 src/readelf.c:11736
+#: src/readelf.c:11921 src/readelf.c:12246
 #, c-format
 msgid "cannot get %s content: %s"
 msgstr "kan inte hämta %s innehåll: %s"
@@ -4875,8 +4922,8 @@ msgstr "[Nr] Namn Typ Adress Storlek ES Flaggor Lk Inf Al"
 
 #: src/readelf.c:1509
 msgid ""
-"[Nr] Name                 Type         Addr             Off      Size     ES"
-" Flags Lk Inf Al"
+"[Nr] Name                 Type         Addr             Off      Size     ES "
+"Flags Lk Inf Al"
 msgstr "[Nr] Namn Typ Adress Storlek ES Flaggor Lk Inf Al"
 
 #: src/readelf.c:1514
@@ -4927,7 +4974,7 @@ msgstr ""
 "Mappning av sektioner till\n"
 "segment: Segmentera sektioner..."
 
-#: src/readelf.c:1731 src/unstrip.c:2172 src/unstrip.c:2214 src/unstrip.c:2221
+#: src/readelf.c:1731 src/unstrip.c:2181 src/unstrip.c:2223 src/unstrip.c:2230
 #, c-format
 msgid "cannot get program header: %s"
 msgstr "kan inte hämta programhuvud: %s"
@@ -4945,7 +4992,8 @@ msgstr[0] ""
 "COMDAT-sektionsgrupp [%2zu] '%s' med signatur '%s' innehåller %zu poster\n"
 msgstr[1] ""
 "\n"
-"COMDAT-sektionsgruppen [%2zu] '%s' med signaturen '%s' innehåller %zu poster\n"
+"COMDAT-sektionsgruppen [%2zu] '%s' med signaturen '%s' innehåller %zu "
+"poster\n"
 
 #: src/readelf.c:1880
 #, c-format
@@ -4971,8 +5019,8 @@ msgid "<INVALID SECTION>"
 msgstr "<OGILTIGT AVSNITT>"
 
 #: src/readelf.c:1925 src/readelf.c:2840 src/readelf.c:4183 src/readelf.c:4483
-#: src/readelf.c:14048 src/readelf.c:14055 src/readelf.c:14099
-#: src/readelf.c:14106
+#: src/readelf.c:14059 src/readelf.c:14066 src/readelf.c:14110
+#: src/readelf.c:14117
 msgid "Couldn't uncompress section"
 msgstr "Kunde inte packa upp avsnittet"
 
@@ -5071,16 +5119,20 @@ msgstr ""
 #, c-format
 msgid ""
 "\n"
-"Relocation section [%2zu] '%s' for section [%2u] '%s' at offset %#0<PRIx64> contains %d entry:\n"
+"Relocation section [%2zu] '%s' for section [%2u] '%s' at offset %#0<PRIx64> "
+"contains %d entry:\n"
 msgid_plural ""
 "\n"
-"Relocation section [%2zu] '%s' for section [%2u] '%s' at offset %#0<PRIx64> contains %d entries:\n"
+"Relocation section [%2zu] '%s' for section [%2u] '%s' at offset %#0<PRIx64> "
+"contains %d entries:\n"
 msgstr[0] ""
 "\n"
-"Flyttningsavsnitt [%2zu] '%s' för avsnitt [%2u] '%s' vid offset %#0<PRIx64> innehåller %d post\n"
+"Flyttningsavsnitt [%2zu] '%s' för avsnitt [%2u] '%s' vid offset %#0<PRIx64> "
+"innehåller %d post\n"
 msgstr[1] ""
 "\n"
-"Flyttningssektion [%2zu] '%s' för sektion [%2u] '%s' vid offset %#0<PRIx64> innehåller %d poster\n"
+"Flyttningssektion [%2zu] '%s' för sektion [%2u] '%s' vid offset %#0<PRIx64> "
+"innehåller %d poster\n"
 
 #. The .rel.dyn section does not refer to a specific section but
 #. instead of section index zero.  Do not try to print a section
@@ -5285,19 +5337,23 @@ msgstr "   1 *global*                    "
 #, c-format
 msgid ""
 "\n"
-"Histogram for bucket list length in section [%2u] '%s' (total of %d bucket):\n"
+"Histogram for bucket list length in section [%2u] '%s' (total of %d "
+"bucket):\n"
 " Addr: %#0*<PRIx64>  Offset: %#08<PRIx64>  Link to section: [%2u] '%s'\n"
 msgid_plural ""
 "\n"
-"Histogram for bucket list length in section [%2u] '%s' (total of %d buckets):\n"
+"Histogram for bucket list length in section [%2u] '%s' (total of %d "
+"buckets):\n"
 " Addr: %#0*<PRIx64>  Offset: %#08<PRIx64>  Link to section: [%2u] '%s'\n"
 msgstr[0] ""
 "\n"
-"Histogram för längden på bucket list i avsnitt [%2u] '%s' (totalt %d bucket):\n"
+"Histogram för längden på bucket list i avsnitt [%2u] '%s' (totalt %d "
+"bucket):\n"
 " Adress: %#0*<PRIx64> Offset: %#08<PRIx64> Länk till avsnitt: [%2u] '%s'\n"
 msgstr[1] ""
 "\n"
-"Histogram för längden på bucket list i avsnitt [%2u] '%s' (totalt %d buckets):\n"
+"Histogram för längden på bucket list i avsnitt [%2u] '%s' (totalt %d "
+"buckets):\n"
 " Adress: %#0*<PRIx64> Offset: %#08<PRIx64> Länk till avsnitt: [%2u] '%s'\n"
 
 #: src/readelf.c:3895
@@ -5361,7 +5417,8 @@ msgid ""
 " Bitmask Size: %zu bytes  %<PRIuFAST32>%% bits set  2nd hash shift: %u\n"
 msgstr ""
 " Symbolbias: %u\n"
-" Bitmaskstorlek: %zu byte  %<PRIuFAST32>%% bitar inställda  2:a hashskift: %u\n"
+" Bitmaskstorlek: %zu byte  %<PRIuFAST32>%% bitar inställda  2:a hashskift: "
+"%u\n"
 
 #: src/readelf.c:4226
 #, c-format
@@ -5373,10 +5430,12 @@ msgid_plural ""
 "Library list section [%2zu] '%s' at offset %#0<PRIx64> contains %d entries:\n"
 msgstr[0] ""
 "\n"
-"Biblioteksförteckningsavsnitt [%2zu] '%s' vid offset %#0<PRIx64> innehåller %d poster\n"
+"Biblioteksförteckningsavsnitt [%2zu] '%s' vid offset %#0<PRIx64> innehåller "
+"%d poster\n"
 msgstr[1] ""
 "\n"
-"Biblioteksförteckningsavsnitt [%2zu] '%s' vid offset %#0<PRIx64> innehåller %d poster\n"
+"Biblioteksförteckningsavsnitt [%2zu] '%s' vid offset %#0<PRIx64> innehåller "
+"%d poster\n"
 
 #: src/readelf.c:4240
 msgid ""
@@ -5388,7 +5447,8 @@ msgstr "       Bibliotek Tidstämpel Kontrollsumma Version Flaggor"
 #, c-format
 msgid ""
 "\n"
-"Object attributes section [%2zu] '%s' of %<PRIu64> bytes at offset %#0<PRIx64>:\n"
+"Object attributes section [%2zu] '%s' of %<PRIu64> bytes at offset "
+"%#0<PRIx64>:\n"
 msgstr ""
 "\n"
 "Objektattributssektion [%2zu] '%s' av %<PRIu64> byte vid offset %#0<PRIx64>\n"
@@ -5540,14 +5600,12 @@ msgstr " Segmentstorlek:   %8<PRIu64>\n"
 msgid "Unknown version"
 msgstr "Okänd version"
 
-#: src/readelf.c:6233 src/readelf.c:6440 src/readelf.c:6605
-#: src/readelf.c:10157
+#: src/readelf.c:6233 src/readelf.c:6440 src/readelf.c:6605 src/readelf.c:10157
 #, c-format
 msgid "unsupported address size"
 msgstr "adressstorlek som inte stöds"
 
-#: src/readelf.c:6244 src/readelf.c:6451 src/readelf.c:6615
-#: src/readelf.c:10167
+#: src/readelf.c:6244 src/readelf.c:6451 src/readelf.c:6615 src/readelf.c:10167
 #, c-format
 msgid "unsupported segment size"
 msgstr "segmentstorlek som inte stöds"
@@ -5792,10 +5850,12 @@ msgstr "kan inte hämta nästa DIE: %s"
 #, c-format
 msgid ""
 " Split compilation unit at offset %<PRIu64>:\n"
-" Version: %<PRIu16>, Abbreviation section offset: %<PRIu64>, Address size: %<PRIu8>, Offset size: %<PRIu8>\n"
+" Version: %<PRIu16>, Abbreviation section offset: %<PRIu64>, Address size: "
+"%<PRIu8>, Offset size: %<PRIu8>\n"
 msgstr ""
 " Dela upp kompileringsenheten vid offset %<PRIu64>:\n"
-"Version: %<PRIu16>, Förkortningssektionsoffset: %<PRIu64>, Adressstorlek: %<PRIu8>, Offsetstorlek: %<PRIu8>\n"
+"Version: %<PRIu16>, Förkortningssektionsoffset: %<PRIu64>, Adressstorlek: "
+"%<PRIu8>, Offsetstorlek: %<PRIu8>\n"
 
 #: src/readelf.c:8928
 #, c-format
@@ -5857,7 +5917,8 @@ msgstr "ogiltigt maximalt antal operationer per instruktion är noll"
 #: src/readelf.c:9848
 #, c-format
 msgid " define new file: dir=%u, mtime=%<PRIu64>, length=%<PRIu64>, name=%s\n"
-msgstr " definiera ny fil: dir=%u, mtime=%<PRIu64>, length=%<PRIu64>, name=%s\n"
+msgstr ""
+" definiera ny fil: dir=%u, mtime=%<PRIu64>, length=%<PRIu64>, name=%s\n"
 
 #: src/readelf.c:9889
 #, c-format
@@ -6173,7 +6234,7 @@ msgstr ""
 "\n"
 " Symboltabell vid offset %#<PRIx32> innehåller %zu platser\n"
 
-#: src/readelf.c:12196
+#: src/readelf.c:12197
 #, c-format
 msgid ""
 "\n"
@@ -6182,61 +6243,62 @@ msgstr ""
 "\n"
 "Genvägstabell vid offset %#<PRIx32> innehåller %zu platser\n"
 
-#: src/readelf.c:12208
+#: src/readelf.c:12209
 #, c-format
 msgid "Language of main: %s\n"
 msgstr "Huvudspråk: %s\n"
 
-#: src/readelf.c:12209
+#: src/readelf.c:12210
 #, c-format
 msgid "Name of main: "
 msgstr "Huvudnamn: "
 
-#: src/readelf.c:12236
+#: src/readelf.c:12237
 #, c-format
 msgid ""
 "\n"
 "DWARF section [%2zu] '%s' at offset %#<PRIx64> contains %<PRId64> bytes :\n"
 msgstr ""
 "\n"
-"DWARF-sektion [%2zu] ”%s” vid avståndet %#<PRIx64> innehåller %<PRId64> byte:\n"
+"DWARF-sektion [%2zu] ”%s” vid avståndet %#<PRIx64> innehåller %<PRId64> "
+"byte:\n"
 
-#: src/readelf.c:12267
+#: src/readelf.c:12268
 #, c-format
 msgid " Version: %8<PRId32>\n"
 msgstr " Version: %8<PRId32>\n"
 
-#: src/readelf.c:12277
+#: src/readelf.c:12278
 #, c-format
 msgid "unknown version, cannot parse section"
 msgstr "okänd version, kan inte tolka sektionen"
 
-#: src/readelf.c:12289
+#: src/readelf.c:12290
 #, c-format
 msgid " Offset Size: %4<PRIu8>\n"
 msgstr "Förskjutningsstorlek: %4<PRIu8>\n"
 
-#: src/readelf.c:12300
+#: src/readelf.c:12301
 #, c-format
 msgid " Columns: %8<PRId32>\n"
 msgstr " Kolumner: %8<PRId32>\n"
 
-#: src/readelf.c:12306
+#: src/readelf.c:12307
 #, c-format
 msgid " Entries: %8<PRId32>\n"
 msgstr " Poster: %8<PRId32>\n"
 
-#: src/readelf.c:12312
+#: src/readelf.c:12313
 #, c-format
 msgid " Slots:   %8<PRId32>\n"
 msgstr " Platser:   %8<PRId32>\n"
 
-#: src/readelf.c:12318
+#: src/readelf.c:12319
 #, c-format
 msgid "Must have at least as many slots as entries"
 msgstr "Måste minst ha så många platser som poster"
 
-#: src/readelf.c:12357
+#: src/readelf.c:12367
 #, c-format
 msgid ""
 "\n"
@@ -6245,12 +6307,12 @@ msgstr ""
 "\n"
 "Förskjutningstabell\n"
 
-#: src/readelf.c:12383 src/readelf.c:12433
+#: src/readelf.c:12393 src/readelf.c:12443
 #, c-format
 msgid "Row (%<PRIu32>) larger than unit count (%<PRIu32>)"
 msgstr "Rad (%<PRIu32>) större än antalet enheter (%<PRIu32>)"
 
-#: src/readelf.c:12407
+#: src/readelf.c:12417
 #, c-format
 msgid ""
 "\n"
@@ -6259,18 +6321,18 @@ msgstr ""
 "\n"
 " Storlekstabell\n"
 
-#: src/readelf.c:12590
+#: src/readelf.c:12601
 #, c-format
 msgid "cannot get debug context descriptor: %s"
 msgstr "kan inte hämta felsökningskontextdeskriptor: %s"
 
-#: src/readelf.c:12980 src/readelf.c:13606 src/readelf.c:13716
-#: src/readelf.c:13773
+#: src/readelf.c:12991 src/readelf.c:13617 src/readelf.c:13727
+#: src/readelf.c:13784
 #, c-format
 msgid "cannot convert core note data: %s"
 msgstr "kan inte konvertera kärnnotdata: %s"
 
-#: src/readelf.c:13350
+#: src/readelf.c:13361
 #, c-format
 msgid ""
 "\n"
@@ -6279,21 +6341,21 @@ msgstr ""
 "\n"
 "%*s... <upprepar %u flera gånger> ..."
 
-#: src/readelf.c:13852
+#: src/readelf.c:13863
 msgid "  Owner          Data size  Type\n"
 msgstr "  Ägare          Datastrl   Typ\n"
 
-#: src/readelf.c:13880
+#: src/readelf.c:13891
 #, c-format
 msgid "  %-13.*s  %9<PRId32>  %s\n"
 msgstr "  %-13.*s  %9<PRId32>  %s\n"
 
-#: src/readelf.c:13932
+#: src/readelf.c:13943
 #, c-format
 msgid "cannot get content of note: %s"
 msgstr "kan inte hämta innehållet i anteckningen: %s"
 
-#: src/readelf.c:13965
+#: src/readelf.c:13976
 #, c-format
 msgid ""
 "\n"
@@ -6302,7 +6364,7 @@ msgstr ""
 "\n"
 "Notera avsnitt [%2zu] '%s' av %<PRIu64> byte vid offset %#0<PRIx64>\n"
 
-#: src/readelf.c:13988
+#: src/readelf.c:13999
 #, c-format
 msgid ""
 "\n"
@@ -6311,7 +6373,7 @@ msgstr ""
 "\n"
 "Notera segmentet på %<PRIu64> -byte vid offset %#0<PRIx64>\n"
 
-#: src/readelf.c:14035
+#: src/readelf.c:14046
 #, c-format
 msgid ""
 "\n"
@@ -6320,12 +6382,12 @@ msgstr ""
 "\n"
 "Avsnitt [%zu] '%s' har inga data att dumpa\n"
 
-#: src/readelf.c:14062 src/readelf.c:14113
+#: src/readelf.c:14073 src/readelf.c:14124
 #, c-format
 msgid "cannot get data for section [%zu] '%s': %s"
 msgstr "kan inte hämta data för avsnitt [%zu] '%s': %s"
 
-#: src/readelf.c:14067
+#: src/readelf.c:14078
 #, c-format
 msgid ""
 "\n"
@@ -6334,16 +6396,18 @@ msgstr ""
 "\n"
 "Hexdump av sektion [%zu] '%s', %<PRIu64> byte vid offset %#0<PRIx64>\n"
 
-#: src/readelf.c:14072
+#: src/readelf.c:14083
 #, c-format
 msgid ""
 "\n"
-"Hex dump of section [%zu] '%s', %<PRIu64> bytes (%zd uncompressed) at offset %#0<PRIx64>:\n"
+"Hex dump of section [%zu] '%s', %<PRIu64> bytes (%zd uncompressed) at offset "
+"%#0<PRIx64>:\n"
 msgstr ""
 "\n"
-"Hexdump av sektion [%zu] '%s', %<PRIu64> bytes (%zd okomprimerat) vid offset %#0<PRIx64>\n"
+"Hexdump av sektion [%zu] '%s', %<PRIu64> bytes (%zd okomprimerat) vid offset "
+"%#0<PRIx64>\n"
 
-#: src/readelf.c:14086
+#: src/readelf.c:14097
 #, c-format
 msgid ""
 "\n"
@@ -6352,7 +6416,7 @@ msgstr ""
 "\n"
 "Avsnitt [%zu] '%s' har inga strängar att dumpa\n"
 
-#: src/readelf.c:14118
+#: src/readelf.c:14129
 #, c-format
 msgid ""
 "\n"
@@ -6361,16 +6425,18 @@ msgstr ""
 "\n"
 "Strängsektionen [%zu] '%s' innehåller %<PRIu64> byte vid offset %#0<PRIx64>\n"
 
-#: src/readelf.c:14123
+#: src/readelf.c:14134
 #, c-format
 msgid ""
 "\n"
-"String section [%zu] '%s' contains %<PRIu64> bytes (%zd uncompressed) at offset %#0<PRIx64>:\n"
+"String section [%zu] '%s' contains %<PRIu64> bytes (%zd uncompressed) at "
+"offset %#0<PRIx64>:\n"
 msgstr ""
 "\n"
-"Strängsektionen [%zu] '%s' innehåller %<PRIu64> byte (%zd okomprimerat) vid offset %#0<PRIx64>\n"
+"Strängsektionen [%zu] '%s' innehåller %<PRIu64> byte (%zd okomprimerat) vid "
+"offset %#0<PRIx64>\n"
 
-#: src/readelf.c:14171
+#: src/readelf.c:14182
 #, c-format
 msgid ""
 "\n"
@@ -6379,7 +6445,7 @@ msgstr ""
 "\n"
 "avsnitt [%lu] finns inte"
 
-#: src/readelf.c:14201
+#: src/readelf.c:14212
 #, c-format
 msgid ""
 "\n"
@@ -6388,12 +6454,12 @@ msgstr ""
 "\n"
 "avsnittet '%s' finns inte"
 
-#: src/readelf.c:14256
+#: src/readelf.c:14267
 #, c-format
 msgid "cannot get symbol index of archive '%s': %s"
 msgstr "kan inte hämta symbolindex för arkivet '%s': %s"
 
-#: src/readelf.c:14259
+#: src/readelf.c:14270
 #, c-format
 msgid ""
 "\n"
@@ -6402,7 +6468,7 @@ msgstr ""
 "\n"
 "Arkiv '%s' har inget symbolindex\n"
 
-#: src/readelf.c:14263
+#: src/readelf.c:14274
 #, c-format
 msgid ""
 "\n"
@@ -6411,12 +6477,12 @@ msgstr ""
 "\n"
 "Index för arkivet '%s' har %zu poster\n"
 
-#: src/readelf.c:14281
+#: src/readelf.c:14292
 #, c-format
 msgid "cannot extract member at offset %zu in '%s': %s"
 msgstr "kan inte extrahera medlem vid offset %zu i '%s': %s"
 
-#: src/readelf.c:14286
+#: src/readelf.c:14297
 #, c-format
 msgid "Archive member '%s' contains:\n"
 msgstr "Arkivmedlem '%s' innehåller\n"
@@ -6600,8 +6666,8 @@ msgstr "Försök dessutom att söka efter DWARF-debuginfo-namnet för ramadresse
 
 #: src/stack.c:680
 msgid ""
-"Additionally show inlined function frames using DWARF debuginfo if available"
-" (implies -d)"
+"Additionally show inlined function frames using DWARF debuginfo if available "
+"(implies -d)"
 msgstr ""
 "Visa dessutom inbyggda funktionsramar med DWARF-felsökningsinformation om "
 "sådan finns tillgänglig (innebär -d)"
@@ -6662,11 +6728,21 @@ msgstr ""
 msgid ""
 "Print a stack for each thread in a process or core file.\n"
 "\n"
-"Program exits with return code 0 if all frames were shown without any errors.  If some frames were shown, but there were some non-fatal errors, possibly causing an incomplete backtrace, the program exits with return code 1.  If no frames could be shown, or a fatal error occurred the program exits with return code 2.  If the program was invoked with bad or missing arguments it will exit with return code 64."
+"Program exits with return code 0 if all frames were shown without any "
+"errors.  If some frames were shown, but there were some non-fatal errors, "
+"possibly causing an incomplete backtrace, the program exits with return code "
+"1.  If no frames could be shown, or a fatal error occurred the program exits "
+"with return code 2.  If the program was invoked with bad or missing "
+"arguments it will exit with return code 64."
 msgstr ""
 "Skriv ut en stack för varje tråd i en process- eller kärnfil.\n"
 "\n"
-"Programmet avslutas med returkoden 0 om alla ramar visades utan några fel. Om vissa ramar visades, men det fanns några icke-allvarliga fel som eventuellt orsakade en ofullständig backtrace, avslutas programmet med returkoden 1. Om inga ramar kunde visas eller om ett allvarligt fel inträffade avslutas programmet med returkoden 2. Om programmet startades med felaktiga eller saknade argument avslutas det med returkoden 64."
+"Programmet avslutas med returkoden 0 om alla ramar visades utan några fel. "
+"Om vissa ramar visades, men det fanns några icke-allvarliga fel som "
+"eventuellt orsakade en ofullständig backtrace, avslutas programmet med "
+"returkoden 1. Om inga ramar kunde visas eller om ett allvarligt fel "
+"inträffade avslutas programmet med returkoden 2. Om programmet startades med "
+"felaktiga eller saknade argument avslutas det med returkoden 64."
 
 #: src/stack.c:785
 #, c-format
@@ -6718,8 +6794,8 @@ msgstr "Samla systemomfattande profiler av stackspår."
 #: src/stackprof.cxx:1161
 #, c++-format
 msgid ""
-"{} {} -- max {} frames, received {} samples, lost {} samples ({:.1f}%) (last"
-" {}, worst {})\n"
+"{} {} -- max {} frames, received {} samples, lost {} samples ({:.1f}%) (last "
+"{}, worst {})\n"
 msgstr ""
 "{} {} -- högst {} ramar, tog emot {} sampel, förlorade {} sampel ({:.1f} %) "
 "(senaste {}, värsta {})\n"
@@ -6779,10 +6855,8 @@ msgid "Scan entire file, not only loaded sections"
 msgstr "Skanna hela filen, inte bara laddade sektioner"
 
 #: src/strings.c:67
-msgid ""
-"Only NUL-terminated sequences of MIN-LEN characters or more are printed"
-msgstr ""
-"Endast NUL-avslutade sekvenser med MIN-LEN tecken eller fler skrivs ut"
+msgid "Only NUL-terminated sequences of MIN-LEN characters or more are printed"
+msgstr "Endast NUL-avslutade sekvenser med MIN-LEN tecken eller fler skrivs ut"
 
 #: src/strings.c:68
 msgid ""
@@ -6872,14 +6946,13 @@ msgstr ""
 #: src/strip.c:86
 msgid ""
 "Similar to --reloc-debug-sections, but resolve all trivial relocations "
-"between debug sections in place.  No other stripping is performed (operation"
-" is not reversible, incompatible with -f, -g, --remove-comment and --remove-"
+"between debug sections in place.  No other stripping is performed (operation "
+"is not reversible, incompatible with -f, -g, --remove-comment and --remove-"
 "section)"
 msgstr ""
 "Liknar --reloc-debug-sections, men löser alla triviala omplaceringar mellan "
 "felsökningssektioner på plats. Ingen annan borttagning utförs (åtgärden är "
-"inte reversibel, oförenlig med -f, -g, --remove-comment och --remove-"
-"section)"
+"inte reversibel, oförenlig med -f, -g, --remove-comment och --remove-section)"
 
 #: src/strip.c:88
 msgid "Remove .comment section"
@@ -6912,11 +6985,11 @@ msgstr "--reloc-debug-sections används utan -f"
 
 #: src/strip.c:252
 msgid ""
-"--reloc-debug-sections-only incompatible with -f, -g, --remove-comment and "
-"--remove-section"
+"--reloc-debug-sections-only incompatible with -f, -g, --remove-comment and --"
+"remove-section"
 msgstr ""
-"--reloc-debug-sections-only är inte kompatibelt med -f, -g, --remove-comment"
-" och --remove-section"
+"--reloc-debug-sections-only är inte kompatibelt med -f, -g, --remove-comment "
+"och --remove-section"
 
 #: src/strip.c:266
 msgid "Only one input file allowed together with '-o' and '-f'"
@@ -6961,6 +7034,7 @@ msgstr "%s: kan inte använda -o eller -f vid strippning av arkiv"
 #. which doesn't really support ar members.
 #. result = handle_ar (fd, elf, NULL, fname,
 #. preserve_dates ? tv : NULL);
+#.
 #: src/strip.c:828
 #, c-format
 msgid "%s: no support for stripping archive"
@@ -7205,7 +7279,7 @@ msgstr "kan inte skapa ELF-huvud: %s"
 msgid "cannot get shdrstrndx:%s"
 msgstr "kan inte hämta shdrstrndx:%s"
 
-#: src/unstrip.c:243 src/unstrip.c:2143
+#: src/unstrip.c:243 src/unstrip.c:2152
 #, c-format
 msgid "cannot get ELF header: %s"
 msgstr "kan inte hämta ELF-rubrik: %s"
@@ -7225,12 +7299,12 @@ msgstr "kan inte uppdatera ny nollsektion: %s"
 msgid "cannot copy ELF header: %s"
 msgstr "kan inte kopiera ELF-rubrik: %s"
 
-#: src/unstrip.c:264 src/unstrip.c:2161 src/unstrip.c:2204
+#: src/unstrip.c:264 src/unstrip.c:2170 src/unstrip.c:2213
 #, c-format
 msgid "cannot get number of program headers: %s"
 msgstr "kan inte hämta antalet programrubriker: %s"
 
-#: src/unstrip.c:269 src/unstrip.c:2165
+#: src/unstrip.c:269 src/unstrip.c:2174
 #, c-format
 msgid "cannot create program headers: %s"
 msgstr "kan inte skapa programrubriker: %s"
@@ -7245,12 +7319,12 @@ msgstr "kan inte kopiera programhuvudet: %s"
 msgid "cannot copy section header: %s"
 msgstr "kan inte kopiera sektionsrubrik: %s"
 
-#: src/unstrip.c:288 src/unstrip.c:1749
+#: src/unstrip.c:288 src/unstrip.c:1750
 #, c-format
 msgid "cannot get section data: %s"
 msgstr "kan inte hämta sektionsdata: %s"
 
-#: src/unstrip.c:290 src/unstrip.c:1751
+#: src/unstrip.c:290 src/unstrip.c:1752
 #, c-format
 msgid "cannot copy section data: %s"
 msgstr "kan inte kopiera sektionsdata: %s"
@@ -7260,14 +7334,14 @@ msgstr "kan inte kopiera sektionsdata: %s"
 msgid "cannot create directory '%s'"
 msgstr "kan inte skapa katalogen '%s'"
 
-#: src/unstrip.c:392 src/unstrip.c:666 src/unstrip.c:700 src/unstrip.c:868
-#: src/unstrip.c:1791
+#: src/unstrip.c:392 src/unstrip.c:667 src/unstrip.c:701 src/unstrip.c:869
+#: src/unstrip.c:1794
 #, c-format
 msgid "cannot get symbol table entry: %s"
 msgstr "kan inte hämta symboltabellsposten: %s"
 
-#: src/unstrip.c:408 src/unstrip.c:669 src/unstrip.c:690 src/unstrip.c:703
-#: src/unstrip.c:1812 src/unstrip.c:2014 src/unstrip.c:2038
+#: src/unstrip.c:408 src/unstrip.c:670 src/unstrip.c:691 src/unstrip.c:704
+#: src/unstrip.c:1815 src/unstrip.c:2023 src/unstrip.c:2047
 #, c-format
 msgid "cannot update symbol table: %s"
 msgstr "kan inte uppdatera symboltabellen: %s"
@@ -7302,160 +7376,183 @@ msgstr "kan inte hämta symbolversion: %s"
 msgid "unexpected section type in [%zu] with sh_link to symtab"
 msgstr "oväntad sektions typ i [%zu] med sh_link till symtab"
 
-#: src/unstrip.c:857
+#: src/unstrip.c:642
+msgid ""
+"Symbol table section cannot have zero sh_entsize or a sh_size smaller than "
+"sh_entsize"
+msgstr ""
+
+#: src/unstrip.c:858
 #, c-format
 msgid "cannot get symbol section data: %s"
 msgstr "kan inte hämta symbolsektionsdata: %s"
 
-#: src/unstrip.c:859
+#: src/unstrip.c:860
 #, c-format
 msgid "cannot get string section data: %s"
 msgstr "kan inte hämta strängsektionsdata: %s"
 
-#: src/unstrip.c:876
+#: src/unstrip.c:877
 #, c-format
 msgid "invalid string offset in symbol [%zu]"
 msgstr "ogiltig strängförskjutning i symbol [%zu]"
 
-#: src/unstrip.c:939
+#: src/unstrip.c:940
 msgid "found two identical index map positions."
 msgstr "hittade två identiska indexkarta positioner."
 
-#: src/unstrip.c:990
+#: src/unstrip.c:991
 msgid "section symbols in unexpected order"
 msgstr "sektionssymboler i oväntad ordning"
 
-#: src/unstrip.c:996
+#: src/unstrip.c:997
 msgid "found two identical symbols"
 msgstr "hittade två identiska symboler"
 
-#: src/unstrip.c:1066 src/unstrip.c:1474
+#: src/unstrip.c:1067 src/unstrip.c:1475
 #, c-format
 msgid "cannot read section [%zu] name: %s"
 msgstr "kan inte läsa avsnitt [%zu] namn: %s"
 
-#: src/unstrip.c:1081
+#: src/unstrip.c:1082
 #, c-format
 msgid "bad sh_link for group section: %s"
 msgstr "dålig sh_link för gruppsektionen: %s"
 
-#: src/unstrip.c:1087
+#: src/unstrip.c:1088
 #, c-format
 msgid "couldn't get shdr for group section: %s"
 msgstr "kunde inte hämta shdr för gruppsektionen: %s"
 
-#: src/unstrip.c:1092
+#: src/unstrip.c:1093
 #, c-format
 msgid "bad data for group symbol section: %s"
 msgstr "felaktiga data för gruppsymbolavsnitt: %s"
 
-#: src/unstrip.c:1098
+#: src/unstrip.c:1099
 #, c-format
 msgid "couldn't get symbol for group section: %s"
 msgstr "kunde inte hämta symbol för gruppavsnitt: %s"
 
-#: src/unstrip.c:1103
+#: src/unstrip.c:1104
 #, c-format
 msgid "bad symbol name for group section: %s"
 msgstr "felaktigt symbolnamn för gruppavsnitt: %s"
 
-#: src/unstrip.c:1114 src/unstrip.c:1594
+#: src/unstrip.c:1115 src/unstrip.c:1595
 #, c-format
 msgid "cannot find matching section for [%zu] '%s'"
 msgstr "kan inte hitta matchande avsnitt för [%zu] '%s'"
 
-#: src/unstrip.c:1159 src/unstrip.c:1178 src/unstrip.c:1216
+#: src/unstrip.c:1160 src/unstrip.c:1179 src/unstrip.c:1217
 #, c-format
 msgid "cannot read '.gnu.prelink_undo' section: %s"
 msgstr "kan inte läsa avsnittet '.gnu.prelink_undo': %s"
 
-#: src/unstrip.c:1196
+#: src/unstrip.c:1197
 #, c-format
 msgid "overflow with shnum = %zu in '%s' section"
 msgstr "överflöde med shnum = %zu i avsnittet '%s'"
 
-#: src/unstrip.c:1207
+#: src/unstrip.c:1208
 #, c-format
 msgid "invalid contents in '%s' section"
 msgstr "ogiltigt innehåll i avsnittet '%s'"
 
-#: src/unstrip.c:1378 src/unstrip.c:1394 src/unstrip.c:1675 src/unstrip.c:1973
+#: src/unstrip.c:1379 src/unstrip.c:1395 src/unstrip.c:1676 src/unstrip.c:1982
 #, c-format
 msgid "cannot add section name to string table: %s"
 msgstr "kan inte lägga till sektionsnamn till strängtabellen: %s"
 
-#: src/unstrip.c:1403
+#: src/unstrip.c:1404
 #, c-format
 msgid "cannot update section header string table data: %s"
 msgstr "kan inte uppdatera tabelldata för sektionsrubriksträng: %s"
 
-#: src/unstrip.c:1432 src/unstrip.c:1436
+#: src/unstrip.c:1433 src/unstrip.c:1437
 #, c-format
 msgid "cannot get section header string table section index: %s"
 msgstr "kan inte hämta sektionsrubriksträngtabellens sektionsindex: %s"
 
-#: src/unstrip.c:1440 src/unstrip.c:1444 src/unstrip.c:1690
+#: src/unstrip.c:1441 src/unstrip.c:1445 src/unstrip.c:1691
 #, c-format
 msgid "cannot get section count: %s"
 msgstr "kan inte få antal avsnitt: %s"
 
-#: src/unstrip.c:1447
+#: src/unstrip.c:1448
 msgid "more sections in stripped file than debug file -- arguments reversed?"
 msgstr ""
 "fler sektioner i den rensade filen än i felsökningsfilen – argumenten "
 "omvända?"
 
-#: src/unstrip.c:1451
+#: src/unstrip.c:1452
 msgid "no sections in stripped file"
 msgstr "inga avsnitt i strippad fil"
 
-#: src/unstrip.c:1499 src/unstrip.c:1609
+#: src/unstrip.c:1500 src/unstrip.c:1610
 #, c-format
 msgid "cannot read section header string table: %s"
 msgstr "kan inte läsa sektionsrubriksträngtabell: %s"
 
-#: src/unstrip.c:1668
+#: src/unstrip.c:1669
 #, c-format
 msgid "cannot add new section: %s"
 msgstr "kan inte lägga till nytt avsnitt: %s"
 
-#: src/unstrip.c:1799
+#: src/unstrip.c:1785
+msgid ""
+"SYMTAB section cannot have zero sh_entsize or a sh_size smaller than "
+"sh_entsize"
+msgstr ""
+
+#: src/unstrip.c:1802
 #, c-format
 msgid "symbol [%zu] has invalid section index"
 msgstr "symbolen [%zu] har ogiltigt sektionsindex"
 
-#: src/unstrip.c:1831
+#: src/unstrip.c:1834
 #, c-format
 msgid "group has invalid section index [%zd]"
 msgstr "gruppen har ogiltigt sektionsindex [%zd]"
 
-#: src/unstrip.c:2122
+#: src/unstrip.c:1855
+msgid ""
+"stripped SYMTAB section cannot have zero sh_entsize or a sh_size smaller "
+"than sh_entsize"
+msgstr ""
+
+#: src/unstrip.c:1866
+msgid ""
+"unstripped SYMTAB section cannot have zero sh_entsize or a sh_size smaller "
+"than sh_entsize"
+msgstr ""
+
+#: src/unstrip.c:2131
 #, c-format
 msgid "cannot read section data: %s"
 msgstr "kan inte läsa sektionsdata: %s"
 
-#: src/unstrip.c:2151
+#: src/unstrip.c:2160
 #, c-format
 msgid "cannot update ELF header: %s"
 msgstr "kan inte uppdatera ELF-rubrik: %s"
 
-#: src/unstrip.c:2175
+#: src/unstrip.c:2184
 #, c-format
 msgid "cannot update program header: %s"
 msgstr "kan inte uppdatera programhuvudet: %s"
 
-#: src/unstrip.c:2180 src/unstrip.c:2263
+#: src/unstrip.c:2189 src/unstrip.c:2272
 #, c-format
 msgid "cannot write output file: %s"
 msgstr "kan inte skriva utdatafil: %s"
 
-#: src/unstrip.c:2231
+#: src/unstrip.c:2240
 #, c-format
 msgid "DWARF data not adjusted for prelinking bias; consider prelink -u"
-msgstr ""
-"DWARF-data som inte justerats för förläningsbias; överväg förläning -u"
+msgstr "DWARF-data som inte justerats för förläningsbias; överväg förläning -u"
 
-#: src/unstrip.c:2234
+#: src/unstrip.c:2243
 #, c-format
 msgid ""
 "DWARF data in '%s' not adjusted for prelinking bias; consider prelink -u"
@@ -7463,74 +7560,74 @@ msgstr ""
 "DWARF-data i '%s' är inte justerade för förlänkningsbias; överväg "
 "förlänkning -u"
 
-#: src/unstrip.c:2254 src/unstrip.c:2306 src/unstrip.c:2318 src/unstrip.c:2408
+#: src/unstrip.c:2263 src/unstrip.c:2315 src/unstrip.c:2327 src/unstrip.c:2417
 #, c-format
 msgid "cannot create ELF descriptor: %s"
 msgstr "kan inte skapa ELF-beskrivare: %s"
 
-#: src/unstrip.c:2292
+#: src/unstrip.c:2301
 msgid "WARNING: "
 msgstr "VARNING: "
 
-#: src/unstrip.c:2294
+#: src/unstrip.c:2303
 msgid ", use --force"
 msgstr ", använd --force"
 
-#: src/unstrip.c:2322
+#: src/unstrip.c:2331
 msgid "ELF header identification (e_ident) different"
 msgstr "ELF-huvudidentifiering (e_ident) annorlunda"
 
-#: src/unstrip.c:2326
+#: src/unstrip.c:2335
 msgid "ELF header type (e_type) different"
 msgstr "ELF-huvudtyp (e_type) annorlunda"
 
-#: src/unstrip.c:2330
+#: src/unstrip.c:2339
 msgid "ELF header machine type (e_machine) different"
 msgstr "ELF-huvudmaskinstyp (e_machine) annorlunda"
 
-#: src/unstrip.c:2334
+#: src/unstrip.c:2343
 msgid "stripped program header (e_phnum) smaller than unstripped"
 msgstr "avskalad programrubrik (e_phnum) mindre än oavskalad"
 
-#: src/unstrip.c:2365
+#: src/unstrip.c:2374
 #, c-format
 msgid "cannot find stripped file for module '%s': %s"
 msgstr "kan inte hitta strippad fil för modul '%s': %s"
 
-#: src/unstrip.c:2369
+#: src/unstrip.c:2378
 #, c-format
 msgid "cannot open stripped file '%s' for module '%s': %s"
 msgstr "kan inte öppna strippad fil '%s' för modul '%s': %s"
 
-#: src/unstrip.c:2384
+#: src/unstrip.c:2393
 #, c-format
 msgid "cannot find debug file for module '%s': %s"
 msgstr "kan inte hitta felsökningsfil för modul '%s': %s"
 
-#: src/unstrip.c:2388
+#: src/unstrip.c:2397
 #, c-format
 msgid "cannot open debug file '%s' for module '%s': %s"
 msgstr "kan inte öppna felsökningsfilen '%s' för modulen '%s': %s"
 
-#: src/unstrip.c:2401
+#: src/unstrip.c:2410
 #, c-format
 msgid "module '%s' file '%s' is not stripped"
 msgstr "modul '%s' fil '%s' är inte borttagen"
 
-#: src/unstrip.c:2432
+#: src/unstrip.c:2441
 #, c-format
 msgid "cannot cache section addresses for module '%s': %s"
 msgstr "kan inte cacha sektionsadresser för modul '%s': %s"
 
-#: src/unstrip.c:2560
+#: src/unstrip.c:2570
 msgid "no matching modules found"
 msgstr "inga matchande moduler hittades"
 
-#: src/unstrip.c:2570
+#: src/unstrip.c:2580
 msgid "matched more than one module"
 msgstr "matchade fler än en modul"
 
-#: src/unstrip.c:2615
+#: src/unstrip.c:2625
 msgid ""
 "STRIPPED-FILE DEBUG-FILE\n"
 "[MODULE...]"
@@ -7538,33 +7635,58 @@ msgstr ""
 "STRIPPED-FIL DEBUG-FIL\n"
 "[MODUL...]"
 
-#: src/unstrip.c:2616
+#: src/unstrip.c:2626
 msgid ""
 "Combine stripped files with separate symbols and debug information.\n"
 "\n"
 "The first form puts the result in DEBUG-FILE if -o was not given.\n"
 "\n"
 "MODULE arguments give file name patterns matching modules to process.\n"
-"With -f these match the file name of the main (stripped) file (slashes are never special), otherwise they match the simple module names.  With no arguments, process all modules found.\n"
+"With -f these match the file name of the main (stripped) file (slashes are "
+"never special), otherwise they match the simple module names.  With no "
+"arguments, process all modules found.\n"
 "\n"
-"Multiple modules are written to files under OUTPUT-DIRECTORY, creating subdirectories as needed.  With -m these files have simple module names, otherwise they have the name of the main file complete with directory underneath OUTPUT-DIRECTORY.\n"
+"Multiple modules are written to files under OUTPUT-DIRECTORY, creating "
+"subdirectories as needed.  With -m these files have simple module names, "
+"otherwise they have the name of the main file complete with directory "
+"underneath OUTPUT-DIRECTORY.\n"
 "\n"
-"With -n no files are written, but one line to standard output for each module:\n"
+"With -n no files are written, but one line to standard output for each "
+"module:\n"
 "\tSTART+SIZE BUILDID FILE DEBUGFILE MODULENAME\n"
-"START and SIZE are hexadecimal giving the address bounds of the module.  BUILDID is hexadecimal for the build ID bits, or - if no ID is known; the hexadecimal may be followed by @0xADDR giving the address where the ID resides if that is known.  FILE is the file name found for the module, or - if none was found, or . if an ELF image is available but not from any named file.  DEBUGFILE is the separate debuginfo file name, or - if no debuginfo was found, or . if FILE contains the debug information."
+"START and SIZE are hexadecimal giving the address bounds of the module.  "
+"BUILDID is hexadecimal for the build ID bits, or - if no ID is known; the "
+"hexadecimal may be followed by @0xADDR giving the address where the ID "
+"resides if that is known.  FILE is the file name found for the module, or - "
+"if none was found, or . if an ELF image is available but not from any named "
+"file.  DEBUGFILE is the separate debuginfo file name, or - if no debuginfo "
+"was found, or . if FILE contains the debug information."
 msgstr ""
-"Kombinera strippade filer med separata symboler och felsökningsinformation. Den första formen placerar resultatet i DEBUG-FILE om -o inte angivits. MODULE-argument anger filnamnmönster som\n"
+"Kombinera strippade filer med separata symboler och felsökningsinformation. "
+"Den första formen placerar resultatet i DEBUG-FILE om -o inte angivits. "
+"MODULE-argument anger filnamnmönster som\n"
 "\n"
-"matchar moduler som ska bearbetas. Med -f matchar dessa filnamnet på den huvudsakliga (strippade) filen (snedstreck är aldrig speciella), annars matchar de de\n"
+"matchar moduler som ska bearbetas. Med -f matchar dessa filnamnet på den "
+"huvudsakliga (strippade) filen (snedstreck är aldrig speciella), annars "
+"matchar de de\n"
 "\n"
-"enkla modulnamnen. Utan argument bearbetas alla moduler som hittas. Flera moduler skrivs till filer under OUTPUT-DIRECTORY och underkataloger skapas efter behov. Med -m\n"
-"har dessa filer enkla modulnamn, annars har de namnet på huvudfilen komplett med katalogen under OUTPUT-DIRECTORY. Med -n skrivs inga filer, utan en\n"
+"enkla modulnamnen. Utan argument bearbetas alla moduler som hittas. Flera "
+"moduler skrivs till filer under OUTPUT-DIRECTORY och underkataloger skapas "
+"efter behov. Med -m\n"
+"har dessa filer enkla modulnamn, annars har de namnet på huvudfilen komplett "
+"med katalogen under OUTPUT-DIRECTORY. Med -n skrivs inga filer, utan en\n"
 "\n"
-"rad till standardutmatningen för varje modul: \tSTART+SIZE BUILDID FILE DEBUGFILE MODULENAME START och SIZE är hexadecimala och anger modulens adressgränser. BUILDID är hexadecimalt\n"
+"rad till standardutmatningen för varje modul: \tSTART+SIZE BUILDID FILE "
+"DEBUGFILE MODULENAME START och SIZE är hexadecimala och anger modulens "
+"adressgränser. BUILDID är hexadecimalt\n"
 "\n"
-"för bygg-ID-bitarna, eller - om inget ID är känt; hexadecimalt kan följas av @0xADDR som anger adressen där ID:t finns om det är\n"
-"känt. FILE är filnamnet som hittades för modulen, eller - om inget hittades, eller . om en ELF-bild är tillgänglig men inte\n"
-"från någon namngiven fil. DEBUGFILE är namnet på den separata debuginfo-filen, eller - om ingen debuginfo hittades, eller . om FILE innehåller debug-informationen."
+"för bygg-ID-bitarna, eller - om inget ID är känt; hexadecimalt kan följas av "
+"@0xADDR som anger adressen där ID:t finns om det är\n"
+"känt. FILE är filnamnet som hittades för modulen, eller - om inget hittades, "
+"eller . om en ELF-bild är tillgänglig men inte\n"
+"från någon namngiven fil. DEBUGFILE är namnet på den separata debuginfo-"
+"filen, eller - om ingen debuginfo hittades, eller . om FILE innehåller debug-"
+"informationen."
 
 #. Short description of program.
 #: debuginfod/debuginfod-find.c:45
@@ -7594,7 +7716,7 @@ msgstr ""
 "sektion SÖKVÄG SEKTIONSNAMN\n"
 "metadata (glob|fil|buildid|NYCKEL) (GLOB|FILNAMN|BUILDID|VÄRDE)\n"
 
-#: tests/backtrace.c:491
+#: tests/backtrace.c:492
 msgid "Run executable"
 msgstr "Kör körbar fil"
 
@@ -7607,13 +7729,14 @@ msgid "Show instances of inlined functions"
 msgstr "Visa exempel på inbyggda funktioner"
 
 #~ msgid ""
-#~ "Display DWARF section content.  SECTION can be one of abbrev, addr, aranges,"
-#~ " decodedaranges, frame, gdb_index, info, info+, loc, line, decodedline, "
-#~ "ranges, pubnames, str, macinfo, macro or exception"
+#~ "Display DWARF section content.  SECTION can be one of abbrev, addr, "
+#~ "aranges, decodedaranges, frame, gdb_index, info, info+, loc, line, "
+#~ "decodedline, ranges, pubnames, str, macinfo, macro or exception"
 #~ msgstr ""
-#~ "Visa innehållet i DWARF-sektionen. SECTION kan vara en av följande: abbrev, "
-#~ "addr, aranges, decodedaranges, frame, gdb_index, info, info+, loc, line, "
-#~ "decodedline, ranges, pubnames, str, macinfo, macro eller exception"
+#~ "Visa innehållet i DWARF-sektionen. SECTION kan vara en av följande: "
+#~ "abbrev, addr, aranges, decodedaranges, frame, gdb_index, info, info+, "
+#~ "loc, line, decodedline, ranges, pubnames, str, macinfo, macro eller "
+#~ "exception"
 
 #, c-format
 #~ msgid "%s %#<PRIx64> used with different base addresses"
@@ -7637,9 +7760,10 @@ msgstr "Visa exempel på inbyggda funktioner"
 #~ "section PATH SECTION-NAME\n"
 #~ "metadata (glob|file|KEY) (GLOB|FILENAME|VALUE)\n"
 #~ msgstr ""
-#~ "debuginfo BUILDID debuginfo PATH executable BUILDID executable PATH source "
-#~ "BUILDID /FILENAME source PATH /FILENAME section BUILDID SECTION-NAME section"
-#~ " PATH SECTION-NAME metadata (glob|file|KEY) (GLOB|FILENAME|VALUE)\n"
+#~ "debuginfo BUILDID debuginfo PATH executable BUILDID executable PATH "
+#~ "source BUILDID /FILENAME source PATH /FILENAME section BUILDID SECTION-"
+#~ "NAME section PATH SECTION-NAME metadata (glob|file|KEY) (GLOB|FILENAME|"
+#~ "VALUE)\n"
 
 #~ msgid "failed to allocate job data"
 #~ msgstr "misslyckades med att allokera jobbdata"
