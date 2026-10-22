@@ -51,8 +51,11 @@ loongarch_init (Elf *elf __attribute__ ((unused)),
   HOOK (eh, register_info);
   HOOK (eh, core_note);
   HOOK (eh, abi_cfi);
-  /* gcc/config/ #define DWARF_FRAME_REGISTERS.  */
-  eh->frame_nregs = 74;
+  /* Only the 32 GPRs and 32 FPRs have DWARF register numbers allocated, and
+     participate in unwinding.
+     See "DWARF for the LoongArch(tm) Architecture", v20230425:
+     https://github.com/loongson/la-abi-specs/blob/v2.50/ladwarf.adoc  */
+  eh->frame_nregs = 64;
   HOOK (eh, check_special_symbol);
   HOOK (eh, set_initial_registers_tid);
   HOOK (eh, return_value_location);
