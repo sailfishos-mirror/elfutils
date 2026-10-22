@@ -7,8 +7,8 @@ License: GPLv3+ and (GPLv2+ or LGPLv3+) and GFDL
 Source: ftp://sourceware.org/pub/elfutils/%{version}/elfutils-%{version}.tar.bz2
 Summary: A collection of utilities and DSOs to handle ELF files and DWARF data
 
-# eu-stackprof currently only supports x86/ARM
-%ifarch %{ix86} %{x86_64} %{arm} %{arm64}
+# eu-stackprof currently only supports x86/ARM/LoongArch
+%ifarch %{ix86} %{x86_64} %{arm} %{arm64} %{loongarch64}
 %global enable_stackprof 1
 %else
 %global enable_stackprof 0

@@ -73,6 +73,8 @@ dwflst_arch_from_uname (const char *umachine)
     return EM_ARM;
   else if (strncmp(umachine, "alpha", 5) == 0)
     return EM_ALPHA;
+  else if (strncmp(umachine, "loongarch", 9) == 0)
+    return EM_LOONGARCH;
   /* XXX Other architectures not yet supported. */
   return EM_NONE;
 }
@@ -99,6 +101,8 @@ dwflst_arch_expected_frame_nregs (GElf_Half machine)
        constant directly rather than initializing a new Ebl.  */
     return machine == EM_X86_64 ? 17 : 9;
     /* return ebl_frame_nregs(ebl); */
+  if (machine == EM_LOONGARCH)
+    return 13;  /* See libebl_PERF_FLAGS.h for the list.  */
   /* XXX Other architectures are not supported yet.
      In general, it's fine to be on the permissive side here
      for a minimum expected number of registers.  */
@@ -119,6 +123,8 @@ dwflst_arch_sp_dwarf_reg (GElf_Half machine, bool force_abi32)
     return force_abi32 ? 13 : 31;
   case EM_ALPHA:
     return 30;
+  case EM_LOONGARCH:
+    return 3;
   default:
     /* XXX Other architectures are not supported yet.  */
     return -1;
@@ -140,6 +146,9 @@ dwflst_arch_sp_perf_reg (GElf_Half machine,
   else if (machine == EM_ALPHA)
     sp_perf_index = 30;
     /* PERF_REG_ALPHA_SP */
+  else if (machine == EM_LOONGARCH)
+    sp_perf_index = 3;
+    /* perf_regs<->dwarf_regs mapping also linear */
   else
     /* XXX Other architectures are not supported yet.  */
     return -1;

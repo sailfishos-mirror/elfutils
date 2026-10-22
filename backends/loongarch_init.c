@@ -35,6 +35,7 @@
 #define BACKEND		loongarch_
 #define RELOC_PREFIX	R_LARCH_
 #include "libebl_CPU.h"
+#include "libebl_PERF_FLAGS.h"
 
 /* This defines the common reloc hooks based on loongarch_reloc.def.  */
 #include "common-reloc.c"
@@ -60,6 +61,12 @@ loongarch_init (Elf *elf __attribute__ ((unused)),
   HOOK (eh, set_initial_registers_tid);
   HOOK (eh, return_value_location);
   HOOK (eh, unwind);
+  HOOK (eh, set_initial_registers_sample);
+  HOOK (eh, sample_sp_pc);
+  /* sample_perf_regs_mapping is default ver: after reusing r0's DWARF
+     register slot for PC, the DWARF register mapping happens to match the
+     perf one  */
+  eh->perf_frame_regs_mask = PERF_FRAME_REGISTERS_LOONGARCH;
 
   return eh;
 }

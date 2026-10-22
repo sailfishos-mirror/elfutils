@@ -959,8 +959,8 @@ case $host_cpu in
   i?86|x86_64|amd64|arm*|aarch64*)
     stackprof_arch_supported=yes
     ;;
-  alpha*)
-    # Alpha's <asm/perf_regs.h> is only in newer kernel headers.
+  alpha*|loongarch*)
+    # <asm/perf_regs.h> is only in newer kernel headers for these architectures.
     stackprof_arch_supported=${ac_cv_header_asm_perf_regs_h}
     ;;
   *)

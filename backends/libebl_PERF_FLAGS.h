@@ -37,8 +37,11 @@
 /* || defined(other_architecture)... */
 # include <asm/perf_regs.h>
 #endif
-/* Alpha's asm/perf_regs.h is only in newer kernel headers.  */
-#if defined(__alpha__) && defined(HAVE_ASM_PERF_REGS_H)
+/* These architectures only have <asm/perf_regs.h> in newer kernel headers.
+   - alpha: v7.4.
+   - loongarch: v6.1.  */
+#if (defined(__alpha__) || defined(__loongarch__)) && \
+    defined(HAVE_ASM_PERF_REGS_H)
 # include <asm/perf_regs.h>
 #endif
 #endif
@@ -115,6 +118,22 @@
    different arch, we can't unwind alpha perf sample frames.  */
 #define PERF_FRAME_REGISTERS_ALPHA 0
 #endif /* _ASM_ALPHA_PERF_REGS_H */
+
+#if defined(_ASM_LOONGARCH_PERF_REGS_H)
+#define REG(R) (1ULL << PERF_REG_LOONGARCH_ ## R)
+/* Proper unwind set: PC, $ra (r1), $sp (r3), $fp/$s9 (r22), and callee-saved
+   $s* registers (r23 through r31). $r21 is reserved and unused in the ABI
+   so ABI-conformant code does not need it to properly unwind.
+   Collecting all regs would also be feasible.  */
+#define PERF_FRAME_REGISTERS_LOONGARCH (REG(PC) | REG(R1) | REG(R3) \
+  | REG(R22) | REG(R23) | REG(R24) | REG(R25) | REG(R26) | REG(R27) \
+  | REG(R28) | REG(R29) | REG(R30) | REG(R31))
+/* Register ordering defined in linux arch/loongarch/include/uapi/asm/perf_regs.h.  */
+#else
+/* Since asm/perf_regs.h is absent, or gives the register layout for a
+   different arch, we can't unwind LoongArch perf sample frames.  */
+#define PERF_FRAME_REGISTERS_LOONGARCH 0
+#endif /* _ASM_LOONGARCH_PERF_REGS_H */
 
 static inline bool
 generic_sample_sp_pc (const Dwarf_Word *regs, uint32_t n_regs,
