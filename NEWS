@@ -1,5 +1,8 @@
 Version 0.198
 
+backends: Can now unwind through PLT and tail calls on LoongArch for code
+          compiled without frame pointers.
+
 stackprof: Now supports collecting traces on LoongArch.
 
 Version 0.197 "Anti-Corruption"
