@@ -1,7 +1,7 @@
 /* Initialization of LoongArch specific backend library.
    Copyright (C) 2022 Hengqi Chen
    Copyright (C) 2023 OpenAnolis community LoongArch SIG.
-   Copyright (C) 2023 Loongson Technology Corporation Limted.
+   Copyright (C) 2023 Loongson Technology Corporation Limited.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
