@@ -41,7 +41,8 @@ __libdwfl_getsym (Dwfl_Module *mod, int ndx, GElf_Sym *sym, GElf_Addr *addr,
   if (unlikely (mod == NULL))
     return NULL;
 
-  if (unlikely (mod->symdata == NULL))
+  if (unlikely (!atomic_load_acquire (&mod->symbols_loaded)
+		|| mod->symdata == NULL))
     {
       int result = INTUSE(dwfl_module_getsymtab) (mod);
       if (result < 0)

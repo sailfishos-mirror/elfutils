@@ -48,9 +48,9 @@ dwfl_begin (const Dwfl_Callbacks *callbacks)
     {
       dwfl->callbacks = callbacks;
       dwfl->offline_next_address = OFFLINE_REDZONE;
+      mutex_init (dwfl->debuginfod_lock);
+      mutex_init (dwfl->load_lock);
     }
-
-  mutex_init (dwfl->debuginfod_lock);
 
   return dwfl;
 }
