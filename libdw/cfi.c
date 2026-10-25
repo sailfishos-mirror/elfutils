@@ -456,8 +456,13 @@ cie_cache_initial_state (Dwarf_CFI *cache, struct dwarf_cie *cie)
 {
   int result = DWARF_E_NOERROR;
 
-  if (likely (cie->initial_state != NULL))
+  if (likely (atomic_load_acquire (&cie->initial_state) != NULL))
     return result;
+
+  mutex_lock (cache->lock);
+
+  if (cie->initial_state != NULL)
+    goto out;
 
   /* This CIE has not been used before.  Play out its initial
      instructions and cache the initial state that results.
@@ -477,11 +482,17 @@ cie_cache_initial_state (Dwarf_CFI *cache, struct dwarf_cie *cie)
   /* Fetch the ABI's default CFI program.  */
   if (likely (cache->ebl != (void *) -1l)
       && unlikely (ebl_abi_cfi (cache->ebl, &abi_info) < 0))
-    return DWARF_E_UNKNOWN_ERROR;
+    {
+      result = DWARF_E_UNKNOWN_ERROR;
+      goto out;
+    }
 
   Dwarf_Frame *cie_fs = calloc (1, sizeof (Dwarf_Frame));
   if (unlikely (cie_fs == NULL))
-    return DWARF_E_NOMEM;
+    {
+      result = DWARF_E_NOMEM;
+      goto out;
+    }
 
   /* If the default state of any register is not "undefined"
      (i.e. call-clobbered), then the backend supplies instructions
@@ -513,9 +524,11 @@ cie_cache_initial_state (Dwarf_CFI *cache, struct dwarf_cie *cie)
       /* Now we have the initial state of things that all
 	 FDEs using this CIE will start from.  */
       cie_fs->cache = cache;
-      cie->initial_state = cie_fs;
+      atomic_store_release (&cie->initial_state, cie_fs);
     }
 
+out:
+  mutex_unlock (cache->lock);
   return result;
 }
 
