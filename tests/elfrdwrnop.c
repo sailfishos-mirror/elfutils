@@ -34,6 +34,7 @@
 #include ELFUTILS_HEADER(elf)
 #include <gelf.h>
 
+static int test (const char *name, int mode);
 
 int
 main (int argc, const char *argv[])
@@ -48,8 +49,15 @@ main (int argc, const char *argv[])
   elf_version (EV_CURRENT);
 
   const char *name = argv[1];
-  printf ("elfrdwrdnop %s\n", name);
+  printf ("elfrdwrdnop %s (RDWR)\n", name);
+  test (name, ELF_C_RDWR);
+  printf ("elfrdwrdnop %s (RDWR_MMAP)\n", name);
+  test (name, ELF_C_RDWR_MMAP);
+}
 
+static int
+test (const char *name, int elf_mode)
+{
   int fd = open (name, O_RDWR);
   if (fd < 0)
     {
@@ -58,7 +66,7 @@ main (int argc, const char *argv[])
       exit (1);
     }
 
-  Elf *elf = elf_begin (fd, ELF_C_RDWR, NULL);
+  Elf *elf = elf_begin (fd, elf_mode, NULL);
   if (elf == NULL)
     {
       fprintf (stderr, "Couldn't open ELF file '%s': %s\n",
@@ -77,6 +85,21 @@ main (int argc, const char *argv[])
 
   if (phnum > 0)
     elf_flagelf (elf, ELF_C_SET, ELF_F_LAYOUT);
+
+  /* Go through all sections and mark some data dirty, so it
+     has to be rewritten.  */
+  Elf_Scn *scn = NULL;
+  int c = 0;
+  while ((scn = elf_nextscn (elf, scn)) != NULL)
+    {
+      c++;
+      if (c % 2 == 0)
+	{
+	  Elf_Data *data = elf_getdata (scn, NULL);
+	  if (data != NULL)
+	    elf_flagdata (data, ELF_C_SET, ELF_F_DIRTY);
+	}
+    }
 
   if (elf_update (elf, ELF_C_WRITE) < 0)
     {

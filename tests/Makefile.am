@@ -226,6 +226,7 @@ TESTS = run-arextract.sh run-arsymtest.sh run-ar.sh newfile test-nlist \
 	run-reloc-bpf.sh \
 	run-next-cfi.sh run-next-cfi-self.sh \
 	run-reverse-sections.sh run-reverse-sections-self.sh \
+	run-rdwrnop.sh \
 	run-copyadd-sections.sh \
 	run-copymany-be32.sh run-copymany-le32.sh \
 	run-copymany-be64.sh run-copymany-le64.sh \
@@ -625,6 +626,7 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     testfile-riscv64.bz2 testfile-riscv64-s.bz2 \
 	     testfile-riscv64-core.bz2 \
 	     run-reverse-sections.sh run-reverse-sections-self.sh \
+	     run-rdwrnop.sh testfile-elfsection-gap.so.bz2 \
 	     run-copyadd-sections.sh test-copymany-subr.sh \
 	     run-copymany-be32.sh run-copymany-le32.sh \
 	     run-copymany-be64.sh run-copymany-le64.sh \

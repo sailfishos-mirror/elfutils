@@ -1,5 +1,6 @@
 /* Write changed data structures.
    Copyright (C) 2000-2010, 2014, 2015, 2016, 2018 Red Hat, Inc.
+   Copyright (C) 2026 Mark J. Wielaard <mark@klomp.org>
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2000.
 
@@ -114,7 +115,7 @@ fill_mmap (size_t offset, char *last_position, char *scn_start,
   if (last_position + written != scn_start + offset
       && shdr_end < scn_start + offset)
     {
-      char *fill_start = MAX (shdr_end, scn_start);
+      char *fill_start = MAX (shdr_end, last_position + written);
       memset (fill_start, __libelf_fill_byte,
               scn_start + offset - fill_start);
     }
@@ -527,6 +528,34 @@ fill (int fd, int64_t pos, size_t len, char *fillbuf, size_t *filledp)
 }
 
 
+static inline int
+fill_file (int fd, size_t offset, int64_t last_offset,
+	   int64_t scn_off, int64_t shdrs_start, int64_t shdrs_end,
+	   char *fillbuf, size_t *filledp)
+{
+  size_t written = 0;
+
+  if (last_offset < shdrs_start)
+    {
+      written = MIN (scn_off + offset - last_offset,
+		     shdrs_start - last_offset);
+      if (fill (fd, last_offset, written, fillbuf, filledp) != 0)
+	return -1;
+    }
+
+  if (last_offset + written != scn_off + offset
+      && shdrs_end < scn_off + (int64_t) offset)
+    {
+      size_t fill_off = MAX (shdrs_end, last_offset + written);
+      if (fill (fd, fill_off, scn_off + offset - fill_off,
+		fillbuf, filledp) != 0)
+	return -1;
+    }
+
+  return 0;
+}
+
+
 int
 internal_function
 __elfw2(LIBELFBITS,updatefile) (Elf *elf, int change_bo, size_t shnum)
@@ -662,6 +691,8 @@ __elfw2(LIBELFBITS,updatefile) (Elf *elf, int change_bo, size_t shnum)
 	return 1;
 
       int64_t shdr_offset = elf->start_offset + ehdr->e_shoff;
+      int64_t shdr_endoff = shdr_offset + shnum * ehdr->e_shentsize;
+
 #undef shdr_fctp
 #define shdr_fctp __elf_xfctstom[ELFW(ELFCLASS, LIBELFBITS) - 1][ELF_T_SHDR]
 
@@ -722,10 +753,10 @@ __elfw2(LIBELFBITS,updatefile) (Elf *elf, int change_bo, size_t shnum)
 			|| ((scn->flags | dl->flags | elf->flags)
 			    & ELF_F_DIRTY) != 0))
 		  {
-		    if (unlikely (fill (elf->fildes, last_offset,
-					(scn_start + dl->data.d.d_off)
-					- last_offset, fillbuf,
-					&filled) != 0))
+		    if (unlikely (fill_file (elf->fildes, dl->data.d.d_off,
+					     last_offset, scn_start,
+					     shdr_offset, shdr_endoff,
+					     fillbuf, &filled) != 0))
 		      {
 		      fail_free:
 			free (shdr_data_mem);
@@ -797,9 +828,9 @@ __elfw2(LIBELFBITS,updatefile) (Elf *elf, int change_bo, size_t shnum)
 		 header) changed we might have to fill the gap.  */
 	      if (scn_start > last_offset && previous_scn_changed)
 		{
-		  if (unlikely (fill (elf->fildes, last_offset,
-				      scn_start - last_offset, fillbuf,
-				      &filled) != 0))
+		  if (unlikely (fill_file (elf->fildes, 0, last_offset,
+					   scn_start, shdr_offset, shdr_endoff,
+					   fillbuf, &filled) != 0))
 		    goto fail_free;
 		}
 
