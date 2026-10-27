@@ -521,9 +521,10 @@ extern Dwfl_Error __libdwfl_relocate_value (Dwfl_Module *mod, Elf *elf,
 /* Ensure that MOD->ebl is set up.  */
 extern Dwfl_Error __libdwfl_module_getebl (Dwfl_Module *mod) internal_function;
 
-/* Install a new Dwarf_CFI in *SLOT (MOD->eh_cfi or MOD->dwarf_cfi).  */
-extern Dwarf_CFI *__libdwfl_set_cfi (Dwfl_Module *mod, Dwarf_CFI **slot,
-				     Dwarf_CFI *cfi)
+/* Install a new Dwarf_CFI in *SLOT (MOD->eh_cfi or MOD->dwarf_cfi).
+   MOD->dwfl->load_lock must be held by the caller.  */
+extern Dwarf_CFI *__libdwfl_set_cfi_locked (Dwfl_Module *mod, Dwarf_CFI **slot,
+					    Dwarf_CFI *cfi)
   internal_function;
 
 /* Iterate through all the CU's in the module.  Start by passing a null

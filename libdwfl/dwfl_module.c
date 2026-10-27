@@ -74,7 +74,7 @@ __libdwfl_module_free (Dwfl_Module *mod)
     }
 
   /* We might have primed the Dwarf_CFI ebl cache with our own ebl
-     in __libdwfl_set_cfi. Make sure we don't free it twice.  */
+     in __libdwfl_set_cfi_locked. Make sure we don't free it twice.  */
   if (mod->eh_cfi != NULL)
     {
       if (mod->eh_cfi->ebl != NULL && mod->eh_cfi->ebl == mod->ebl)

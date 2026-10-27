@@ -39,21 +39,31 @@ dwfl_module_eh_cfi (Dwfl_Module *mod, Dwarf_Addr *bias)
   if (mod == NULL)
     return NULL;
 
-  if (mod->eh_cfi != NULL)
+  Dwarf_CFI *cfi = atomic_load_acquire (&mod->eh_cfi);
+  if (cfi != NULL)
     {
       *bias = dwfl_adjusted_address (mod, 0);
-      return mod->eh_cfi;
+      return cfi;
     }
 
-  __libdwfl_getelf (mod);
-  if (mod->elferr != DWFL_E_NOERROR)
+  mutex_lock (mod->dwfl->load_lock);
+  cfi = mod->eh_cfi;
+  if (cfi == NULL)
     {
-      __libdwfl_seterrno (mod->elferr);
-      return NULL;
+      __libdwfl_getelf (mod);
+      if (mod->elferr != DWFL_E_NOERROR)
+	{
+	  __libdwfl_seterrno (mod->elferr);
+	  mutex_unlock (mod->dwfl->load_lock);
+	  return NULL;
+	}
+
+      cfi = __libdwfl_set_cfi_locked (mod, &mod->eh_cfi,
+				      INTUSE(dwarf_getcfi_elf) (mod->main.elf));
     }
 
+  mutex_unlock (mod->dwfl->load_lock);
   *bias = dwfl_adjusted_address (mod, 0);
-  return __libdwfl_set_cfi (mod, &mod->eh_cfi,
-			    INTUSE(dwarf_getcfi_elf) (mod->main.elf));
+  return cfi;
 }
 INTDEF (dwfl_module_eh_cfi)
