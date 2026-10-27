@@ -124,7 +124,8 @@ __libdwfl_getsym (Dwfl_Module *mod, int ndx, GElf_Sym *sym, GElf_Addr *addr,
      descriptors).  */
 
   char *ident;
-  GElf_Addr st_value = sym->st_value & ebl_func_addr_mask (mod->ebl);
+  Ebl *ebl = atomic_load_acquire (&mod->ebl);
+  GElf_Addr st_value = sym->st_value & ebl_func_addr_mask (ebl);
   *resolved = false;
   if (! adjust_st_value && mod->e_type != ET_REL && alloc
       && (GELF_ST_TYPE (sym->st_info) == STT_FUNC
