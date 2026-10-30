@@ -73,7 +73,10 @@ asm_newcomsym (AsmCtx_t *ctx, const char *name, GElf_Xword size,
 
   result = malloc (sizeof (AsmSym_t));
   if (result == NULL)
-    return NULL;
+    {
+      rwlock_unlock (ctx->lock);
+      return NULL;
+    }
 
   result->scn = (AsmScn_t *) &__libasm_com_scn;
   result->size = size;
