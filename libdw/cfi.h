@@ -48,6 +48,11 @@ struct dwarf_cie
   const uint8_t *initial_instructions;
   const uint8_t *initial_instructions_end;
 
+  /* Initial frame state holding instructions for unwinding frames associated
+     with FDEs using this CIE.  Set in cie_cache_initial_state while holding
+     the corresponding cfi->lock.  Destroyed by __libdw_destroy_frame_cache
+     called from either dwarf_end (for Dwarf_CFI acquired from dwarf_getcfi)
+     or dwarf_cfi_end (for Dwarf_CFI acquired from dwarf_getcfi_elf).  */
   const Dwarf_Frame *initial_state;
 
   uint8_t fde_encoding;		/* DW_EH_PE_* for addresses in FDEs.  */
