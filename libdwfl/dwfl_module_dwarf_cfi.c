@@ -35,15 +35,26 @@
 
 Dwarf_CFI *
 internal_function
-__libdwfl_set_cfi (Dwfl_Module *mod, Dwarf_CFI **slot, Dwarf_CFI *cfi)
+__libdwfl_set_cfi_locked (Dwfl_Module *mod, Dwarf_CFI **slot, Dwarf_CFI *cfi)
 {
-  if (cfi != NULL && cfi->ebl == NULL)
+  if (slot != &mod->eh_cfi && slot != &mod->dwarf_cfi)
+    {
+      __libdwfl_seterrno (DWFL_E_INVALID_ARGUMENT);
+      return NULL;
+    }
+
+  if (cfi == NULL)
+    return NULL;
+
+  mutex_lock (cfi->lock);
+  if (cfi->ebl == NULL)
     {
       Dwfl_Error error = __libdwfl_module_getebl (mod);
       if (error == DWFL_E_NOERROR)
 	cfi->ebl = mod->ebl;
       else
 	{
+	  mutex_unlock (cfi->lock);
 	  if (slot == &mod->eh_cfi)
 	    INTUSE(dwarf_cfi_end) (cfi);
 	  __libdwfl_seterrno (error);
@@ -51,7 +62,9 @@ __libdwfl_set_cfi (Dwfl_Module *mod, Dwarf_CFI **slot, Dwarf_CFI *cfi)
 	}
     }
 
-  return *slot = cfi;
+  atomic_store_release (slot, cfi);
+  mutex_unlock (cfi->lock);
+  return cfi;
 }
 
 Dwarf_CFI *
@@ -60,14 +73,23 @@ dwfl_module_dwarf_cfi (Dwfl_Module *mod, Dwarf_Addr *bias)
   if (mod == NULL)
     return NULL;
 
-  if (mod->dwarf_cfi != NULL)
+  Dwarf_CFI *cfi = atomic_load_acquire (&mod->dwarf_cfi);
+  if (cfi != NULL)
     {
       *bias = dwfl_adjusted_dwarf_addr (mod, 0);
-      return mod->dwarf_cfi;
+      return cfi;
     }
 
-  return __libdwfl_set_cfi (mod, &mod->dwarf_cfi,
-			    INTUSE(dwarf_getcfi)
-			    (INTUSE(dwfl_module_getdwarf) (mod, bias)));
+  mutex_lock (mod->dwfl->load_lock);
+  cfi = mod->dwarf_cfi;
+  if (cfi == NULL)
+    cfi = __libdwfl_set_cfi_locked (mod, &mod->dwarf_cfi,
+				    INTUSE(dwarf_getcfi)
+				    (INTUSE(dwfl_module_getdwarf) (mod, bias)));
+  else
+    *bias = dwfl_adjusted_dwarf_addr (mod, 0);
+
+  mutex_unlock (mod->dwfl->load_lock);
+  return cfi;
 }
 INTDEF (dwfl_module_dwarf_cfi)
