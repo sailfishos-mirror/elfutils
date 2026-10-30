@@ -95,7 +95,9 @@ dwarf_formref_die (Dwarf_Attribute *attr, Dwarf_Die *result)
 	  do
 	    {
 	      mutex_lock (attr->cu->dbg->dwarf_lock);
-	      cu = __libdw_intern_next_unit (attr->cu->dbg, scan_debug_types);
+	      cu = Dwarf_Sig8_Hash_find (&attr->cu->dbg->sig8_hash, sig);
+	      if (cu == NULL)
+		cu = __libdw_intern_next_unit (attr->cu->dbg, scan_debug_types);
 	      mutex_unlock (attr->cu->dbg->dwarf_lock);
 
 	      if (cu == NULL)
