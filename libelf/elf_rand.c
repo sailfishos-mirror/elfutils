@@ -54,6 +54,7 @@ elf_rand (Elf *elf, size_t offset)
     {
       /* Mark the archive header as unusable.  */
       elf->elf_ar_hdr.ar_name = NULL;
+      rwlock_unlock (elf->lock);
       return 0;
     }
 
