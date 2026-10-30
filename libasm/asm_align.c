@@ -112,12 +112,8 @@ asm_align (AsmScn_t *asmscn, GElf_Word value)
       /* Update the parent as well (if it exists).  */
       if (asmscn->subsection_id != 0)
 	{
-	  rwlock_wrlock (asmscn->data.up->ctx->lock);
-
 	  if (asmscn->data.up->max_align < value)
 	    asmscn->data.up->max_align = value;
-
-	  rwlock_unlock (asmscn->data.up->ctx->lock);
 	}
     }
 
