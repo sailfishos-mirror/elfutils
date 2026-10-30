@@ -40,14 +40,11 @@ dwfl_module_return_value_location (Dwfl_Module *mod, Dwarf_Die *functypedie,
   if (mod == NULL)
     return -1;
 
-  if (mod->ebl == NULL)
+  Dwfl_Error error = __libdwfl_module_getebl (mod);
+  if (error != DWFL_E_NOERROR)
     {
-      Dwfl_Error error = __libdwfl_module_getebl (mod);
-      if (error != DWFL_E_NOERROR)
-	{
-	  __libdwfl_seterrno (error);
-	  return -1;
-	}
+      __libdwfl_seterrno (error);
+      return -1;
     }
 
   int nops = ebl_return_value_location (mod->ebl, functypedie, locops);

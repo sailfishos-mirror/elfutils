@@ -43,14 +43,11 @@ dwfl_module_register_names (Dwfl_Module *mod,
   if (unlikely (mod == NULL))
     return -1;
 
-  if (unlikely (mod->ebl == NULL))
+  Dwfl_Error error = __libdwfl_module_getebl (mod);
+  if (unlikely (error != DWFL_E_NOERROR))
     {
-      Dwfl_Error error = __libdwfl_module_getebl (mod);
-      if (error != DWFL_E_NOERROR)
-	{
-	  __libdwfl_seterrno (error);
-	  return -1;
-	}
+      __libdwfl_seterrno (error);
+      return -1;
     }
 
   int nregs = ebl_register_info (mod->ebl, -1, NULL, 0,

@@ -1347,17 +1347,29 @@ Dwfl_Error
 internal_function
 __libdwfl_module_getebl (Dwfl_Module *mod)
 {
+  if (likely (atomic_load_acquire (&mod->ebl) != NULL))
+    return DWFL_E_NOERROR;
+
+  Dwfl_Error ret = DWFL_E_NOERROR;
+  mutex_lock (mod->dwfl->load_lock);
+
   if (mod->ebl == NULL)
     {
       __libdwfl_getelf (mod);
-      if (mod->elferr != DWFL_E_NOERROR)
-	return mod->elferr;
+      ret = mod->elferr;
 
-      mod->ebl = ebl_openbackend (mod->main.elf);
-      if (mod->ebl == NULL)
-	return DWFL_E_LIBEBL;
+      if (ret == DWFL_E_NOERROR)
+	{
+	  Ebl *ebl = ebl_openbackend (mod->main.elf);
+	  if (ebl == NULL)
+	    ret = DWFL_E_LIBEBL;
+	  else
+	    atomic_store_release (&mod->ebl, ebl);
+	}
     }
-  return DWFL_E_NOERROR;
+
+  mutex_unlock (mod->dwfl->load_lock);
+  return ret;
 }
 
 /* Try to start up libdw on DEBUGFILE.  */

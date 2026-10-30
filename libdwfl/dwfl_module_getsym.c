@@ -123,6 +123,13 @@ __libdwfl_getsym (Dwfl_Module *mod, int ndx, GElf_Sym *sym, GElf_Addr *addr,
      might know where the real value is (e.g. for function
      descriptors).  */
 
+  Dwfl_Error error = __libdwfl_module_getebl (mod);
+  if (unlikely (error != DWFL_E_NOERROR))
+    {
+      __libdwfl_seterrno (error);
+      return NULL;
+    }
+
   char *ident;
   GElf_Addr st_value = sym->st_value & ebl_func_addr_mask (mod->ebl);
   *resolved = false;
@@ -132,18 +139,15 @@ __libdwfl_getsym (Dwfl_Module *mod, int ndx, GElf_Sym *sym, GElf_Addr *addr,
 	      && (ident = elf_getident (elf, NULL)) != NULL
 	      && ident[EI_OSABI] == ELFOSABI_LINUX)))
     {
-      if (likely (__libdwfl_module_getebl (mod) == DWFL_E_NOERROR))
+      if (elf != mod->main.elf)
 	{
-	  if (elf != mod->main.elf)
-	    {
-	      st_value = dwfl_adjusted_st_value (mod, elf, st_value);
-	      st_value = dwfl_deadjust_st_value (mod, mod->main.elf, st_value);
-	    }
-
-	  *resolved = ebl_resolve_sym_value (mod->ebl, &st_value);
-	  if (! *resolved)
-	    st_value = sym->st_value;
+	  st_value = dwfl_adjusted_st_value (mod, elf, st_value);
+	  st_value = dwfl_deadjust_st_value (mod, mod->main.elf, st_value);
 	}
+
+      *resolved = ebl_resolve_sym_value (mod->ebl, &st_value);
+      if (! *resolved)
+	st_value = sym->st_value;
     }
 
   if (shndxp != NULL)
