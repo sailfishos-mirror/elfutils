@@ -44,51 +44,71 @@ dwar (Dwfl_Module *mod, unsigned int idx)
 
 
 static Dwfl_Error
+addrarange_locked (Dwfl_Module *mod, struct dwfl_arange **result)
+{
+  struct dwfl_arange *aranges = NULL;
+  Dwarf_Aranges *dwaranges = NULL;
+  size_t naranges;
+  if (__libdw_getdieranges (mod->dw, &dwaranges, &naranges) != 0)
+    return DWFL_E_LIBDW;
+
+  /* If the module has no aranges (when no code is included) we
+     allocate nothing.  */
+  if (naranges != 0)
+    {
+      aranges = malloc (naranges * sizeof *aranges);
+      if (unlikely (aranges == NULL))
+	return DWFL_E_NOMEM;
+
+      /* libdw has sorted its list by address, which is how we want it.
+	 But the sorted list is full of not-quite-contiguous runs pointing
+	 to the same CU.  We don't care about the little gaps inside the
+	 module, we'll consider them part of the surrounding CU anyway.
+	 Collect our own array with just one record for each run of ranges
+	 pointing to one CU.  */
+
+      naranges = 0;
+      Dwarf_Off lastcu = 0;
+      for (size_t i = 0; i < dwaranges->naranges; ++i)
+	if (i == 0 || dwaranges->info[i].offset != lastcu)
+	  {
+	    aranges[naranges].arange = i;
+	    aranges[naranges].cu = NULL;
+	    ++naranges;
+	    lastcu = dwaranges->info[i].offset;
+	  }
+    }
+
+  /* Store the final array, which is probably much smaller than before.  */
+  mod->naranges = naranges;
+  if (naranges > 0)
+    *result = (realloc (aranges, naranges * sizeof aranges[0]) ?: aranges);
+  else if (aranges != NULL)
+    free (aranges);
+  mod->lazycu += naranges;
+
+  return DWFL_E_NOERROR;
+}
+
+static Dwfl_Error
 addrarange (Dwfl_Module *mod, Dwarf_Addr addr, struct dwfl_arange **arange)
 {
-  if (mod->aranges == NULL)
+  if (unlikely (atomic_load_acquire (&mod->aranges) == NULL))
     {
       struct dwfl_arange *aranges = NULL;
-      Dwarf_Aranges *dwaranges = NULL;
-      size_t naranges;
-      if (__libdw_getdieranges (mod->dw, &dwaranges, &naranges) != 0)
-	return DWFL_E_LIBDW;
+      Dwfl_Error error = DWFL_E_NOERROR;
 
-      /* If the module has no aranges (when no code is included) we
-	 allocate nothing.  */
-      if (naranges != 0)
+      mutex_lock (mod->dwfl->load_lock);
+      if (mod->aranges == NULL)
 	{
-	  aranges = malloc (naranges * sizeof *aranges);
-	  if (unlikely (aranges == NULL))
-	    return DWFL_E_NOMEM;
-
-	  /* libdw has sorted its list by address, which is how we want it.
-	     But the sorted list is full of not-quite-contiguous runs pointing
-	     to the same CU.  We don't care about the little gaps inside the
-	     module, we'll consider them part of the surrounding CU anyway.
-	     Collect our own array with just one record for each run of ranges
-	     pointing to one CU.  */
-
-	  naranges = 0;
-	  Dwarf_Off lastcu = 0;
-	  for (size_t i = 0; i < dwaranges->naranges; ++i)
-	    if (i == 0 || dwaranges->info[i].offset != lastcu)
-	      {
-		aranges[naranges].arange = i;
-		aranges[naranges].cu = NULL;
-		++naranges;
-		lastcu = dwaranges->info[i].offset;
-	      }
+	  error = addrarange_locked (mod, &aranges);
+	  if (error == DWFL_E_NOERROR)
+	    atomic_store_release (&mod->aranges, aranges);
 	}
 
-      /* Store the final array, which is probably much smaller than before.  */
-      mod->naranges = naranges;
-      if (naranges > 0)
-        mod->aranges = (realloc (aranges, naranges * sizeof aranges[0])
-			?: aranges);
-      else if (aranges != NULL)
-	free (aranges);
-      mod->lazycu += naranges;
+      mutex_unlock (mod->dwfl->load_lock);
+      if (error != DWFL_E_NOERROR)
+	return error;
     }
 
   /* The address must be inside the module to begin with.  */
@@ -288,20 +308,40 @@ __libdwfl_nextcu (Dwfl_Module *mod, struct dwfl_cu *lastcu,
   return DWFL_E_NOERROR;
 }
 
+static Dwfl_Error
+arangecu_locked (Dwfl_Module *mod, struct dwfl_arange *arange,
+		 struct dwfl_cu **cu)
+{
+  const Dwarf_Arange *dwarange = &mod->dw->dieranges->info[arange->arange];
+  Dwfl_Error result = intern_cu (mod, dwarange->offset, cu);
+  if (result != DWFL_E_NOERROR)
+    return result;
+  assert (*cu != NULL && *cu != (void *) -1l);
+  less_lazy (mod);		/* Each arange with null ->cu counts once.  */
+
+  return DWFL_E_NOERROR;
+}
 
 /* Intern the CU arange points to, if necessary.  */
 
 static Dwfl_Error
 arangecu (Dwfl_Module *mod, struct dwfl_arange *arange, struct dwfl_cu **cu)
 {
-  if (arange->cu == NULL)
+  if (unlikely (atomic_load_acquire (&arange->cu) == NULL))
     {
-      const Dwarf_Arange *dwarange = &mod->dw->dieranges->info[arange->arange];
-      Dwfl_Error result = intern_cu (mod, dwarange->offset, &arange->cu);
-      if (result != DWFL_E_NOERROR)
-	return result;
-      assert (arange->cu != NULL && arange->cu != (void *) -1l);
-      less_lazy (mod);		/* Each arange with null ->cu counts once.  */
+      Dwfl_Error error = DWFL_E_NOERROR;
+      mutex_lock (mod->dwfl->load_lock);
+      if (arange->cu == NULL)
+	{
+	  struct dwfl_cu *newcu = NULL;
+	  error = arangecu_locked (mod, arange, &newcu);
+	  if (error == DWFL_E_NOERROR)
+	    atomic_store_release (&arange->cu, newcu);
+	}
+
+      mutex_unlock (mod->dwfl->load_lock);
+      if (error != DWFL_E_NOERROR)
+	return error;
     }
 
   *cu = arange->cu;
