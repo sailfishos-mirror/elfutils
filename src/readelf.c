@@ -5864,7 +5864,7 @@ skip_listptr_hole (struct listptr_table *table, size_t *idxp,
 		   uint_fast8_t *address_sizep, uint_fast8_t *offset_sizep,
 		   Dwarf_Addr *base, struct Dwarf_CU **cu, ptrdiff_t offset,
 		   unsigned char **readp, unsigned char *endp,
-		   unsigned int *attr)
+		   unsigned int *attr, FILE *out)
 {
   if (table->n == 0)
     return false;
@@ -5878,16 +5878,16 @@ skip_listptr_hole (struct listptr_table *table, size_t *idxp,
       || p->offset >= (Dwarf_Off) (endp - *readp + offset))
     {
       *readp = endp;
-      printf (_(" [%6tx]  <UNUSED GARBAGE IN REST OF SECTION>\n"),
-	      offset);
+      fprintf (out, _(" [%6tx]  <UNUSED GARBAGE IN REST OF SECTION>\n"),
+	       offset);
       return true;
     }
 
   if (p->offset != (Dwarf_Off) offset)
     {
       *readp += p->offset - offset;
-      printf (_(" [%6tx]  <UNUSED GARBAGE> ... %" PRIu64 " bytes ...\n"),
-	      offset, (Dwarf_Off) p->offset - offset);
+      fprintf (out, _(" [%6tx]  <UNUSED GARBAGE> ... %" PRIu64 " bytes ...\n"),
+	       offset, (Dwarf_Off) p->offset - offset);
       return true;
     }
 
@@ -6934,7 +6934,7 @@ print_debug_ranges_section (Dwfl_Module *dwflmod,
 
       if (first && skip_listptr_hole (&known_rangelistptr, &listptr_idx,
 				      &address_size, NULL, &base, &cu,
-				      offset, &readp, endp, NULL))
+				      offset, &readp, endp, NULL, out))
 	continue;
 
       if (last_cu != cu)
@@ -10586,7 +10586,7 @@ print_debug_loc_section (Dwfl_Module *dwflmod,
 
       if (first && skip_listptr_hole (&known_locsptr, &listptr_idx,
 				      &address_size, &offset_size, &base,
-				      &cu, offset, &readp, endp, &attr))
+				      &cu, offset, &readp, endp, &attr, out))
 	continue;
 
       if (last_cu != cu)
@@ -11826,7 +11826,7 @@ print_debug_exception_table (Dwfl_Module *dwflmod __attribute__ ((unused)),
       if (max_action > maxdata || maxdata - max_action < 1)
 	{
 	invalid_action_table:
-	  fputs (_("   <INVALID DATA>\n"), stdout);
+	  fputs (_("   <INVALID DATA>\n"), out);
 	  return;
 	}
 
