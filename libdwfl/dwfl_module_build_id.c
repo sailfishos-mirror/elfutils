@@ -52,7 +52,9 @@ found_build_id (Dwfl_Module *mod, bool set,
 
   mod->build_id_bits = memcpy (copy, bits, len);
   mod->build_id_vaddr = vaddr;
-  mod->build_id_len = len;
+
+  /* Build id readers check len to tell if bits and vaddr are also loaded.  */
+  atomic_store_release (&mod->build_id_len, len);
   return len;
 }
 
@@ -85,23 +87,34 @@ dwfl_module_build_id (Dwfl_Module *mod,
   if (mod == NULL)
     return -1;
 
-  if (mod->build_id_len == 0 && mod->main.elf != NULL)
+  int len = atomic_load_acquire (&mod->build_id_len);
+  if (len == 0)
     {
-      /* We have the file, but have not examined it yet.  */
-      int result = __libdwfl_find_build_id (mod, true, mod->main.elf);
-      if (result <= 0)
+      mutex_lock (mod->dwfl->load_lock);
+      len = mod->build_id_len;
+      if (len == 0 && mod->main.elf != NULL)
 	{
-	  mod->build_id_len = -1;	/* Cache negative result.  */
-	  return result;
+	  /* We have the file, but have not examined it yet.  */
+	  len = __libdwfl_find_build_id (mod, true, mod->main.elf);
+	  if (len <= 0)
+	    {
+	      /* Cache negative result.  */
+	      atomic_store_release (&mod->build_id_len, -1);
+	      mutex_unlock (mod->dwfl->load_lock);
+	      return len;
+	    }
 	}
+
+      mutex_unlock (mod->dwfl->load_lock);
     }
 
-  if (mod->build_id_len <= 0)
+  if (len <= 0)
     return 0;
 
   *bits = mod->build_id_bits;
   *vaddr = mod->build_id_vaddr;
-  return mod->build_id_len;
+
+  return len;
 }
 NEW_INTDEF (dwfl_module_build_id)
 

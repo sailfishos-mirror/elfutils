@@ -234,7 +234,9 @@ __libdwfl_getelf (Dwfl_Module *mod)
   if (!mod->main.valid)
     {
       /* Clear any explicitly reported build ID, just in case it was wrong.
-	 We'll fetch it from the file when asked.  */
+	 We'll fetch it from the file when asked.  The main ELF must be set
+	 during a caller-serialized phase before MOD is shared across threads,
+	 so no atomic store is needed here.  */
       free (mod->build_id_bits);
       mod->build_id_bits = NULL;
       mod->build_id_len = 0;
@@ -1075,12 +1077,8 @@ find_aux_sym (Dwfl_Module *mod __attribute__ ((unused)),
 
 /* Try to find a symbol table in either MOD->main.elf or MOD->debug.elf.  */
 static void
-find_symtab (Dwfl_Module *mod)
+find_symtab_locked (Dwfl_Module *mod)
 {
-  if (mod->symdata != NULL || mod->aux_symdata != NULL	/* Already done.  */
-      || mod->symerr != DWFL_E_NOERROR) /* Cached previous failure.  */
-    return;
-
   __libdwfl_getelf (mod);
   mod->symerr = mod->elferr;
   if (mod->symerr != DWFL_E_NOERROR)
@@ -1325,6 +1323,24 @@ find_symtab (Dwfl_Module *mod)
     }
 }
 
+/* Load the symtab if it isn't already loaded.  */
+static void
+find_symtab (Dwfl_Module *mod)
+{
+  if (likely (atomic_load_acquire (&mod->symbols_loaded)))
+    return;
+
+  mutex_lock (mod->dwfl->load_lock);
+  if (!mod->symbols_loaded && mod->symdata == NULL
+      && mod->aux_symdata == NULL && mod->symerr == DWFL_E_NOERROR)
+    {
+      find_symtab_locked (mod);
+      mod->symerr = __libdwfl_canon_error (mod->symerr);
+      atomic_store_release (&mod->symbols_loaded, true);
+    }
+
+  mutex_unlock (mod->dwfl->load_lock);
+}
 
 /* Try to open a libebl backend for MOD.  */
 Dwfl_Error
@@ -1411,10 +1427,6 @@ load_dw (Dwfl_Module *mod, struct dwfl_file *debugfile)
 static void
 find_dw (Dwfl_Module *mod)
 {
-  if (mod->dw != NULL		/* Already done.  */
-      || mod->dwerr != DWFL_E_NOERROR) /* Cached previous failure.  */
-    return;
-
   __libdwfl_getelf (mod);
   mod->dwerr = mod->elferr;
   if (mod->dwerr != DWFL_E_NOERROR)
@@ -1471,12 +1483,9 @@ find_dw (Dwfl_Module *mod)
   mod->dwerr = __libdwfl_canon_error (mod->dwerr);
 }
 
-Dwarf *
-dwfl_module_getdwarf (Dwfl_Module *mod, Dwarf_Addr *bias)
+static void
+get_dwarf_locked (Dwfl_Module *mod)
 {
-  if (mod == NULL)
-    return NULL;
-
   find_dw (mod);
   if (mod->dwerr == DWFL_E_NOERROR)
     {
@@ -1489,13 +1498,36 @@ dwfl_module_getdwarf (Dwfl_Module *mod, Dwarf_Addr *bias)
 	  if (mod->debug.elf != mod->main.elf)
 	    (void) __libdwfl_relocate (mod, mod->debug.elf, false);
 	}
-
-      *bias = dwfl_adjusted_dwarf_addr (mod, 0);
-      return mod->dw;
     }
 
-  __libdwfl_seterrno (mod->dwerr);
-  return NULL;
+}
+
+Dwarf *
+dwfl_module_getdwarf (Dwfl_Module *mod, Dwarf_Addr *bias)
+{
+  if (mod == NULL)
+    return NULL;
+
+  if (unlikely (!atomic_load_acquire (&mod->dwarf_loaded)))
+    {
+      mutex_lock (mod->dwfl->load_lock);
+      if (!mod->dwarf_loaded && mod->dw == NULL && mod->dwerr == DWFL_E_NOERROR)
+	{
+	  get_dwarf_locked (mod);
+	  atomic_store_release (&mod->dwarf_loaded, true);
+	}
+
+      mutex_unlock (mod->dwfl->load_lock);
+    }
+
+  if (mod->dwerr != DWFL_E_NOERROR)
+    {
+      __libdwfl_seterrno (mod->dwerr);
+      return NULL;
+    }
+
+  *bias = dwfl_adjusted_dwarf_addr (mod, 0);
+  return mod->dw;
 }
 INTDEF (dwfl_module_getdwarf)
 

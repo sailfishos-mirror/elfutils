@@ -144,6 +144,10 @@ struct Dwfl
 
   /* Serialize debuginfod_client usage.  */
   mutex_define (, debuginfod_lock);
+
+  /* Serialize loading of ELF/DWARF, relocations, symbols as well as
+     Dwfl_Callbacks.*/
+  mutex_define (, load_lock);
 };
 
 #define OFFLINE_REDZONE		0x10000
@@ -205,6 +209,10 @@ struct Dwfl_Module
 
   Dwfl_Error symerr;		/* Previous failure to load symbols.  */
   Dwfl_Error dwerr;		/* Previous failure to load DWARF.  */
+
+  bool symbols_loaded;		/* True if symbols loaded or failed to load.  */
+  bool dwarf_loaded;		/* True if dwarf loaded or failed to load.  */
+  bool elf_loaded;		/* True if elf loaded or failed to load.  */
 
   /* Known CU's in this module.  */
   struct dwfl_cu *first_cu, **cu;

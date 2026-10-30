@@ -32,12 +32,9 @@
 
 #include "libdwflP.h"
 
-Elf *
-dwfl_module_getelf (Dwfl_Module *mod, GElf_Addr *loadbase)
+static Elf *
+get_elf_locked (Dwfl_Module *mod, GElf_Addr *loadbase)
 {
-  if (mod == NULL)
-    return NULL;
-
   __libdwfl_getelf (mod);
   if (mod->elferr == DWFL_E_NOERROR)
     {
@@ -67,5 +64,31 @@ dwfl_module_getelf (Dwfl_Module *mod, GElf_Addr *loadbase)
 
   __libdwfl_seterrno (mod->elferr);
   return NULL;
+}
+
+Elf *
+dwfl_module_getelf (Dwfl_Module *mod, GElf_Addr *loadbase)
+{
+  if (mod == NULL)
+    return NULL;
+
+  if (likely (atomic_load_acquire (&mod->elf_loaded)))
+    {
+      if (mod->elferr != DWFL_E_NOERROR)
+	{
+	  __libdwfl_seterrno (mod->elferr);
+	  return NULL;
+	}
+
+      *loadbase = dwfl_adjusted_address (mod, 0);
+      return mod->main.elf;
+    }
+
+  mutex_lock (mod->dwfl->load_lock);
+  Elf *elf = get_elf_locked (mod, loadbase);
+  atomic_store_release (&mod->elf_loaded, true);
+  mutex_unlock (mod->dwfl->load_lock);
+
+  return elf;
 }
 INTDEF (dwfl_module_getelf)
