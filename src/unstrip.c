@@ -626,6 +626,17 @@ adjust_all_relocs (Elf *elf, Elf_Scn *symtab, const GElf_Shdr *symshdr,
       }
 }
 
+/* Return true if SHDR, a symbol table section of ELF, has an sh_entsize
+   equal to the size of one symbol and an sh_size of at least one entry.
+   libelf bounds symbol accesses by sh_size divided by the symbol size,
+   so only then does sh_size / sh_entsize count the symbols it can access.  */
+static bool
+valid_symtab_entsize (Elf *elf, const GElf_Shdr *shdr)
+{
+  return (shdr->sh_entsize == gelf_fsize (elf, ELF_T_SYM, 1, EV_CURRENT)
+	  && shdr->sh_size >= shdr->sh_entsize);
+}
+
 /* The original file probably had section symbols for all of its
    sections, even the unallocated ones.  To match it as closely as
    possible, add in section symbols for the added sections.  */
@@ -643,6 +654,10 @@ add_new_section_symbols (Elf_Scn *old_symscn, size_t old_shnum,
 		     " or a sh_size smaller than sh_entsize"));
 
   const size_t nsym = shdr->sh_size / shdr->sh_entsize;
+  /* The loop below writes symndx_map[i - 1] for each i < old_shnum, so
+     old_shnum must not exceed nsym.  */
+  if (old_shnum > nsym)
+    error_exit (0, _("SYMTAB section has too few symbols"));
   size_t symndx_map[nsym - 1];
 
   shdr->sh_info += added;
@@ -1779,11 +1794,10 @@ more sections in stripped file than debug file -- arguments reversed?"));
 
 	    Elf_Data *shndxdata = NULL;	/* XXX */
 
-	    if (shdr_mem.sh_entsize == 0
-		|| shdr_mem.sh_size < shdr_mem.sh_entsize)
+	    if (!valid_symtab_entsize (stripped, &shdr_mem))
 	      error_exit (0,
-			  _("SYMTAB section cannot have zero sh_entsize"
-			    " or a sh_size smaller than sh_entsize"));
+			  _("SYMTAB section cannot have an invalid"
+			    " sh_entsize or sh_size"));
 	    for (size_t i = 1; i < shdr_mem.sh_size / shdr_mem.sh_entsize; ++i)
 	      {
 		GElf_Sym sym_mem;
@@ -1848,12 +1862,10 @@ more sections in stripped file than debug file -- arguments reversed?"));
     {
       /* Merge the stripped file's symbol table into the unstripped one.  */
       if (stripped_symtab != NULL
-	  && (stripped_symtab->shdr.sh_entsize == 0
-	      || (stripped_symtab->shdr.sh_size
-		  < stripped_symtab->shdr.sh_entsize)))
+	  && !valid_symtab_entsize (stripped, &stripped_symtab->shdr))
 	error_exit (0,
-		    _("stripped SYMTAB section cannot have zero sh_entsize"
-		      " or a sh_size smaller than sh_entsize"));
+		    _("stripped SYMTAB section cannot have an invalid"
+		      " sh_entsize or sh_size"));
       const size_t stripped_nsym = (stripped_symtab == NULL ? 1
 				    : (stripped_symtab->shdr.sh_size
 				       / stripped_symtab->shdr.sh_entsize));
@@ -1861,10 +1873,10 @@ more sections in stripped file than debug file -- arguments reversed?"));
       GElf_Shdr shdr_mem;
       GElf_Shdr *shdr = gelf_getshdr (unstripped_symtab, &shdr_mem);
       ELF_CHECK (shdr != NULL, _("cannot get section header: %s"));
-      if (shdr->sh_entsize == 0 || shdr->sh_size < shdr->sh_entsize)
+      if (!valid_symtab_entsize (unstripped, shdr))
 	error_exit (0,
-		    _("unstripped SYMTAB section cannot have zero sh_entsize"
-		      " or a sh_size smaller than sh_entsize"));
+		    _("unstripped SYMTAB section cannot have an invalid"
+		      " sh_entsize or sh_size"));
       const size_t unstripped_nsym = shdr->sh_size / shdr->sh_entsize;
 
       /* First collect all the symbols from both tables.  */
