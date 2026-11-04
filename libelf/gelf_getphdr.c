@@ -60,6 +60,16 @@ gelf_getphdr (Elf *elf, int ndx, GElf_Phdr *dst)
 
   rwlock_rdlock (elf->lock);
 
+  /* Test whether the index is ok.  */
+  size_t phnum;
+  if (ndx < 0
+      || __elf_getphdrnum_chk_rdlock (elf, &phnum) != 0
+      || (size_t) ndx >= phnum)
+    {
+      __libelf_seterrno (ELF_E_INVALID_INDEX);
+      goto out;
+    }
+
   if (elf->class == ELFCLASS32)
     {
       /* Copy the elements one-by-one.  */
@@ -73,15 +83,6 @@ gelf_getphdr (Elf *elf, int ndx, GElf_Phdr *dst)
 	    /* The error number is already set.  */
 	    return NULL;
 	  rwlock_rdlock (elf->lock);
-	}
-
-      /* Test whether the index is ok.  */
-      size_t phnum;
-      if (__elf_getphdrnum_chk_rdlock (elf, &phnum) != 0
-	  || (size_t) ndx >= phnum)
-	{
-	  __libelf_seterrno (ELF_E_INVALID_INDEX);
-	  goto out;
 	}
 
       /* We know the result now.  */
@@ -113,15 +114,6 @@ gelf_getphdr (Elf *elf, int ndx, GElf_Phdr *dst)
 	    /* The error number is already set.  */
 	    return NULL;
 	  rwlock_rdlock (elf->lock);
-	}
-
-      /* Test whether the index is ok.  */
-      size_t phnum;
-      if (__elf_getphdrnum_chk_rdlock (elf, &phnum) != 0
-	  || (size_t) ndx >= phnum)
-	{
-	  __libelf_seterrno (ELF_E_INVALID_INDEX);
-	  goto out;
 	}
 
       /* We only have to copy the data.  */

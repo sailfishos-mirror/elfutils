@@ -53,6 +53,16 @@ gelf_update_phdr (Elf *elf, int ndx, GElf_Phdr *src)
 
   rwlock_wrlock (elf->lock);
 
+  /* Test whether the index is ok.  */
+  size_t phnum;
+  if (ndx < 0
+      || __elf_getphdrnum_chk_rdlock (elf, &phnum) != 0
+      || (size_t) ndx >= phnum)
+    {
+      __libelf_seterrno (ELF_E_INVALID_INDEX);
+      goto out;
+    }
+
   if (elf->class == ELFCLASS32)
     {
       Elf32_Phdr *phdr = elf->state.elf32.phdr;
@@ -79,17 +89,6 @@ gelf_update_phdr (Elf *elf, int ndx, GElf_Phdr *src)
 	    goto out;
 	}
 
-      /* Test whether the index is ok.  */
-      size_t phnum;
-      if (ndx >= elf->state.elf32.ehdr->e_phnum
-	  && (elf->state.elf32.ehdr->e_phnum != PN_XNUM
-	      || __elf_getphdrnum_rdlock (elf, &phnum) != 0
-	      || (size_t) ndx >= phnum))
-	{
-	  __libelf_seterrno (ELF_E_INVALID_INDEX);
-	  goto out;
-	}
-
       /* Now correct the pointer to point to the correct element.  */
       phdr += ndx;
 
@@ -114,17 +113,6 @@ gelf_update_phdr (Elf *elf, int ndx, GElf_Phdr *src)
 	  if (phdr == NULL)
 	    /* The error number is already set.  */
 	    goto out;
-	}
-
-      /* Test whether the index is ok.  */
-      size_t phnum;
-      if (ndx >= elf->state.elf64.ehdr->e_phnum
-	  && (elf->state.elf64.ehdr->e_phnum != PN_XNUM
-	      || __elf_getphdrnum_rdlock (elf, &phnum) != 0
-	      || (size_t) ndx >= phnum))
-	{
-	  __libelf_seterrno (ELF_E_INVALID_INDEX);
-	  goto out;
 	}
 
       /* Just copy the data.  */
