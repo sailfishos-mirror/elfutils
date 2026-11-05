@@ -9260,7 +9260,8 @@ print_form_data (Dwarf *dbg, int form, const unsigned char *readp,
     strx_val:
       data = dbg->sectiondata[IDX_debug_str_offsets];
       if (data == NULL
-	  || data->d_size - str_offsets_base < val * offset_len)
+	  || str_offsets_base > data->d_size
+	  || val > (data->d_size - str_offsets_base) / offset_len)
 	str = "???";
       else
 	{
