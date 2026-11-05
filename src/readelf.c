@@ -11553,6 +11553,8 @@ print_debug_str_offsets_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	  uint16_t version;
 	  uint16_t padding;
 
+	  if (unlikely (readendp - readp < 4))
+	    goto invalid_data;
 	  unit_length = read_4ubyte_unaligned_inc (dbg, readp);
 	  if (unlikely (unit_length == 0xffffffff))
 	    {
