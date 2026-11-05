@@ -8698,9 +8698,22 @@ print_debug_units (Dwfl_Module *dwflmod,
      Dwarf_CU is still in the expected section.  */
   if (debug_types)
     {
+      /* libdw ignores a section it cannot use, e.g. an empty one or one
+	 that failed to decompress.  Then there is nothing to print.  */
+      if (dbg->sectiondata[IDX_debug_types] == NULL)
+	goto do_return;
       cu_mem.dbg = dbg;
-      cu_mem.end = dbg->sectiondata[IDX_debug_info]->d_size;
-      cu_mem.sec_idx = IDX_debug_info;
+      if (dbg->sectiondata[IDX_debug_info] != NULL)
+	{
+	  cu_mem.end = dbg->sectiondata[IDX_debug_info]->d_size;
+	  cu_mem.sec_idx = IDX_debug_info;
+	}
+      else
+	{
+	  /* No .debug_info, start at the beginning of .debug_types.  */
+	  cu_mem.end = 0;
+	  cu_mem.sec_idx = IDX_debug_types;
+	}
       cu = &cu_mem;
     }
   else
