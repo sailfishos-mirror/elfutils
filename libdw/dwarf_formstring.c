@@ -43,8 +43,20 @@ dwarf_formstring (Dwarf_Attribute *attrp)
 
   /* We found it.  Now determine where the string is stored.  */
   if (attrp->form == DW_FORM_string)
-    /* A simple inlined string.  */
-    return (const char *) attrp->valp;
+    {
+      /* A simple inlined string.  dwarf_getattrs and dwarf_attr hand out
+	 the attribute before its value length is checked, so make sure the
+	 string is null-terminated inside its unit.  */
+      const unsigned char *endp = attrp->cu->endp;
+      if (unlikely (attrp->valp >= endp
+		    || memchr (attrp->valp, '\0',
+			       (size_t) (endp - attrp->valp)) == NULL))
+	{
+	  __libdw_seterrno (DWARF_E_INVALID_DWARF);
+	  return NULL;
+	}
+      return (const char *) attrp->valp;
+    }
 
   Dwarf_CU *cu = attrp->cu;
   Dwarf *dbg = cu->dbg;
