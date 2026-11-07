@@ -199,7 +199,7 @@ get_shnum (void *map_address, unsigned char *e_ident, int fildes,
 
       /* If the section headers were truncated, pretend none were there.  */
       if (ehdr.e32->e_shoff > maxsize
-	  || maxsize - ehdr.e32->e_shoff < sizeof (Elf32_Shdr) * result)
+	  || result > (maxsize - ehdr.e32->e_shoff) / sizeof (Elf32_Shdr))
 	result = 0;
     }
   else
@@ -268,7 +268,7 @@ get_shnum (void *map_address, unsigned char *e_ident, int fildes,
 
       /* If the section headers were truncated, pretend none were there.  */
       if (ehdr.e64->e_shoff > maxsize
-	  || maxsize - ehdr.e64->e_shoff < sizeof (Elf64_Shdr) * result)
+	  || result > (maxsize - ehdr.e64->e_shoff) / sizeof (Elf64_Shdr))
 	result = 0;
     }
 
