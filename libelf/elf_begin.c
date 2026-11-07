@@ -1109,18 +1109,27 @@ dup_elf (int fildes, Elf_Cmd cmd, Elf *ref)
   /* We have all the information we need about the next archive member.
      Now create a descriptor for it. Check parent size can contain member.  */
   if (ref->state.ar.offset < ref->start_offset)
-    return NULL;
+    {
+      __libelf_seterrno (ELF_E_INVALID_FILE);
+      return NULL;
+    }
   size_t max_size = ref->maximum_size;
   size_t offset = (size_t) (ref->state.ar.offset - ref->start_offset);
   size_t hdr_size = sizeof (struct ar_hdr);
   size_t ar_size = (size_t) ref->state.ar.cur_ar_hdr.ar_size;
   if (max_size < hdr_size || max_size - hdr_size < offset)
-    return NULL;
+    {
+      __libelf_seterrno (ELF_E_INVALID_FILE);
+      return NULL;
+    }
 
   Elf_Arhdr ar_hdr = {0};
   if (copy_arhdr (&ar_hdr, ref) != 0)
-    /* Out of memory.  */
-    return NULL;
+    {
+      /* Out of memory.  */
+      __libelf_seterrno (ELF_E_NOMEM);
+      return NULL;
+    }
 
   result = read_file (fildes, ref->state.ar.offset + sizeof (struct ar_hdr),
 		      MIN (max_size - hdr_size - offset, ar_size), cmd, ref);
