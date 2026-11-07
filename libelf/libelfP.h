@@ -1,6 +1,6 @@
 /* Internal interfaces for libelf.
    Copyright (C) 1998-2010, 2015, 2016 Red Hat, Inc.
-   Copyright (C) 2023 Mark J. Wielaard <mark@klomp.org>
+   Copyright (C) 2023, 2026 Mark J. Wielaard <mark@klomp.org>
    This file is part of elfutils.
    Contributed by Ulrich Drepper <drepper@redhat.com>, 1998.
 
@@ -550,8 +550,9 @@ extern Elf_Data *__elf_rawdata_internal (Elf_Scn *__scn, Elf_Data *__data)
 /* Should be called to setup first section data element if
    data_list_rear is NULL and we know data_read is set and there is
    raw data available.  Might upgrade the ELF lock from a read to a
-   write lock.  If the lock is already a write lock set wrlocked.  */
-extern void __libelf_set_data_list_rdlock (Elf_Scn *scn, int wrlocked)
+   write lock.  If the lock is already a write lock set wrlocked.
+   Returns 0 on success and -1 on failure (and sets libelf errno).  */
+extern int __libelf_set_data_list_rdlock (Elf_Scn *scn, int wrlocked)
      internal_function;
 extern char *__elf_strptr_internal (Elf *__elf, size_t __index,
 				    size_t __offset) attribute_hidden;
@@ -607,9 +608,11 @@ extern void * __libelf_decompress_elf_wrlock (Elf_Scn *scn, size_t *size_out,
 					      size_t *addralign)
      internal_function;
 
-
-extern void __libelf_reset_rawdata (Elf_Scn *scn, void *buf, size_t size,
-				    size_t align, Elf_Type type)
+/* Resets the rawdata buffer of an Elf_Scn. Assumes buf is a malloced
+   buffer.  Returns 1 on failure (and sets libelf errno), 0 on
+   success.  */
+extern int __libelf_reset_rawdata (Elf_Scn *scn, void *buf, size_t size,
+				   size_t align, Elf_Type type)
      internal_function;
 
 

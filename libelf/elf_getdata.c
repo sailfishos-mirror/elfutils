@@ -1,6 +1,6 @@
 /* Return the next data element from the section after possibly converting it.
    Copyright (C) 1998-2005, 2006, 2007, 2015, 2016 Red Hat, Inc.
-   Copyright (C) 2022 Mark J. Wielaard <mark@klomp.org>
+   Copyright (C) 2022, 2026 Mark J. Wielaard <mark@klomp.org>
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 1998.
 
@@ -133,8 +133,9 @@ __libelf_data_type (GElf_Ehdr *ehdr, int sh_type, GElf_Xword align)
     }
 }
 
-/* Convert the data in the current section.  */
-static void
+/* Convert the data in the current section.  Returns 1 on failure
+   (setting elf errno to ELF_E_NOMEM), 0 on success.  */
+static int
 convert_data (Elf_Scn *scn, int eclass,
 	      int data, size_t size, Elf_Type type)
 {
@@ -152,7 +153,7 @@ convert_data (Elf_Scn *scn, int eclass,
 	  if (scn->data_base == NULL)
 	    {
 	      __libelf_seterrno (ELF_E_NOMEM);
-	      return;
+	      return 1;
 	    }
 
 	  /* The copy will be appropriately aligned for direct access.  */
@@ -167,7 +168,7 @@ convert_data (Elf_Scn *scn, int eclass,
       if (scn->data_base == NULL)
 	{
 	  __libelf_seterrno (ELF_E_NOMEM);
-	  return;
+	  return 1;
 	}
 
       /* Make sure the source is correctly aligned for the conversion
@@ -181,7 +182,7 @@ convert_data (Elf_Scn *scn, int eclass,
 	  if (rawdata_source == NULL)
 	    {
 	      __libelf_seterrno (ELF_E_NOMEM);
-	      return;
+	      return 1;
 	    }
 
 	  /* The copy will be appropriately aligned for direct access.  */
@@ -205,6 +206,8 @@ convert_data (Elf_Scn *scn, int eclass,
   scn->data_list.data.d.d_version = scn->rawdata.d.d_version;
 
   scn->data_list.data.s = scn;
+
+  return 0;
 }
 
 
@@ -433,7 +436,7 @@ __libelf_set_rawdata (Elf_Scn *scn)
   return result;
 }
 
-void
+int
 internal_function
 __libelf_set_data_list_rdlock (Elf_Scn *scn, int wrlocked)
 {
@@ -448,17 +451,18 @@ __libelf_set_data_list_rdlock (Elf_Scn *scn, int wrlocked)
 	  rwlock_unlock (elf->lock);
 	  rwlock_wrlock (elf->lock);
 	  if (scn->data_list_rear != NULL)
-	    return;
+	    return 0;
 	}
 
       /* Convert according to the version and the type.   */
-      convert_data (scn, elf->class,
-		    (elf->class == ELFCLASS32
-		     || (offsetof (struct Elf, state.elf32.ehdr)
-			 == offsetof (struct Elf, state.elf64.ehdr))
-		     ? elf->state.elf32.ehdr->e_ident[EI_DATA]
-		     : elf->state.elf64.ehdr->e_ident[EI_DATA]),
-		    scn->rawdata.d.d_size, scn->rawdata.d.d_type);
+      if (convert_data (scn, elf->class,
+			(elf->class == ELFCLASS32
+			 || (offsetof (struct Elf, state.elf32.ehdr)
+			     == offsetof (struct Elf, state.elf64.ehdr))
+			 ? elf->state.elf32.ehdr->e_ident[EI_DATA]
+			 : elf->state.elf64.ehdr->e_ident[EI_DATA]),
+			scn->rawdata.d.d_size, scn->rawdata.d.d_type) != 0)
+	return 1;
     }
   else
     {
@@ -469,6 +473,8 @@ __libelf_set_data_list_rdlock (Elf_Scn *scn, int wrlocked)
     }
 
   scn->data_list_rear = &scn->data_list;
+
+  return 0;
 }
 
 static Elf_Data *
@@ -559,8 +565,9 @@ get_data_lock (Elf_Scn *scn, Elf_Data *data, int wrlocked)
   /* At this point we know the raw data is available.  But it might be
      empty in case the section has size zero (for whatever reason).
      Now create the converted data in case this is necessary.  */
-  if (scn->data_list_rear == NULL)
-    __libelf_set_data_list_rdlock (scn, wrlocked);
+  if (scn->data_list_rear == NULL
+      && __libelf_set_data_list_rdlock (scn, wrlocked) != 0)
+    goto out;
 
   /* Return the first data element in the list.  */
   result = &scn->data_list.data.d;

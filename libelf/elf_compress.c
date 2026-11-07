@@ -1,6 +1,6 @@
 /* Compress or decompress a section.
    Copyright (C) 2015, 2016 Red Hat, Inc.
-   Copyright (C) 2023, Mark J. Wielaard <mark@klomp.org>
+   Copyright (C) 2023, 2026 Mark J. Wielaard <mark@klomp.org>
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -553,8 +553,9 @@ __libelf_decompress_elf (Elf_Scn *scn, size_t *size_out, size_t *addralign)
   return decompress_elf (scn, size_out, addralign, false);
 }
 
-/* Assumes buf is a malloced buffer.  */
-void
+/* Assumes buf is a malloced buffer.  Returns 1 on failure
+   (out of memory), 0 on success.  */
+int
 internal_function
 __libelf_reset_rawdata (Elf_Scn *scn, void *buf, size_t size, size_t align,
 			Elf_Type type)
@@ -604,7 +605,10 @@ __libelf_reset_rawdata (Elf_Scn *scn, void *buf, size_t size, size_t align,
      data (might have to convert the Chdr to native format).  */
   scn->data_read = 1;
   scn->flags |= ELF_F_FILEDATA;
-  __libelf_set_data_list_rdlock (scn, 1);
+  if (__libelf_set_data_list_rdlock (scn, 1) != 0)
+    return 1;
+
+  return 0;
 }
 
 int
@@ -742,7 +746,8 @@ elf_compress (Elf_Scn *scn, int type, unsigned int flags)
 	  shdr.s64->sh_flags |= SHF_COMPRESSED;
 	}
 
-      __libelf_reset_rawdata (scn, out_buf, new_size, 1, ELF_T_CHDR);
+      if (__libelf_reset_rawdata (scn, out_buf, new_size, 1, ELF_T_CHDR) != 0)
+	return -1;
 
       /* The section is now compressed, we could keep the uncompressed
 	 data around, but since that might have been multiple Elf_Data
@@ -792,10 +797,11 @@ elf_compress (Elf_Scn *scn, int type, unsigned int flags)
 	  shdr.s64->sh_flags &= ~SHF_COMPRESSED;
 	}
 
-      __libelf_reset_rawdata (scn, scn->zdata_base,
-			      scn->zdata_size, scn->zdata_align,
-			      __libelf_data_type (&ehdr, sh_type,
-						  scn->zdata_align));
+      if (__libelf_reset_rawdata (scn, scn->zdata_base,
+				  scn->zdata_size, scn->zdata_align,
+				  __libelf_data_type (&ehdr, sh_type,
+						      scn->zdata_align)) != 0)
+	return -1;
 
       return 1;
     }

@@ -80,8 +80,9 @@ elf_newdata (Elf_Scn *scn)
      already data available.  */
   if (scn->data_read
       && scn->rawdata_base != NULL
-      && scn->data_list_rear == NULL)
-    __libelf_set_data_list_rdlock (scn, 1);
+      && scn->data_list_rear == NULL
+      && __libelf_set_data_list_rdlock (scn, 1) != 0)
+    goto out;
 
   if (scn->data_read && scn->data_list_rear == NULL)
     {
@@ -99,10 +100,10 @@ elf_newdata (Elf_Scn *scn)
 	 load/convert any data if data_list_rear is set.  */
       if (scn->data_read == 0)
 	{
-	  if (__libelf_set_rawdata_wrlock (scn) != 0)
+	  if (__libelf_set_rawdata_wrlock (scn) != 0
+	      || __libelf_set_data_list_rdlock (scn, 1) != 0)
 	    /* Something went wrong.  The error value is already set.  */
 	    goto out;
-	  __libelf_set_data_list_rdlock (scn, 1);
 	}
 
       /* Create a new, empty data descriptor.  */

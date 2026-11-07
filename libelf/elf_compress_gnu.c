@@ -1,5 +1,6 @@
 /* Compress or decompress a section.
    Copyright (C) 2015 Red Hat, Inc.
+   Copyright (C) 2026 Mark J. Wielaard <mark@klomp.org>
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -131,7 +132,8 @@ elf_compress_gnu (Elf_Scn *scn, int inflate, unsigned int flags)
       else
 	  shdr.s64->sh_size = new_size;
 
-      __libelf_reset_rawdata (scn, out_buf, new_size, 1, ELF_T_BYTE);
+      if (__libelf_reset_rawdata (scn, out_buf, new_size, 1, ELF_T_BYTE) != 0)
+	return -1;
 
       /* The section is now compressed, we could keep the uncompressed
 	 data around, but since that might have been multiple Elf_Data
@@ -193,9 +195,10 @@ elf_compress_gnu (Elf_Scn *scn, int inflate, unsigned int flags)
       else
 	shdr.s64->sh_size = size;
 
-      __libelf_reset_rawdata (scn, buf_out, size, sh_addralign,
-			      __libelf_data_type (&ehdr, sh_type,
-						  sh_addralign));
+      if (__libelf_reset_rawdata (scn, buf_out, size, sh_addralign,
+				  __libelf_data_type (&ehdr, sh_type,
+						      sh_addralign)) != 0)
+	return -1;
 
       scn->zdata_base = buf_out;
 
