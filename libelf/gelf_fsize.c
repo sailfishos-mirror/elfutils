@@ -100,6 +100,13 @@ gelf_fsize (Elf *elf, Elf_Type type, size_t count, unsigned int version)
       return 0;
     }
 
+  /* Class is set from the Ehdr.  */
+  if (elf->class == 0)
+    {
+      __libelf_seterrno (ELF_E_WRONG_ORDER_EHDR);
+      return 0;
+    }
+
   return count * __libelf_type_sizes[elf->class - 1][type];
 }
 INTDEF(gelf_fsize)
