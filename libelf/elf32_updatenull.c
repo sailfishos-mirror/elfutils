@@ -308,6 +308,10 @@ __elfw2(LIBELFBITS,updatenull_wrlock) (Elf *elf, int *change_bop, size_t shnum)
 			  return -1;
 			}
 
+		      /* An alignment of zero would cause the padding
+			 calculation to be wrong.  */
+		      if (data->d_align == 0)
+			data->d_align = 1;
 		      if (unlikely (! powerof2 (data->d_align)))
 			{
 			  __libelf_seterrno (ELF_E_INVALID_ALIGN);
