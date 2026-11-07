@@ -1,6 +1,6 @@
 /* Create descriptor for processing file.
    Copyright (C) 1998-2010, 2012, 2014, 2015, 2016 Red Hat, Inc.
-   Copyright (C) 2021, 2022 Mark J. Wielaard <mark@klomp.org>
+   Copyright (C) 2021, 2022, 2026 Mark J. Wielaard <mark@klomp.org>
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 1998.
 
@@ -736,11 +736,13 @@ read_long_names (Elf *elf)
 	  string = buf;
 	}
 
-      /* atol expects to see at least one digit.
-	 It also cannot be negative (-).  */
+      /* ar_size must start with at least one digit ('0'-'9').  */
       if (!isdigit(string[0]))
 	return NULL;
-      len = atol (string);
+      errno = 0;
+      len = strtoul(string, NULL, 10);
+      if (errno == ERANGE)
+	return NULL;
 
       if (memcmp (hdr->ar_name, "//              ", 16) == 0)
 	break;
