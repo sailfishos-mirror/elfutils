@@ -81,6 +81,13 @@ elf_getdata_rawchunk (Elf *elf, int64_t offset, size_t size, Elf_Type type)
       return NULL;
     }
 
+  /* Class is set from the Ehdr.  */
+  if (unlikely (elf->class == 0))
+    {
+      __libelf_seterrno (ELF_E_WRONG_ORDER_EHDR);
+      return NULL;
+    }
+
   /* Get the raw bytes from the file.  */
   void *rawchunk;
   int flags = 0;
