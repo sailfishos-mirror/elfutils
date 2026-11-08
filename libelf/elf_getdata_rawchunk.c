@@ -45,10 +45,10 @@ chunk_compare (const void *a, const void *b)
   Elf_Data_Chunk *db = (Elf_Data_Chunk *)b;
 
   if (da->offset != db->offset)
-    return da->offset - db->offset;
+    return da->offset < db->offset ? -1 : 1;
 
   if (da->data.d.d_size != db->data.d.d_size)
-    return da->data.d.d_size - db->data.d.d_size;
+    return da->data.d.d_size < db->data.d.d_size ? -1 : 1;
 
   return da->data.d.d_type - db->data.d.d_type;
 }
