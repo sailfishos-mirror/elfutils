@@ -193,10 +193,12 @@ load_shdr_wrlock (Elf_Scn *scn)
     }
 
   Elf_Scn *scns = elf->state.ELFW(elf,LIBELFBITS).scns.data;
+  size_t scns_cnt = elf->state.ELFW(elf,LIBELFBITS).scns.cnt;
 
   /* Set the pointers in the `scn's.  Set section 0 last to indicate that
-     all sections have been set.  */
-  for (size_t cnt = shnum; cnt > 0; --cnt)
+     all sections have been set.  Add a shdr pointer to all sections
+     read from the file.  */
+  for (size_t cnt = scns_cnt; cnt > 0; --cnt)
     atomic_store_release (&scns[cnt - 1].shdr.ELFW(e,LIBELFBITS),
 			  &elf->state.ELFW(elf,LIBELFBITS).shdr[cnt - 1]);
 
