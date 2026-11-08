@@ -1,6 +1,6 @@
 /* Return converted data from raw chunk of ELF file.
    Copyright (C) 2007, 2014, 2015 Red Hat, Inc.
-   Copyright (C) 2022, 2023 Mark J. Wielaard <mark@klomp.org>
+   Copyright (C) 2022, 2023, 2026 Mark J. Wielaard <mark@klomp.org>
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -31,7 +31,6 @@
 # include <config.h>
 #endif
 
-#include <assert.h>
 #include <errno.h>
 #include <string.h>
 
@@ -162,27 +161,16 @@ elf_getdata_rawchunk (Elf *elf, int64_t offset, size_t size, Elf_Type type)
   void *buffer;
   if (elf->state.elf32.ehdr->e_ident[EI_DATA] == MY_ELFDATA)
     {
-      if (((uintptr_t) rawchunk & (align - 1)) == 0)
-	/* No need to copy, we can use the raw data.  */
-	buffer = rawchunk;
-      else
-	{
-	  /* A malloc'd block is always sufficiently aligned.  */
-	  assert (flags == 0);
-
-	  buffer = malloc (size);
-	  if (unlikely (buffer == NULL))
-	    goto nomem;
-	  flags = ELF_F_MALLOCED;
-
-	  /* The copy will be appropriately aligned for direct access.  */
-	  memcpy (buffer, rawchunk, size);
-
-	  free (rawchunk);
-	}
+      /* The rawchunk was already aligned for the type above. It was
+	 either mmapped and already aligned correctly, otherwise it
+	 was malloced and flags was set to ELF_F_MALLOCED, malloc
+	 makes sure to align correctly for the largest type.  And we
+	 don't need to covert.  */
+      buffer = rawchunk;
     }
   else
     {
+      /* If the rawchunk was malloced above use it directly.  */
       if (flags)
 	buffer = rawchunk;
       else
@@ -195,9 +183,6 @@ elf_getdata_rawchunk (Elf *elf, int64_t offset, size_t size, Elf_Type type)
 
       /* Call the conversion function.  */
       (*__elf_xfctstom[elf->class - 1][type])(buffer, rawchunk, size, 0);
-
-      if (!flags)
-	free (rawchunk);
     }
 
   /* Allocate the dummy container to point at this buffer.  */
