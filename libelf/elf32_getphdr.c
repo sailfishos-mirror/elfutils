@@ -150,6 +150,8 @@ __elfw2(LIBELFBITS,getphdr_wrlock) (Elf *elf)
 		      if (unlikely (notcvt == NULL))
 			{
 			  __libelf_seterrno (ELF_E_NOMEM);
+			  free (elf->state.ELFW(elf,LIBELFBITS).phdr);
+			  elf->state.ELFW(elf,LIBELFBITS).phdr = NULL;
 			  goto out;
 			}
 		      memcpy (notcvt, file_phdr, size);
