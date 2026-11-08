@@ -212,6 +212,8 @@ elf_getarsym (Elf *elf, size_t *ptr)
 	      temp_data = malloc (sz);
 	      if (unlikely (temp_data == NULL))
 		{
+		  free (elf->state.ar.ar_sym);
+		  elf->state.ar.ar_sym = NULL;
 		  __libelf_seterrno (ELF_E_NOMEM);
 		  goto out;
 		}
@@ -255,6 +257,8 @@ elf_getarsym (Elf *elf, size_t *ptr)
 		  temp_data = malloc (sz);
 		  if (unlikely (temp_data == NULL))
 		    {
+		      free (elf->state.ar.ar_sym);
+		      elf->state.ar.ar_sym = NULL;
 		      __libelf_seterrno (ELF_E_NOMEM);
 		      goto out;
 		    }
