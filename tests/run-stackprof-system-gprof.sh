@@ -33,14 +33,14 @@ tempfiles test.out
 testjob_launch
 
 # run systemwide scan, no gprof output
-testrun timeout -p --kill-after=5 10 ${abs_top_builddir}/src/stackprof -v 2>&1 | tee test.out
+testrun timeout -p --foreground --kill-after=5 10 ${abs_top_builddir}/src/stackprof -v 2>&1 | tee test.out
 grep "^perf_event_attr configuration" test.out
 grep "Starting stack profile collection systemwide" test.out || (grep "ERROR: Unsupported architecture" test.out && echo "unsupported arch" && exit 77)
 grep -E "^[0-9]+ " test.out # -- pid / sample counts entries
 
 # run systemwide scan again, with gprof output
 # reduce verbosity, bump post-processing timeout compared to the first run
-testrun timeout -p --kill-after=10 10 ${abs_top_builddir}/src/stackprof -g 2>&1 | tee test.out
+testrun timeout -p --foreground --kill-after=10 10 ${abs_top_builddir}/src/stackprof -g 2>&1 | tee test.out
 tempfiles gmon.*
 grep "^perf_event_attr configuration" test.out
 grep "Starting stack profile collection systemwide" test.out
