@@ -67,7 +67,7 @@ gelf_getauxv (Elf_Data *data, int ndx, GElf_auxv_t *dst)
 	 entries has to be converted.  The user better have provided a
 	 buffer where we can store the information.  While copying the data
 	 we convert the format.  */
-      if (unlikely ((ndx + 1) * sizeof (Elf32_auxv_t) > data_scn->d.d_size))
+      if (INVALID_NDX (ndx, Elf32_auxv_t, &data_scn->d))
 	{
 	  __libelf_seterrno (ELF_E_INVALID_INDEX);
 	  goto out;
@@ -87,7 +87,7 @@ gelf_getauxv (Elf_Data *data, int ndx, GElf_auxv_t *dst)
 
       /* The data is already in the correct form.  Just make sure the
 	 index is OK.  */
-      if (unlikely ((ndx + 1) * sizeof (GElf_auxv_t) > data_scn->d.d_size))
+      if (INVALID_NDX (ndx, GElf_auxv_t, &data_scn->d))
 	{
 	  __libelf_seterrno (ELF_E_INVALID_INDEX);
 	  goto out;

@@ -76,7 +76,7 @@ gelf_update_auxv (Elf_Data *data, int ndx, GElf_auxv_t *src)
 	}
 
       /* Check whether we have to resize the data buffer.  */
-      if (unlikely ((ndx + 1) * sizeof (Elf32_auxv_t) > data_scn->d.d_size))
+      if (INVALID_NDX (ndx, Elf32_auxv_t, &data_scn->d))
 	{
 	  __libelf_seterrno (ELF_E_INVALID_INDEX);
 	  goto out;
@@ -90,7 +90,7 @@ gelf_update_auxv (Elf_Data *data, int ndx, GElf_auxv_t *src)
   else
     {
       /* Check whether we have to resize the data buffer.  */
-      if (unlikely ((ndx + 1) * sizeof (Elf64_auxv_t) > data_scn->d.d_size))
+      if (INVALID_NDX (ndx, Elf64_auxv_t, &data_scn->d))
 	{
 	  __libelf_seterrno (ELF_E_INVALID_INDEX);
 	  goto out;
