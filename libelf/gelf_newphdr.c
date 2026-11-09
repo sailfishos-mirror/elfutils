@@ -40,6 +40,9 @@
 void *
 gelf_newphdr ( Elf *elf, size_t phnum)
 {
+  if (elf == NULL)
+    return NULL;
+
   return (elf->class == ELFCLASS32
 	  ? (void *) INTUSE(elf32_newphdr) (elf, phnum)
 	  : (void *) INTUSE(elf64_newphdr) (elf, phnum));
