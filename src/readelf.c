@@ -10800,6 +10800,16 @@ struct mac_culist
   struct mac_culist *next;
 };
 
+static void
+free_mac_culist (struct mac_culist *culist)
+{
+  while (culist != NULL)
+    {
+      struct mac_culist *next = culist->next;
+      free (culist);
+      culist = next;
+    }
+}
 
 static int
 mac_compare (const void *p1, const void *p2)
@@ -10855,7 +10865,7 @@ print_debug_macinfo_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
       if (dwarf_formudata (&attr, &macoff) != 0)
 	continue;
 
-      struct mac_culist *newp = (struct mac_culist *) alloca (sizeof (*newp));
+      struct mac_culist *newp = xmalloc (sizeof (*newp));
       newp->die = cudie;
       newp->offset = macoff;
       newp->files = NULL;
@@ -10865,8 +10875,8 @@ print_debug_macinfo_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
     }
 
   /* Convert the list into an array for easier consumption.  */
-  struct mac_culist *cus = (struct mac_culist *) alloca ((nculist + 1)
-							 * sizeof (*cus));
+  struct mac_culist *cus_base = xmalloc ((nculist + 1) * sizeof (*cus_base));
+  struct mac_culist *cus = cus_base;
   /* Add sentinel.  */
   cus[nculist].offset = data->d_size;
   cus[nculist].files = (Dwarf_Files *) -1l;
@@ -10875,8 +10885,10 @@ print_debug_macinfo_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
       for (size_t cnt = nculist - 1; culist != NULL; --cnt)
 	{
 	  assert (cnt < nculist);
+	  struct mac_culist *next = culist->next;
 	  cus[cnt] = *culist;
-	  culist = culist->next;
+	  free (culist);
+	  culist = next;
 	}
 
       /* Sort the array according to the offset in the .debug_macinfo
@@ -10913,7 +10925,7 @@ print_debug_macinfo_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	      fprintf (out, _("\
 %*s*** non-terminated string at end of section"),
 		       level, "");
-	      return;
+	      goto out;
 	    }
 
 	  if (opcode == DW_MACINFO_define)
@@ -10936,7 +10948,7 @@ print_debug_macinfo_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	      fprintf (out, _("\
 %*s*** missing DW_MACINFO_start_file argument at end of section"),
 		       level, "");
-	      return;
+	      goto out;
 	    }
 	  get_uleb128 (u128_2, readp, readendp);
 
@@ -10975,6 +10987,9 @@ print_debug_macinfo_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	  break;
 	}
     }
+
+ out:
+  free (cus_base);
 }
 
 
@@ -11016,7 +11031,7 @@ print_debug_macro_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
       if (dwarf_formudata (&attr, &lineoff) != 0)
 	continue;
 
-      struct mac_culist *newp = (struct mac_culist *) alloca (sizeof (*newp));
+      struct mac_culist *newp = xmalloc (sizeof (*newp));
       newp->die = cudie;
       newp->offset = lineoff;
       newp->files = NULL;
@@ -11038,7 +11053,7 @@ print_debug_macro_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	{
 	invalid_data:
 	  error (0, 0, _("invalid data"));
-	  return;
+	  goto out;
 	}
       const uint16_t vers = read_2ubyte_unaligned_inc (dbg, readp);
       fprintf (out, _(" Version:            %" PRIu16 "\n"), vers);
@@ -11048,7 +11063,7 @@ print_debug_macro_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
       if (vers != 4 && vers != 5)
 	{
 	  fprintf (out, _("  unknown version, cannot parse section\n"));
-	  return;
+	  goto out;
 	}
 
       if (readp + 1 > readendp)
@@ -11333,6 +11348,9 @@ print_debug_macro_section (Dwfl_Module *dwflmod __attribute__ ((unused)),
 	    fputc ('\n', out);
 	}
     }
+
+ out:
+  free_mac_culist (culist);
 }
 
 
