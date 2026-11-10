@@ -131,7 +131,13 @@ gelf_update_symshndx (Elf_Data *symdata, Elf_Data *shndxdata, int ndx,
 
   /* Now we can store the section index.  */
   if (shndx != NULL)
-    *shndx = srcshndx;
+    {
+      *shndx = srcshndx;
+
+      /* Mark the section as modified.  */
+      Elf_Scn *shndx_scn = shndxdata_scn->s;
+      shndx_scn->flags |= ELF_F_DIRTY;
+    }
 
   result = 1;
 
