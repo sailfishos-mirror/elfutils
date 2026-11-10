@@ -7573,7 +7573,7 @@ print_debug_frame_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 	invalid_data:
 	  error (0, 0, _("invalid data in section [%zu] '%s'"),
 		     elf_ndxscn (scn), scnname);
-	      return;
+	      goto out;
 	}
 
       /* At the beginning there must be a CIE.  There can be multiple,
@@ -7759,7 +7759,7 @@ print_debug_frame_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 
 	  if (likely (ptr_size == 4 || ptr_size == 8))
 	    {
-	      struct cieinfo *newp = alloca (sizeof (*newp));
+	      struct cieinfo *newp = xmalloc (sizeof (*newp));
 	      newp->cie_offset = offset;
 	      newp->augmentation = augmentation;
 	      newp->fde_encoding = fde_encoding;
@@ -7784,7 +7784,7 @@ print_debug_frame_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 	  if (unlikely (cie == NULL))
 	    {
 	      fputs ("invalid CIE reference in FDE\n", out);
-	      return;
+	      goto out;
 	    }
 
 	  /* Initialize from CIE data.  */
@@ -7900,6 +7900,14 @@ print_debug_frame_section (Dwfl_Module *dwflmod, Ebl *ebl, GElf_Ehdr *ehdr,
 			   data_alignment_factor, version, ptr_size,
 			   fde_encoding, dwflmod, ebl, ehdr, dbg, out);
       readp = cieend;
+    }
+
+ out:
+  while (cies != NULL)
+    {
+      struct cieinfo *next = cies->next;
+      free (cies);
+      cies = next;
     }
 }
 
