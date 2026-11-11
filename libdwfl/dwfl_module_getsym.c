@@ -190,7 +190,9 @@ __libdwfl_getsym (Dwfl_Module *mod, int ndx, GElf_Sym *sym, GElf_Addr *addr,
   if (addr != NULL)
     *addr = st_value;
 
-  if (unlikely (sym->st_name >= symstrdata->d_size))
+  if (unlikely (sym->st_name >= symstrdata->d_size)
+      || unlikely (memchr (symstrdata->d_buf + sym->st_name, '\0',
+			   symstrdata->d_size - sym->st_name) == NULL))
     {
       __libdwfl_seterrno (DWFL_E_BADSTROFF);
       return NULL;

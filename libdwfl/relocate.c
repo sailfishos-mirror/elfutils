@@ -285,6 +285,9 @@ resolve_symbol (Dwfl_Module *referer, struct reloc_symtab_cache *symtab,
 	}
       if (unlikely (sym->st_name >= symtab->symstrdata->d_size))
 	return DWFL_E_BADSTROFF;
+      if (unlikely (memchr (symtab->symstrdata->d_buf + sym->st_name, '\0',
+			    symtab->symstrdata->d_size - sym->st_name) == NULL))
+	return DWFL_E_BADSTROFF;
 
       const char *name = symtab->symstrdata->d_buf;
       name += sym->st_name;
@@ -318,6 +321,9 @@ resolve_symbol (Dwfl_Module *referer, struct reloc_symtab_cache *symtab,
 
 		/* Get this candidate symbol's name.  */
 		if (unlikely (sym->st_name >= m->symstrdata->d_size))
+		  return DWFL_E_BADSTROFF;
+		if (unlikely (memchr (m->symstrdata->d_buf + sym->st_name, '\0',
+				      m->symstrdata->d_size - sym->st_name) == NULL))
 		  return DWFL_E_BADSTROFF;
 		const char *n = m->symstrdata->d_buf;
 		n += sym->st_name;
