@@ -13059,6 +13059,7 @@ handle_core_item (Elf *core, const GElf_Ehdr *ehdr,
 #define DO_TYPE(NAME, Name, hex, dec) GElf_##Name Name
   typedef union { TYPES; } value_t;
   void *data = alloca (count * sizeof (value_t));
+  void *heap_data = NULL;
 #undef DO_TYPE
 
 #define DO_TYPE(NAME, Name, hex, dec) \
@@ -13078,7 +13079,8 @@ handle_core_item (Elf *core, const GElf_Ehdr *ehdr,
 	     stack and crash readelf.  count and convsize are derived
 	     from the capped size so convert () cannot write past data.  */
 	  size_t alloc_size = MIN (*repeated_size, 64 * 1024);
-	  data = alloca (alloc_size);
+	  heap_data = xmalloc (alloc_size);
+	  data = heap_data;
 	  count *= alloc_size / size;
 	  convsize = count * size;
 	  *repeated_size -= convsize;
@@ -13138,7 +13140,7 @@ handle_core_item (Elf *core, const GElf_Ehdr *ehdr,
       const unsigned int bias = item->format == 'b';
 
       {
-	char printed[(negate ? nbits - pop : pop) * 16 + 1];
+	char *printed = xmalloc ((negate ? nbits - pop : pop) * 16 + 1);
 	char *p = printed;
 	*p = '\0';
 
@@ -13196,6 +13198,7 @@ handle_core_item (Elf *core, const GElf_Ehdr *ehdr,
 
 	colno = print_core_item (colno, ',', WRAP_COLUMN, 0, item->name,
 				 negate ? "~<%s>" : "<%s>", printed);
+	free (printed);
       }
       break;
 
@@ -13283,6 +13286,7 @@ handle_core_item (Elf *core, const GElf_Ehdr *ehdr,
 
 #undef TYPES
 
+  free (heap_data);
   return colno;
 }
 
