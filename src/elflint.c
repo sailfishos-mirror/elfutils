@@ -2470,8 +2470,7 @@ hash section [%2zu] '%s' does not contain enough data\n"),
     }
 
   uint32_t nentries = sym_shdr->sh_size / sym_shdr->sh_entsize;
-  char *used = alloca (nentries);
-  memset (used, '\0', nentries);
+  char *used = xcalloc (nentries ?: 1, 1);
 
   /* First go over the GNU_HASH table and mark the entries as used.  */
   const Elf32_Word *gnu_hasharr = (Elf32_Word *) gnu_hash_data->d_buf;
@@ -2487,6 +2486,7 @@ hash section [%2zu] '%s' does not contain enough data\n"),
       ERROR (_("\
 hash section [%2zu] '%s' has zero bit mask words\n"),
 	     gnu_hash_idx, gnu_hash_name);
+      free (used);
       return;
     }
 
@@ -2498,6 +2498,7 @@ hash section [%2zu] '%s' has zero bit mask words\n"),
       ERROR (_("\
 hash section [%2zu] '%s' uses too much data\n"),
 	     gnu_hash_idx, gnu_hash_name);
+      free (used);
       return;
     }
 
@@ -2513,6 +2514,7 @@ hash section [%2zu] '%s' uses too much data\n"),
 		  ERROR (_("\
 hash section [%2zu] '%s' invalid symbol index %" PRIu32 " (max_nsyms: %" PRIu32 ", nentries: %" PRIu32 "\n"),
 			 gnu_hash_idx, gnu_hash_name, symidx, max_nsyms, nentries);
+		  free (used);
 		  return;
 		}
 	      used[symidx + gnu_symbias] |= 1;
@@ -2531,6 +2533,7 @@ hash section [%2zu] '%s' invalid symbol index %" PRIu32 " (max_nsyms: %" PRIu32 
 	  ERROR (_("\
 hash section [%2zu] '%s' does not contain enough data\n"),
 		 hash_idx, hash_name);
+	  free (used);
 	  return;
 	}
 
@@ -2542,6 +2545,7 @@ hash section [%2zu] '%s' does not contain enough data\n"),
 	  ERROR (_("\
 hash section [%2zu] '%s' uses too much data\n"),
 		 hash_idx, hash_name);
+	  free (used);
 	  return;
 	}
 
@@ -2566,6 +2570,7 @@ hash section [%2zu] '%s' uses too much data\n"),
 	  ERROR (_("\
 hash section [%2zu] '%s' does not contain enough data\n"),
 		 hash_idx, hash_name);
+	  free (used);
 	  return;
 	}
 
@@ -2579,6 +2584,7 @@ hash section [%2zu] '%s' does not contain enough data\n"),
 	  ERROR (_("\
 hash section [%2zu] '%s' uses too much data\n"),
 		 hash_idx, hash_name);
+	  free (used);
 	  return;
 	}
 
@@ -2600,6 +2606,7 @@ hash section [%2zu] '%s' uses too much data\n"),
       ERROR (_("\
 hash section [%2zu] '%s' invalid sh_entsize\n"),
 	     hash_idx, hash_name);
+      free (used);
       return;
     }
 
@@ -2638,6 +2645,8 @@ symbol %d referenced in old hash table in [%2zu] '%s' but not in new hash table 
 		     elf_strptr (ebl->elf, shstrndx, gnu_hash_shdr->sh_name));
 	  }
       }
+
+  free (used);
 }
 
 
