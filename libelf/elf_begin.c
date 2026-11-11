@@ -346,6 +346,7 @@ file_read_elf (int fildes, void *map_address, unsigned char *e_ident,
 
       /* This is a 32-bit binary.  */
       if (map_address != NULL && e_ident[EI_DATA] == MY_ELFDATA
+	  && cmd != ELF_C_READ_MMAP /* We need a copy to be able to write.  */
 	  && (ALLOW_UNALIGNED
 	      || (ehdr & (__alignof__ (Elf32_Ehdr) - 1)) == 0))
 	{
@@ -436,6 +437,7 @@ file_read_elf (int fildes, void *map_address, unsigned char *e_ident,
 
       /* This is a 64-bit binary.  */
       if (map_address != NULL && e_ident[EI_DATA] == MY_ELFDATA
+	  && cmd != ELF_C_READ_MMAP /* We need a copy to be able to write.  */
 	  && (ALLOW_UNALIGNED
 	      || (ehdr & (__alignof__ (Elf64_Ehdr) - 1)) == 0))
 	{

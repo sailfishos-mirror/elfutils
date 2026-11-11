@@ -52,7 +52,7 @@ check_elf (const char *fname, bool use_mmap)
       exit (1);
     }
 
-  Elf *elf = elf_begin (fd, use_mmap ? ELF_C_READ_MMAP_PRIVATE : ELF_C_READ,
+  Elf *elf = elf_begin (fd, use_mmap ? ELF_C_READ_MMAP : ELF_C_READ,
 			NULL);
   if (elf == NULL)
     {
@@ -63,7 +63,7 @@ check_elf (const char *fname, bool use_mmap)
   /* Check if we can update the elf layout without having read anything.
      This used to crash with 65280+ sections.
      https://sourceware.org/bugzilla/show_bug.cgi?id=33967
-     Still crashes for read-only mmap.
+     It also used to crash when opened with ELF_C_READ_MMAP.
      https://sourceware.org/bugzilla/show_bug.cgi?id=33968
   */
   if (elf_update (elf, ELF_C_NULL) < 0)
