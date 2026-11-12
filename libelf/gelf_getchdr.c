@@ -53,6 +53,7 @@ gelf_getchdr (Elf_Scn *scn, GElf_Chdr *dest)
       if (chdr == NULL)
 	return NULL;
       dest->ch_type = chdr->ch_type;
+      dest->ch_reserved = 0;
       dest->ch_size = chdr->ch_size;
       dest->ch_addralign = chdr->ch_addralign;
     }
