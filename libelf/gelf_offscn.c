@@ -40,6 +40,9 @@
 Elf_Scn *
 gelf_offscn (Elf *elf, GElf_Off offset)
 {
+  if (elf == NULL)
+    return NULL;
+
   if (elf->class == ELFCLASS32)
     {
       if ((Elf32_Off) offset != offset)
