@@ -107,7 +107,15 @@ gelf_fsize (Elf *elf, Elf_Type type, size_t count, unsigned int version)
       return 0;
     }
 
-  return count * __libelf_type_sizes[elf->class - 1][type];
+  size_t size = __libelf_type_sizes[elf->class - 1][type];
+
+  if (count == 0 || count > SIZE_MAX / size)
+    {
+      __libelf_seterrno (ELF_E_INVALID_OPERAND);
+      return 0;
+    }
+
+  return count * size;
 }
 INTDEF(gelf_fsize)
 
