@@ -66,6 +66,13 @@ elf_strptr (Elf *elf, size_t idx, size_t offset)
       return NULL;
     }
 
+  /* Class is set from the Ehdr.  */
+  if (elf->class == 0)
+    {
+      __libelf_seterrno (ELF_E_WRONG_ORDER_EHDR);
+      return NULL;
+    }
+
   rwlock_rdlock (elf->lock);
 
   char *result = NULL;
@@ -231,6 +238,13 @@ elf_strptr (Elf *elf, size_t idx, size_t offset)
 	  if (offset >= (size_t) dl->data.d.d_off
 	      && offset < dl->data.d.d_off + dl->data.d.d_size)
 	    {
+	      /* NO_BITS section data only has a size, not a buf.  */
+	      if (unlikely (dl->data.d.d_buf == NULL))
+		{
+		  __libelf_seterrno (ELF_E_INVALID_DATA);
+		  break;
+		}
+
 	      /* Make sure the string is NUL terminated.  Start from
 		 the end, which very likely is a NUL char.  */
 	      if (likely (validate_str ((char *) dl->data.d.d_buf,
