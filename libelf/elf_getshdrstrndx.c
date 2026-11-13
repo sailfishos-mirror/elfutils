@@ -112,8 +112,9 @@ elf_getshdrstrndx (Elf *elf, size_t *dst)
 		{
 		  /* First see whether the information in the ELF header is
 		     valid and it does not ask for too much.  */
-		  if (unlikely (elf->maximum_size - offset
-				< sizeof (Elf32_Shdr)))
+		  if (unlikely (offset > elf->maximum_size
+				|| (elf->maximum_size - offset
+				    < sizeof (Elf32_Shdr))))
 		    {
 		      /* Something is wrong.  */
 		      __libelf_seterrno (ELF_E_INVALID_SECTION_HEADER);
@@ -177,8 +178,9 @@ elf_getshdrstrndx (Elf *elf, size_t *dst)
 		{
 		  /* First see whether the information in the ELF header is
 		     valid and it does not ask for too much.  */
-		  if (unlikely (elf->maximum_size - offset
-				< sizeof (Elf64_Shdr)))
+		  if (unlikely (offset > elf->maximum_size
+				|| (elf->maximum_size - offset
+				    < sizeof (Elf64_Shdr))))
 		    {
 		      /* Something is wrong.  */
 		      __libelf_seterrno (ELF_E_INVALID_SECTION_HEADER);
