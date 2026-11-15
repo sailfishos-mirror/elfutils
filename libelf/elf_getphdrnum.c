@@ -95,7 +95,7 @@ __elf_getphdrnum_chk_rdlock (Elf *elf, size_t *dst)
 
   /* If the phdrs haven't been created or read in yet then do some
      sanity checking to make sure phnum and phoff are consistent.  */
-  if (elf->state.elf.phdr == NULL)
+  if (result == 0 && elf->state.elf.phdr == NULL)
     {
       Elf64_Off off = (elf->class == ELFCLASS32
 		       ? elf->state.elf32.ehdr->e_phoff
