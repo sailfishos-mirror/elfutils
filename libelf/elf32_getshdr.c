@@ -99,19 +99,16 @@ load_shdr_wrlock (Elf_Scn *scn)
       assert ((elf->flags & (ELF_F_MALLOCED | ELF_F_PARENT_MALLOCED))
 	      || ehdr->e_ident[EI_DATA] != MY_ELFDATA
 	      || elf->cmd == ELF_C_READ_MMAP
-	      || (! ALLOW_UNALIGNED
-		  && ((uintptr_t) file_shdr
-		      & (__alignof__ (ElfW2(LIBELFBITS,Shdr)) - 1)) != 0));
+	      || ((uintptr_t) file_shdr
+		  & (__alignof__ (ElfW2(LIBELFBITS,Shdr)) - 1)) != 0);
 
       /* Now copy the data and at the same time convert the byte order.  */
       if (ehdr->e_ident[EI_DATA] == MY_ELFDATA)
 	memcpy (shdr, file_shdr, size);
       else
 	{
-	  bool copy = ! (ALLOW_UNALIGNED
-			 || ((uintptr_t) file_shdr
-			     & (__alignof__ (ElfW2(LIBELFBITS,Shdr)) - 1))
-			     == 0);
+	  bool copy = ((uintptr_t) file_shdr
+		       & (__alignof__ (ElfW2(LIBELFBITS,Shdr)) - 1)) != 0;
 	  if (! copy)
 	    notcvt = (ElfW2(LIBELFBITS,Shdr) *)
 	      ((char *) elf->map_address
