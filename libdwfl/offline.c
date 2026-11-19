@@ -88,7 +88,8 @@ dwfl_offline_section_address (Dwfl_Module *mod,
 	return -1;
       if ((main_shdr->sh_flags & SHF_ALLOC) && skip_alloc-- == 0)
 	{
-	  assert (main_shdr->sh_flags == shdr->sh_flags);
+	  if (unlikely (main_shdr->sh_flags != shdr->sh_flags))
+	    return -1;
 	  *addr = main_shdr->sh_addr;
 	  return 0;
 	}
