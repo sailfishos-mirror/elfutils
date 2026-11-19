@@ -45,6 +45,7 @@ elf_newscn (Elf *elf)
 {
   Elf_Scn *result = NULL;
   bool first = false;
+  void *shdr = NULL;
 
   if (elf == NULL)
     return NULL;
@@ -61,6 +62,20 @@ elf_newscn (Elf *elf)
   rwlock_wrlock (elf->lock);
 
  again:
+  result = NULL;
+
+  /* Create a section header for this section before modifying the
+     section list so that a failure does not leave a half-initialized
+     section behind.  */
+  shdr = (elf->class == ELFCLASS32
+	 ? calloc (1, sizeof (Elf32_Shdr))
+	 : calloc (1, sizeof (Elf64_Shdr)));
+  if (shdr == NULL)
+    {
+      __libelf_seterrno (ELF_E_NOMEM);
+      goto out;
+    }
+
   if (elf->state.elf.scns_last->cnt < elf->state.elf.scns_last->max)
     {
       result = &elf->state.elf.scns_last->data[elf->state.elf.scns_last->cnt];
@@ -99,6 +114,7 @@ elf_newscn (Elf *elf)
 			   * sizeof (Elf_Scn)));
       if (newp == NULL)
 	{
+	  free (shdr);
 	  __libelf_seterrno (ELF_E_NOMEM);
 	  goto out;
 	}
@@ -119,25 +135,10 @@ elf_newscn (Elf *elf)
       elf->state.elf.scns_last = elf->state.elf.scns_last->next = newp;
     }
 
-  /* Create a section header for this section.  */
   if (elf->class == ELFCLASS32)
-    {
-      result->shdr.e32 = calloc (1, sizeof (Elf32_Shdr));
-      if (result->shdr.e32 == NULL)
-	{
-	  __libelf_seterrno (ELF_E_NOMEM);
-	  goto out;
-	}
-    }
+    result->shdr.e32 = shdr;
   else
-    {
-      result->shdr.e64 = calloc (1, sizeof (Elf64_Shdr));
-      if (result->shdr.e64 == NULL)
-	{
-	  __libelf_seterrno (ELF_E_NOMEM);
-	  goto out;
-	}
-    }
+    result->shdr.e64 = shdr;
 
   result->elf = elf;
   result->shdr_flags = ELF_F_DIRTY | ELF_F_MALLOCED;
