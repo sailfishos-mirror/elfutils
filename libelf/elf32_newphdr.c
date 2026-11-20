@@ -90,7 +90,10 @@ elfw2(LIBELFBITS,newphdr) (Elf *elf, size_t count)
       if (elf->state.ELFW(elf,LIBELFBITS).phdr != NULL)
 	{
 	  if (elf->state.ELFW(elf,LIBELFBITS).phdr_flags & ELF_F_MALLOCED)
-	    free (elf->state.ELFW(elf,LIBELFBITS).phdr);
+	    {
+	      free (elf->state.ELFW(elf,LIBELFBITS).phdr);
+	      elf->state.ELFW(elf,LIBELFBITS).phdr_flags &= ~ELF_F_MALLOCED;
+	    }
 
 	  /* Set the pointer to NULL.  */
 	  elf->state.ELFW(elf,LIBELFBITS).phdr = NULL;
