@@ -133,7 +133,13 @@ elf_newdata (Elf_Scn *scn)
  out:
   rwlock_unlock (scn->elf->lock);
 
-  /* Please note that the following is thread safe and is also defined
-     for RESULT == NULL since it still return NULL.  */
-  return &result->data.d;
+  /* We would like to just return &result->data.d; Which should work
+     because data is the first member of Elf_Data_list and d is the
+     first member of Elf_Data_Scn. But dereferencing NULL is undefined
+     behavior. Just cast result directly to Elf_Data * (which is
+     defined).  And do some static asserts so this breaks if someone
+     ever changes the struct definitions.  */
+  eu_static_assert (offsetof (Elf_Data_List, data) == 0);
+  eu_static_assert (offsetof (Elf_Data_Scn, d) == 0);
+  return (Elf_Data *) result;
 }
