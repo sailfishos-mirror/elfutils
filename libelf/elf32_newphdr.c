@@ -137,9 +137,14 @@ elfw2(LIBELFBITS,newphdr) (Elf *elf, size_t count)
 
       /* Allocate a new program header with the appropriate number of
 	 elements.  */
-      result = (ElfW2(LIBELFBITS,Phdr) *)
-	realloc (elf->state.ELFW(elf,LIBELFBITS).phdr,
-		 count * sizeof (ElfW2(LIBELFBITS,Phdr)));
+      if (elf->state.ELFW(elf,LIBELFBITS).phdr_flags & ELF_F_MALLOCED)
+	result = (ElfW2(LIBELFBITS,Phdr) *)
+	  realloc (elf->state.ELFW(elf,LIBELFBITS).phdr,
+		   count * sizeof (ElfW2(LIBELFBITS,Phdr)));
+      else
+	result = (ElfW2(LIBELFBITS,Phdr) *)
+	  malloc (count * sizeof (ElfW2(LIBELFBITS,Phdr)));
+
       if (result == NULL)
 	__libelf_seterrno (ELF_E_NOMEM);
       else
