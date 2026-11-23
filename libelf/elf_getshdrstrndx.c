@@ -105,10 +105,9 @@ elf_getshdrstrndx (Elf *elf, size_t *dst)
 
 	      if (elf->map_address != NULL
 		  && elf->state.elf32.ehdr->e_ident[EI_DATA] == MY_ELFDATA
-		  && (ALLOW_UNALIGNED
-		      || (((size_t) ((char *) elf->map_address
-			   + elf->start_offset + offset))
-			  & (__alignof__ (Elf32_Shdr) - 1)) == 0))
+		  && (((size_t) ((char *) elf->map_address
+				 + elf->start_offset + offset))
+		      & (__alignof__ (Elf32_Shdr) - 1)) == 0)
 		{
 		  /* First see whether the information in the ELF header is
 		     valid and it does not ask for too much.  */
@@ -171,10 +170,9 @@ elf_getshdrstrndx (Elf *elf, size_t *dst)
 
 	      if (elf->map_address != NULL
 		  && elf->state.elf64.ehdr->e_ident[EI_DATA] == MY_ELFDATA
-		  && (ALLOW_UNALIGNED
-		      || (((size_t) ((char *) elf->map_address
-			   + elf->start_offset + offset))
-			  & (__alignof__ (Elf64_Shdr) - 1)) == 0))
+		  && (((size_t) ((char *) elf->map_address
+				 + elf->start_offset + offset))
+		      & (__alignof__ (Elf64_Shdr) - 1)) == 0)
 		{
 		  /* First see whether the information in the ELF header is
 		     valid and it does not ask for too much.  */
