@@ -96,10 +96,9 @@ get_shnum (void *map_address, unsigned char *e_ident, int fildes,
 
   /* Make the ELF header available.  */
   if (e_ident[EI_DATA] == MY_ELFDATA
-      && (ALLOW_UNALIGNED
-	  || (((size_t) e_ident
-	       & ((is32 ? __alignof__ (Elf32_Ehdr) : __alignof__ (Elf64_Ehdr))
-		  - 1)) == 0)))
+      && (((size_t) e_ident
+	   & ((is32 ? __alignof__ (Elf32_Ehdr) : __alignof__ (Elf64_Ehdr))
+	      - 1)) == 0))
     ehdr.p = e_ident;
   else
     {
@@ -110,13 +109,7 @@ get_shnum (void *map_address, unsigned char *e_ident, int fildes,
 
       if (is32)
 	{
-	  if (ALLOW_UNALIGNED)
-	    {
-	      ehdr_mem.e32.e_shnum = ((Elf32_Ehdr *) e_ident)->e_shnum;
-	      ehdr_mem.e32.e_shoff = ((Elf32_Ehdr *) e_ident)->e_shoff;
-	    }
-	  else
-	    memcpy (&ehdr_mem, e_ident, sizeof (Elf32_Ehdr));
+	  memcpy (&ehdr_mem, e_ident, sizeof (Elf32_Ehdr));
 
 	  if (e_ident[EI_DATA] != MY_ELFDATA)
 	    {
@@ -126,13 +119,7 @@ get_shnum (void *map_address, unsigned char *e_ident, int fildes,
 	}
       else
 	{
-	  if (ALLOW_UNALIGNED)
-	    {
-	      ehdr_mem.e64.e_shnum = ((Elf64_Ehdr *) e_ident)->e_shnum;
-	      ehdr_mem.e64.e_shoff = ((Elf64_Ehdr *) e_ident)->e_shoff;
-	    }
-	  else
-	    memcpy (&ehdr_mem, e_ident, sizeof (Elf64_Ehdr));
+	  memcpy (&ehdr_mem, e_ident, sizeof (Elf64_Ehdr));
 
 	  if (e_ident[EI_DATA] != MY_ELFDATA)
 	    {
@@ -155,10 +142,9 @@ get_shnum (void *map_address, unsigned char *e_ident, int fildes,
 	    return 0;
 
 	  if (likely (map_address != NULL) && e_ident[EI_DATA] == MY_ELFDATA
-	      && (ALLOW_UNALIGNED
-		  || (((size_t) ((char *) (map_address + ehdr.e32->e_shoff
-					   + offset)))
-		      & (__alignof__ (Elf32_Shdr) - 1)) == 0))
+	      && (((size_t) ((char *) (map_address + ehdr.e32->e_shoff
+				       + offset)))
+		  & (__alignof__ (Elf32_Shdr) - 1)) == 0)
 	    /* We can directly access the memory.  */
 	    result = ((Elf32_Shdr *) ((char *) map_address + ehdr.e32->e_shoff
 				      + offset))->sh_size;
@@ -216,10 +202,9 @@ get_shnum (void *map_address, unsigned char *e_ident, int fildes,
 
 	  Elf64_Xword size;
 	  if (likely (map_address != NULL) && e_ident[EI_DATA] == MY_ELFDATA
-	      && (ALLOW_UNALIGNED
-		  || (((size_t) ((char *) (map_address + ehdr.e64->e_shoff
-					   + offset)))
-		      & (__alignof__ (Elf64_Shdr) - 1)) == 0))
+	      && ((((size_t) ((char *) (map_address + ehdr.e64->e_shoff
+					+ offset)))
+		   & (__alignof__ (Elf64_Shdr) - 1)) == 0))
 	    /* We can directly access the memory.  */
 	    size = ((Elf64_Shdr *) ((char *) map_address + ehdr.e64->e_shoff
 				    + offset))->sh_size;
