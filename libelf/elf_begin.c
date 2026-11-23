@@ -332,8 +332,7 @@ file_read_elf (int fildes, void *map_address, unsigned char *e_ident,
       /* This is a 32-bit binary.  */
       if (map_address != NULL && e_ident[EI_DATA] == MY_ELFDATA
 	  && cmd != ELF_C_READ_MMAP /* We need a copy to be able to write.  */
-	  && (ALLOW_UNALIGNED
-	      || (ehdr & (__alignof__ (Elf32_Ehdr) - 1)) == 0))
+	  && (ehdr & (__alignof__ (Elf32_Ehdr) - 1)) == 0)
 	{
 	  /* We can use the mmapped memory.  */
 	  elf->state.elf32.ehdr = (Elf32_Ehdr *) ehdr;
@@ -368,8 +367,7 @@ file_read_elf (int fildes, void *map_address, unsigned char *e_ident,
       Elf32_Off e_shoff = elf->state.elf32.ehdr->e_shoff;
       if (map_address != NULL && e_ident[EI_DATA] == MY_ELFDATA
 	  && cmd != ELF_C_READ_MMAP /* We need a copy to be able to write.  */
-	  && (ALLOW_UNALIGNED
-	      || (((ehdr + e_shoff) & (__alignof__ (Elf32_Shdr) - 1)) == 0)))
+	  && ((ehdr + e_shoff) & (__alignof__ (Elf32_Shdr) - 1)) == 0)
 	{
 	  if (unlikely (scncnt > 0 && e_shoff >= maxsize)
 	      || unlikely (maxsize - e_shoff
@@ -423,8 +421,7 @@ file_read_elf (int fildes, void *map_address, unsigned char *e_ident,
       /* This is a 64-bit binary.  */
       if (map_address != NULL && e_ident[EI_DATA] == MY_ELFDATA
 	  && cmd != ELF_C_READ_MMAP /* We need a copy to be able to write.  */
-	  && (ALLOW_UNALIGNED
-	      || (ehdr & (__alignof__ (Elf64_Ehdr) - 1)) == 0))
+	  && (ehdr & (__alignof__ (Elf64_Ehdr) - 1)) == 0)
 	{
 	  /* We can use the mmapped memory.  */
 	  elf->state.elf64.ehdr = (Elf64_Ehdr *) ehdr;
@@ -459,8 +456,7 @@ file_read_elf (int fildes, void *map_address, unsigned char *e_ident,
       Elf64_Off e_shoff = elf->state.elf64.ehdr->e_shoff;
       if (map_address != NULL && e_ident[EI_DATA] == MY_ELFDATA
 	  && cmd != ELF_C_READ_MMAP /* We need a copy to be able to write.  */
-	  && (ALLOW_UNALIGNED
-	      || (((ehdr + e_shoff) & (__alignof__ (Elf64_Shdr) - 1)) == 0)))
+	  && ((ehdr + e_shoff) & (__alignof__ (Elf64_Shdr) - 1)) == 0)
 	{
 	  if (unlikely (scncnt > 0 && e_shoff >= maxsize)
 	      || unlikely (maxsize - e_shoff
