@@ -2723,7 +2723,8 @@ section [%2d] '%s': signature symbol cannot be empty string\n"),
 	       idx, section_name (ebl, idx));
 
       if (be_strict
-	  && shdr->sh_entsize != elf32_fsize (ELF_T_WORD, 1, EV_CURRENT))
+	  && shdr->sh_entsize != gelf_fsize (ebl->elf, ELF_T_WORD, 1,
+					     EV_CURRENT))
 	ERROR (_("section [%2d] '%s': sh_flags not set correctly\n"),
 	       idx, section_name (ebl, idx));
     }
@@ -2734,7 +2735,7 @@ section [%2d] '%s': signature symbol cannot be empty string\n"),
 	   idx, section_name (ebl, idx), elf_errmsg (-1));
   else
     {
-      size_t elsize = elf32_fsize (ELF_T_WORD, 1, EV_CURRENT);
+      size_t elsize = gelf_fsize (ebl->elf, ELF_T_WORD, 1, EV_CURRENT);
       size_t cnt;
       Elf32_Word val;
 
@@ -2762,22 +2763,14 @@ section [%2d] '%s': section group with only one member\n"),
 		   idx, section_name (ebl, idx));
 	}
 
-#if ALLOW_UNALIGNED
-      val = *((Elf32_Word *) data->d_buf);
-#else
       memcpy (&val, data->d_buf, elsize);
-#endif
       if ((val & ~GRP_COMDAT) != 0)
 	ERROR (_("section [%2d] '%s': unknown section group flags\n"),
 	       idx, section_name (ebl, idx));
 
       for (cnt = elsize; cnt + elsize <= data->d_size; cnt += elsize)
 	{
-#if ALLOW_UNALIGNED
-	  val = *((Elf32_Word *) ((char *) data->d_buf + cnt));
-#else
 	  memcpy (&val, (char *) data->d_buf + cnt, elsize);
-#endif
 
 	  if (val > shnum)
 	    ERROR (_("\
