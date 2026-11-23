@@ -251,8 +251,7 @@ elf_getarsym (Elf *elf, size_t *ptr)
 	  else
 	    {
 	      file_data = (void *) (elf->map_address + off);
-	      if (!ALLOW_UNALIGNED
-		  && ((uintptr_t) file_data & -(uintptr_t) n) != 0)
+	      if (((uintptr_t) file_data & (w - 1)) != 0)
 		{
 		  temp_data = malloc (sz);
 		  if (unlikely (temp_data == NULL))
