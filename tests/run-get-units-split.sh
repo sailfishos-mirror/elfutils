@@ -86,4 +86,19 @@ Found a skeleton unit, with split die: main.cc
 EOF
 done
 
+# See testfile-relative-compdir.source.  DW_AT_comp_dir is "." and
+# DW_AT_dwo_name is relative, so the .dwo file is found in the current
+# working directory even though the binary is in another directory.
+testfiles testfile-relative-compdir testfile-relative-compdir.dwo
+mkdir bin
+mv testfile-relative-compdir bin/
+testrun_compare ${abs_builddir}/get-units-split bin/testfile-relative-compdir << EOF
+file: bin/testfile-relative-compdir
+Got cudie unit_type: 4
+Found a skeleton unit, with split die: hello.c
+
+EOF
+rm bin/testfile-relative-compdir
+rmdir bin
+
 exit 0

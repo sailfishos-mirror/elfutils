@@ -753,6 +753,9 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     testfile-dwp-mixed-4.bz2 testfile-dwp-mixed-4.dwp.bz2 \
 	     testfile-dwp-mixed-5.bz2 testfile-dwp-mixed-5.dwp.bz2 \
 	     testfile-dwp-mixed.source \
+	     testfile-relative-compdir.bz2 \
+	     testfile-relative-compdir.dwo.bz2 \
+	     testfile-relative-compdir.source \
 	     testfile-define-file.bz2 \
 	     testfile-sysroot.tar.bz2 run-sysroot.sh \
 	     run-test-manyfuncs.sh manyfuncs.c \

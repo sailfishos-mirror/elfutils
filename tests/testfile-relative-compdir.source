@@ -1,0 +1,16 @@
+# Program used to generate a split DWARF file with a relative DW_AT_comp_dir,
+# like build systems that make the build directory "." for reproducible builds.
+
+# = hello.c =
+
+int
+main (int argc, char **argv)
+{
+  return argc - 1;
+}
+
+# Built with GCC 11.5.0.  The skeleton unit has DW_AT_comp_dir "." and
+# DW_AT_dwo_name "testfile-relative-compdir.dwo".
+$ gcc -gdwarf-5 -gsplit-dwarf -fdebug-prefix-map=$PWD=. -O2 -c hello.c \
+    -o testfile-relative-compdir.o
+$ gcc testfile-relative-compdir.o -o testfile-relative-compdir

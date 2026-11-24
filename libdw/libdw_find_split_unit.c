@@ -217,7 +217,8 @@ __libdw_find_split_unit (Dwarf_CU *cu)
       Dwarf_Die cudie = CUDIE (cu);
       Dwarf_Attribute dwo_name;
       /* Try a dwo file.  It is fine if dwo_dir doesn't exist, but then
-	 dwo_name needs to be an absolute path.  */
+	 dwo_name needs to be an absolute path or relative to the current
+	 working directory.  */
       if (cu->split == (Dwarf_CU *) -1
 	  && (dwarf_attr (&cudie, DW_AT_dwo_name, &dwo_name) != NULL
 	      || dwarf_attr (&cudie, DW_AT_GNU_dwo_name, &dwo_name) != NULL))
@@ -242,6 +243,21 @@ __libdw_find_split_unit (Dwarf_CU *cu)
 	      if (dwo_dir != NULL)
 		{
 		  dwo_path = __libdw_filepath (debugdir, dwo_dir, dwo_file);
+		  if (dwo_path != NULL)
+		    {
+		      try_split_file (cu, dwo_path);
+		      free (dwo_path);
+		    }
+		}
+
+	      /* Try a relative compdir plus dwo_name, or a relative
+		 dwo_name without compdir, in the current working
+		 directory.  */
+	      if (cu->split == (Dwarf_CU *) -1
+		  && dwo_file != NULL && dwo_file[0] != '/'
+		  && (dwo_dir == NULL || dwo_dir[0] != '/'))
+		{
+		  dwo_path = __libdw_filepath ("./", dwo_dir, dwo_file);
 		  if (dwo_path != NULL)
 		    {
 		      try_split_file (cu, dwo_path);
