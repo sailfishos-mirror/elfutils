@@ -31,7 +31,6 @@
 # include <config.h>
 #endif
 
-#include <assert.h>
 #include <libelf.h>
 #include <stddef.h>
 
@@ -42,12 +41,16 @@ int64_t
 elf_getaroff (Elf *elf)
 {
   /* Be gratious, the specs demand it.  */
-  if (elf == NULL || elf->parent == NULL)
+  if (elf == NULL)
     return -1;
 
-  /* We can be sure the parent is an archive.  */
   Elf *parent = elf->parent;
-  assert (parent->kind == ELF_K_AR);
+  /* Calling this function is not ok for any file type but archives.  */
+  if (parent == NULL || parent->kind != ELF_K_AR)
+    {
+      __libelf_seterrno (ELF_E_INVALID_OP);
+      return -1;
+    }
 
   return elf->start_offset - sizeof (struct ar_hdr) - parent->start_offset;
 }
