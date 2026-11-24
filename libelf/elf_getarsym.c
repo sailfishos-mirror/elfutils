@@ -76,6 +76,9 @@ read_number_entries (uint64_t *nump, Elf *elf, size_t *offp, bool index64_p)
 Elf_Arsym *
 elf_getarsym (Elf *elf, size_t *ptr)
 {
+  if (elf == NULL)
+    return NULL;
+
   if (elf->kind != ELF_K_AR)
     {
       /* This is no archive.  */
