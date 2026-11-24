@@ -838,8 +838,10 @@ section [%2d] '%s': symbol %zu (%s): function in COMMON section is nonsense\n"),
 section [%2d] '%s': symbol %zu (%s): st_value out of bounds\n"),
 				   idx, section_name (ebl, idx), cnt, name);
 			}
-		      else if ((st_value - sh_addr
-				+ sym->st_size) > destshdr->sh_size)
+		      /* Subtract instead of adding st_size: the sum can wrap
+			 around for a large symbol size from the ELF file.  */
+		      else if (sym->st_size
+			       > destshdr->sh_size - (st_value - sh_addr))
 			ERROR (_("\
 section [%2d] '%s': symbol %zu (%s) does not fit completely in referenced section [%2d] '%s'\n"),
 			       idx, section_name (ebl, idx), cnt, name,
@@ -863,8 +865,7 @@ section [%2d] '%s': symbol %zu (%s): referenced section [%2d] '%s' does not have
 section [%2d] '%s': symbol %zu (%s): st_value out of bounds of referenced section [%2d] '%s'\n"),
 			       idx, section_name (ebl, idx), cnt, name,
 			       (int) xndx, section_name (ebl, xndx));
-		      else if (st_value + sym->st_size
-			       > destshdr->sh_size)
+		      else if (sym->st_size > destshdr->sh_size - st_value)
 			ERROR (_("\
 section [%2d] '%s': symbol %zu (%s) does not fit completely in referenced section [%2d] '%s'\n"),
 			       idx, section_name (ebl, idx), cnt, name,
@@ -911,9 +912,9 @@ section [%2d] '%s': symbol %zu (%s): st_value short of referenced section [%2d] 
 section [%2d] '%s': symbol %zu (%s): st_value out of bounds of referenced section [%2d] '%s'\n"),
 				   idx, section_name (ebl, idx), cnt, name,
 				   (int) xndx, section_name (ebl, xndx));
-			  else if (st_value + sym->st_size
+			  else if (sym->st_size
 				   > (destshdr->sh_offset - phdr->p_offset
-				      + destshdr->sh_size))
+				      + destshdr->sh_size) - st_value)
 			    ERROR (_("\
 section [%2d] '%s': symbol %zu (%s) does not fit completely in referenced section [%2d] '%s'\n"),
 				   idx, section_name (ebl, idx), cnt, name,
