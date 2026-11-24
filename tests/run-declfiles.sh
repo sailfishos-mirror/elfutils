@@ -321,3 +321,60 @@ file: testfile-dwp-4
    i@/home/osandov/src/elfutils/tests/foobar.h:25:25
    tmp@/home/osandov/src/elfutils/tests/foobar.h:27:9
 EOF
+
+# See testfile-dwp-mixed.source.
+testfiles testfile-dwp-mixed-5 testfile-dwp-mixed-5.dwp
+testfiles testfile-dwp-mixed-4 testfile-dwp-mixed-4.dwp
+
+testrun_compare ${abs_builddir}/declfiles testfile-dwp-mixed-5 << EOF
+file: testfile-dwp-mixed-5
+ cu: foo.c
+  foo@/var/tmp/dwp-mixed/foo.h:1:8
+   a@/var/tmp/dwp-mixed/foo.h:3:7
+   b@/var/tmp/dwp-mixed/foo.h:3:10
+  foo@/var/tmp/dwp-mixed/foo.c:4:1
+   f@/var/tmp/dwp-mixed/foo.c:4:18
+   x@/var/tmp/dwp-mixed/foo.c:6:7
+ cu: main.c
+  add@/var/tmp/dwp-mixed/main.c:4
+   x@/var/tmp/dwp-mixed/main.c:4
+   y@/var/tmp/dwp-mixed/main.c:4
+  main@/var/tmp/dwp-mixed/main.c:10
+   argc@/var/tmp/dwp-mixed/main.c:10
+   argv@/var/tmp/dwp-mixed/main.c:10
+   f@/var/tmp/dwp-mixed/main.c:12
+   add@/var/tmp/dwp-mixed/main.c:4
+    x@/var/tmp/dwp-mixed/main.c:4
+    y@/var/tmp/dwp-mixed/main.c:4
+  foo@./foo.h:6
+  foo@./foo.h:1
+   a@./foo.h:3
+   b@./foo.h:3
+EOF
+
+testrun_compare ${abs_builddir}/declfiles testfile-dwp-mixed-4 << EOF
+file: testfile-dwp-mixed-4
+ cu: foo.c
+  foo@/var/tmp/dwp-mixed/foo.h:1:8
+   a@/var/tmp/dwp-mixed/foo.h:3:7
+   b@/var/tmp/dwp-mixed/foo.h:3:10
+  foo@/var/tmp/dwp-mixed/foo.c:4:1
+   f@/var/tmp/dwp-mixed/foo.c:4:18
+   x@/var/tmp/dwp-mixed/foo.c:6:7
+ cu: main.c
+  add@/var/tmp/dwp-mixed/main.c:4
+   x@/var/tmp/dwp-mixed/main.c:4
+   y@/var/tmp/dwp-mixed/main.c:4
+  main@/var/tmp/dwp-mixed/main.c:10
+   argc@/var/tmp/dwp-mixed/main.c:10
+   argv@/var/tmp/dwp-mixed/main.c:10
+   f@/var/tmp/dwp-mixed/main.c:12
+   add@/var/tmp/dwp-mixed/main.c:4
+    x@/var/tmp/dwp-mixed/main.c:4
+    y@/var/tmp/dwp-mixed/main.c:4
+   foo@./foo.h:6
+  foo@./foo.h:6
+  foo@./foo.h:1
+   a@./foo.h:3
+   b@./foo.h:3
+EOF

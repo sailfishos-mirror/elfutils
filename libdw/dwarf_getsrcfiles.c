@@ -62,19 +62,30 @@ dwarf_getsrcfiles (Dwarf_Die *cudie, Dwarf_Files **files, size_t *nfiles)
 	  cu->files = (void *) -1;
 
 	  /* See if there is a .debug_line section, for split CUs
-	     the table is at offset zero.  */
-	  if (cu->dbg->sectiondata[IDX_debug_line] != NULL)
+	     the table is at offset zero.  In a DWARF package file, a
+	     unit doesn't have a table if it doesn't contribute to
+	     .debug_line, even if other units do.  */
+	  bool has_table = cu->dbg->sectiondata[IDX_debug_line] != NULL;
+	  Dwarf_Off dwp_off = 0;
+	  if (has_table)
 	    {
-	      Dwarf_Off dwp_off;
+	      Dwarf_Off dwp_size;
 	      if (INTUSE(dwarf_cu_dwp_section_info) (cu, DW_SECT_LINE,
-						     &dwp_off, NULL) == 0)
+						     &dwp_off, &dwp_size) != 0)
 		{
-		  /* We are only interested in the files, the lines will
-		     always come from the skeleton.  */
-		  res = __libdw_getsrcfiles (cu->dbg, dwp_off,
-					     __libdw_getcompdir (cudie),
-					     cu->address_size, &cu->files);
+		  mutex_unlock (cudie->cu->src_lock);
+		  return -1;
 		}
+	      has_table = cu->dwp_row == 0 || dwp_size != 0;
+	    }
+
+	  if (has_table)
+	    {
+	      /* We are only interested in the files, the lines will
+		 always come from the skeleton.  */
+	      res = __libdw_getsrcfiles (cu->dbg, dwp_off,
+					 __libdw_getcompdir (cudie),
+					 cu->address_size, &cu->files);
 	    }
 	  else
 	    {

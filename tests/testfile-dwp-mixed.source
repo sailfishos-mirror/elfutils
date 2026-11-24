@@ -1,0 +1,54 @@
+# Program used to generate DWARF package files that mix split units with and
+# without a contribution to .debug_line.dwo.  GCC emits a file name table in
+# .debug_line.dwo for split units.  Clang doesn't, so its split units use the
+# file name table of the skeleton unit.
+
+# = foo.h =
+
+struct foo
+{
+  int a, b;
+};
+
+int foo (struct foo *f);
+
+# = foo.c =
+
+#include "foo.h"
+
+int
+foo (struct foo *f)
+{
+  int x = f->a;
+  return x + f->b;
+}
+
+# = main.c =
+
+#include "foo.h"
+
+static int
+add (int x, int y)
+{
+  return x + y;
+}
+
+int
+main (int argc, char **argv)
+{
+  struct foo f = { argc, 1 };
+  return add (foo (&f), argc);
+}
+
+# Built in /var/tmp/dwp-mixed with GCC 11.5.0, Clang 22.1.3, llvm-dwp 21, and
+# GNU dwp 2.35.2.
+$ gcc -gdwarf-5 -gsplit-dwarf -O2 -c foo.c -o foo5.o
+$ clang -gdwarf-5 -gsplit-dwarf -O2 -c main.c -o main5.o
+$ gcc foo5.o main5.o -o testfile-dwp-mixed-5
+# GNU dwp only supports DWARF 4.
+$ llvm-dwp -e testfile-dwp-mixed-5 -o testfile-dwp-mixed-5.dwp
+
+$ gcc -gdwarf-4 -gsplit-dwarf -O2 -c foo.c -o foo4.o
+$ clang -gdwarf-4 -gsplit-dwarf -O2 -c main.c -o main4.o
+$ gcc foo4.o main4.o -o testfile-dwp-mixed-4
+$ dwp -e testfile-dwp-mixed-4
