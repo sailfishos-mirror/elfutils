@@ -39,7 +39,7 @@ ioperm_info (GElf_Word descsz, GElf_Word *regs_offset,
   static const Ebl_Core_Item ioperm_item =
     { .type = ELF_T_WORD, .format = 'b', .name = "ioperm" };
 
-  if (descsz % 4 != 0)
+  if (descsz < 4 || descsz % 4 != 0)
     return 0;
 
   *regs_offset = 0;

@@ -123,7 +123,7 @@ tls_info (GElf_Word descsz, GElf_Word *regs_offset,
 	  size_t *nregloc, const Ebl_Register_Location **reglocs,
 	  size_t *nitems, const Ebl_Core_Item **items)
 {
-  if (descsz % 16 != 0)
+  if (descsz < 16 || descsz % 16 != 0)
     return 0;
 
   *regs_offset = 0;
