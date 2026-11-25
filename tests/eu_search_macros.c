@@ -31,6 +31,8 @@
 #include <unistd.h>
 #include <error.h>
 
+#define NUM_THREADS 4
+
 static void *thread_work (void * arg);
 static int mac (Dwarf_Macro *macro, void *arg);
 static int include (Dwarf_Off macoff, ptrdiff_t token);
@@ -142,10 +144,9 @@ int main (int argc, char *argv[])
   dbg = dwarf_begin (fd, DWARF_C_READ);
   cuoff = strtol (argv[2], NULL, 0);
 
-  int num_threads = 4;
-  pthread_t threads[num_threads];
+  pthread_t threads[NUM_THREADS];
 
-  for (int i = 0; i < num_threads; i++)
+  for (int i = 0; i < NUM_THREADS; i++)
     {
       if (pthread_create (&threads[i], NULL, thread_work, NULL) != 0)
 	{
@@ -160,7 +161,7 @@ int main (int argc, char *argv[])
 	}
     }
 
-  for (int i = 0; i < num_threads; i++)
+  for (int i = 0; i < NUM_THREADS; i++)
     {
       if (pthread_join (threads[i], NULL) != 0)
 	{

@@ -33,6 +33,8 @@
 #include "system.h"
 #include <pthread.h>
 
+#define NUM_THREADS 4
+
 static void handle_section (char *name, const unsigned char e_ident[],
 			   Elf_Scn *scn, const bool is_eh);
 static void *thread_work (void *arg);
@@ -146,8 +148,7 @@ int main (int argc, char *argv[])
 
   size_t strndx = ehdr.e_shstrndx;
 
-  int num_threads = 4;
-  pthread_t threads[num_threads];
+  pthread_t threads[NUM_THREADS];
   ThreadData thread_data;
 
   Elf_Scn *scn = NULL;
@@ -173,7 +174,7 @@ int main (int argc, char *argv[])
 	      thread_data.scn = scn;
 	      thread_data.is_eh = is_eh;
 
-	      for (int i = 0; i < num_threads; i++)
+	      for (int i = 0; i < NUM_THREADS; i++)
 		if (pthread_create (&threads[i], NULL, thread_work,
 				    &thread_data) != 0)
 		  {
@@ -187,7 +188,7 @@ int main (int argc, char *argv[])
 		    return 1;
 		  }
 
-	      for (int i = 0; i < num_threads; i++)
+	      for (int i = 0; i < NUM_THREADS; i++)
 		if (pthread_join (threads[i], NULL) != 0)
 		  perror ("pthread_join");
 	    }

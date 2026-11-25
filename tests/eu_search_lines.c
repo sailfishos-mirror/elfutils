@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+#define NUM_THREADS 4
+
 static Dwarf *dbg;
 
 static void *thread_work (void *arg)
@@ -171,11 +173,10 @@ int main (int argc, char *argv[])
 
   printf ("checking %s\n", name);
 
-  int num_threads = 4;
-  pthread_t threads[num_threads];
-  int thread_results[num_threads];
+  pthread_t threads[NUM_THREADS];
+  int thread_results[NUM_THREADS];
 
-  for (int i = 0; i < num_threads; ++i)
+  for (int i = 0; i < NUM_THREADS; ++i)
     {
       if (pthread_create (&threads[i], NULL, thread_work,
 			  &thread_results[i]) != 0)
@@ -192,7 +193,7 @@ int main (int argc, char *argv[])
     }
 
   int res = 0;
-  for (int i = 0; i < num_threads; ++i)
+  for (int i = 0; i < NUM_THREADS; ++i)
     {
       if (pthread_join (threads[i], NULL) != 0)
 	{
