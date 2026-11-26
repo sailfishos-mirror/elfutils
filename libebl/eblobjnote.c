@@ -103,8 +103,11 @@ ebl_object_note (Ebl *ebl, uint32_t namesz, const char *name, uint32_t type,
 
 	  ++pname;
 	  const char *args = memchr (pname, '\0', desc + descsz - pname);
-	  if (args == NULL ||
-	      memchr (++args, '\0', desc + descsz - pname) != desc + descsz - 1)
+	  if (args == NULL)
+	    goto invalid_sdt;
+
+	  ++args;
+	  if (memchr (args, '\0', desc + descsz - args) != desc + descsz - 1)
 	    goto invalid_sdt;
 
 	  GElf_Addr pc;
