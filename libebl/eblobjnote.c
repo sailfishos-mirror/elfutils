@@ -194,15 +194,17 @@ ebl_object_note (Ebl *ebl, uint32_t namesz, const char *name, uint32_t type,
 	  /* Most data actually is inside the name.
 	     https://fedoraproject.org/wiki/Toolchain/Watermark  */
 
-	  /* We need at least 2 chars of data to describe the
-	     attribute and value encodings.  */
-	  const char *data = (name
-			      + strlen (ELF_NOTE_GNU_BUILD_ATTRIBUTE_PREFIX));
-	  if (namesz < 2)
+	  /* We need at least 2 chars of data after the prefix to describe
+	     the attribute and value encodings.  */
+	  const size_t prefix_len
+	    = strlen (ELF_NOTE_GNU_BUILD_ATTRIBUTE_PREFIX);
+	  if (namesz < prefix_len + 2)
 	    {
 	      printf ("<insufficient data>\n");
 	      return;
 	    }
+	  const char *data = name + prefix_len;
+	  const char *nend = name + namesz;
 
 	  printf ("    ");
 
@@ -235,8 +237,23 @@ ebl_object_note (Ebl *ebl, uint32_t namesz, const char *name, uint32_t type,
 	      printf ("SHORT_ENUM: ");
 	      break;
 	    case 32 ... 126:
-	      printf ("\"%s\": ", &data[1]);
-	      value += strlen (&data[1]) + 1;
+	      {
+		/* The attribute name is inside the note name, which is not
+		   guaranteed to be terminated.  */
+		const char *aname = &data[1];
+		const char *anul = memchr (aname, '\0', nend - aname);
+		if (anul == NULL)
+		  {
+		    printf ("<invalid name>\n");
+		    return;
+		  }
+		printf ("\"%s\": ", aname);
+		size_t skip = (size_t) (anul - aname) + 1;
+		if (skip > (size_t) (nend - value))
+		  value = nend;
+		else
+		  value += skip;
+	      }
 	      break;
 	    default:
 	      printf ("<unknown>: ");
@@ -250,7 +267,9 @@ ebl_object_note (Ebl *ebl, uint32_t namesz, const char *name, uint32_t type,
 		/* Any numbers are always in (unsigned) little endian.  */
 		static const Dwarf dbg
 		  = { .other_byte_order = MY_ELFDATA != ELFDATA2LSB };
-		size_t bytes = namesz - (value - name);
+		if (value > nend)
+		  goto unknown;
+		size_t bytes = nend - value;
 		uint64_t val;
 		if (bytes == 1)
 		  val = *(unsigned char *) value;
@@ -266,7 +285,10 @@ ebl_object_note (Ebl *ebl, uint32_t namesz, const char *name, uint32_t type,
 	      }
 	      break;
 	    case GNU_BUILD_ATTRIBUTE_TYPE_STRING:
-	      printf ("\"%s\"", value);
+	      {
+		size_t avail = value < nend ? (size_t) (nend - value) : 0;
+		printf ("\"%.*s\"", (int) strnlen (value, avail), value);
+	      }
 	      break;
 	    case GNU_BUILD_ATTRIBUTE_TYPE_BOOL_TRUE:
 	      printf ("TRUE");
