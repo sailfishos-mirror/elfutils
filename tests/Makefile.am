@@ -164,6 +164,7 @@ TESTS = run-arextract.sh run-arsymtest.sh run-ar.sh newfile test-nlist \
 	run-readelf-aranges.sh run-readelf-line.sh run-readelf-z.sh \
 	run-readelf-frames.sh \
 	run-readelf-n.sh \
+	run-readelf-badnote.sh \
 	run-readelf-r-manyfuncs.sh \
 	run-retain.sh \
 	run-native-test.sh run-bug1-test.sh \
@@ -462,6 +463,8 @@ EXTRA_DIST = run-arextract.sh run-arsymtest.sh run-ar.sh \
 	     run-readelf-types.sh \
 	     run-readelf-frames.sh \
 	     run-readelf-n.sh \
+	     run-readelf-badnote.sh \
+	     testfile-badnote-sdt.bz2 testfile-badnote-ga.bz2 \
 	     testfile-gnu-property-note.bz2 testfile-gnu-property-note.o.bz2 \
 	     testfile_gnu_props.32le.o.bz2 \
 	     testfile_gnu_props.64le.o.bz2 \
