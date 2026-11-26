@@ -390,6 +390,26 @@ if test "$use_address" = yes; then
 fi
 AM_CONDITIONAL(USE_ADDRESS_SANITIZER, test "$use_address" = yes)
 
+AC_ARG_ENABLE([sanitize-thread],
+              AS_HELP_STRING([--enable-sanitize-thread],
+                             [Use gcc thread sanitizer]),
+                             [use_thread_sanitizer=$enableval], [use_thread_sanitizer=no])
+if test "$use_thread_sanitizer" = yes; then
+  old_CFLAGS="$CFLAGS"
+  old_CXXFLAGS="$CXXFLAGS"
+  old_LDFLAGS="$LDFLAGS"
+  CFLAGS="$CFLAGS -fsanitize=thread"
+  CXXFLAGS="$CXXFLAGS -fsanitize=thread"
+  LDFLAGS="-Wl,-z,defs -shared"
+  AC_LINK_IFELSE([AC_LANG_SOURCE([int main (int argc, char **argv) { return 0; }])], use_thread_sanitizer=yes, use_thread_sanitizer=no)
+  AS_IF([test "x$use_thread_sanitizer" = xyes],
+        ac_cv_zdefs=no NO_UNDEFINED=,
+        AC_MSG_WARN([gcc thread sanitizer not available])
+        CFLAGS="$old_CFLAGS" CXXFLAGS="$old_CXXFLAGS")
+  LDFLAGS="$old_LDFLAGS"
+fi
+AM_CONDITIONAL(USE_THREAD_SANITIZER, test "$use_thread_sanitizer" = yes)
+
 AC_ARG_ENABLE([helgrind],
 AS_HELP_STRING([--enable-helgrind],[run all tests under the valgrind tool helgrind]),
 [use_helgrind=$enableval], [use_helgrind=no])
@@ -1137,6 +1157,7 @@ AC_MSG_NOTICE([
     run all tests under valgrind       : ${use_valgrind}
     gcc undefined behaviour sanitizer  : ${use_undefined}
     gcc address sanitizer              : ${use_address}
+    gcc thread sanitizer               : ${use_thread_sanitizer}
     clang memory sanitizer             : ${use_msan}
     use rpath in tests                 : ${tests_use_rpath}
     test biarch                        : ${utrace_cv_cc_biarch}
