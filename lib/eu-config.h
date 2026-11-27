@@ -64,15 +64,6 @@
   __attribute__ ((packed))
 #endif
 
-/* Define ALLOW_UNALIGNED if the architecture allows operations on
-   unaligned memory locations.  */
-#define SANITIZE_UNDEFINED 1
-#if (defined __i386__ || defined __x86_64__) && ! CHECK_UNDEFINED
-# define ALLOW_UNALIGNED	1
-#else
-# define ALLOW_UNALIGNED	0
-#endif
-
 #if DEBUGPRED
 # ifdef __x86_64__
 asm (".section predict_data, \"aw\"; .previous\n"

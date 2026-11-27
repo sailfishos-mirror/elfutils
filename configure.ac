@@ -353,7 +353,6 @@ AC_ARG_ENABLE([sanitize-undefined],
 if test "$use_undefined" = yes; then
   old_CFLAGS="$CFLAGS"
   old_CXXFLAGS="$CXXFLAGS"
-  # We explicitly use unaligned access when possible (see ALLOW_UNALIGNED)
   # We want to fail immediately on first error, don't try to recover.
   CFLAGS="$CFLAGS -fsanitize=undefined -fno-sanitize-recover"
   CXXFLAGS="$CXXFLAGS -fsanitize=undefined -fno-sanitize-recover"
@@ -362,13 +361,6 @@ if test "$use_undefined" = yes; then
         AC_MSG_WARN([gcc undefined behaviour sanitizer not available])
         CFLAGS="$old_CFLAGS" CXXFLAGS="$old_CXXFLAGS")
 fi
-case $use_undefined in
- yes) check_undefined_val=1 ;;
- *)   check_undefined_val=0 ;;
-esac
-AC_DEFINE_UNQUOTED(CHECK_UNDEFINED, $check_undefined_val,
-		   [Building with -fsanitize=undefined or not])
-
 AC_ARG_ENABLE([sanitize-address],
               AS_HELP_STRING([--enable-sanitize-address],
                              [Use gcc address sanitizer]),
