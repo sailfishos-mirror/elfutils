@@ -62,24 +62,14 @@ static void
    functions referenced in the table will be aliases for one of these
    functions.  Which one is decided by the ELFxx_FSZ_type.  */
 
-#if ALLOW_UNALIGNED
+/* Use memcpy for the accesses so that the compiler takes care of
+   alignment.  */
 
-#define FETCH(Bits, ptr)	(*(const uint##Bits##_t *) ptr)
-#define STORE(Bits, ptr, val)	(*(uint##Bits##_t *) ptr = val)
+#define FETCH(Bits, ptr)						      \
+  ({ uint##Bits##_t vf_; memcpy (&vf_, (ptr), sizeof (vf_)); vf_; })
+#define STORE(Bits, ptr, val)						      \
+  ({ uint##Bits##_t vs_ = (val); memcpy ((ptr), &vs_, sizeof (vs_)); vs_; })
 
-#else
-
-union unaligned
-  {
-    uint16_t u16;
-    uint32_t u32;
-    uint64_t u64;
-  } attribute_packed;
-
-#define FETCH(Bits, ptr)	(((const union unaligned *) ptr)->u##Bits)
-#define STORE(Bits, ptr, val)	(((union unaligned *) ptr)->u##Bits = val)
-
-#endif
 
 /* Now define the conversion functions for the basic types.  We use here
    the fact that file and memory types are the same and that we have the
