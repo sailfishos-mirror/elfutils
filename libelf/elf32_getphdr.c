@@ -103,9 +103,8 @@ __elfw2(LIBELFBITS,getphdr_wrlock) (Elf *elf)
 	  void *file_phdr = ((char *) elf->map_address
 			     + elf->start_offset + ehdr->e_phoff);
 	  if (ehdr->e_ident[EI_DATA] == MY_ELFDATA
-	      && (ALLOW_UNALIGNED
-		  || ((uintptr_t) file_phdr
-		      & (__alignof__ (ElfW2(LIBELFBITS,Phdr)) - 1)) == 0))
+	      && ((uintptr_t) file_phdr
+		  & (__alignof__ (ElfW2(LIBELFBITS,Phdr)) - 1)) == 0)
 	    /* Simply use the mapped data.  */
 	    elf->state.ELFW(elf,LIBELFBITS).phdr = file_phdr;
 	  else
@@ -129,16 +128,11 @@ __elfw2(LIBELFBITS,getphdr_wrlock) (Elf *elf)
 		 byte order.  */
 
 	      if (ehdr->e_ident[EI_DATA] == MY_ELFDATA)
-		{
-		  assert (! ALLOW_UNALIGNED);
-		  memcpy (phdr, file_phdr, size);
-		}
+		memcpy (phdr, file_phdr, size);
 	      else
 		{
-		  bool copy = ! (ALLOW_UNALIGNED
-				 || ((uintptr_t) file_phdr
-				     & (__alignof__ (ElfW2(LIBELFBITS,Phdr))
-					- 1)) == 0);
+		  size_t align = __alignof__ (ElfW2(LIBELFBITS,Phdr));
+		  bool copy = ((uintptr_t) file_phdr & (align - 1)) != 0;
 		  if (! copy)
 		    notcvt = file_phdr;
 		  else
